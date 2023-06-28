@@ -11,11 +11,10 @@ from olympus.campaigns import ParameterSpace
 from rich.progress import track
 
 from atlas import Logger
-from atlas.optimizers.acqfs import create_available_options
-from atlas.optimizers.acquisition_optimizers.base_optimizer import \
-    AcquisitionOptimizer
-from atlas.optimizers.params import Parameters
-from atlas.optimizers.utils import (cat_param_to_feat, forward_normalize,
+from atlas.acquisition_functions.acqfs import create_available_options
+from atlas.acquisition_optimizers.base_optimizer import AcquisitionOptimizer
+from atlas.params.params import Parameters
+from atlas.utils.planner_utils import (cat_param_to_feat, forward_normalize,
                                     forward_standardize, get_cat_dims,
                                     get_fixed_features_list,
                                     infer_problem_type, param_vector_to_dict,

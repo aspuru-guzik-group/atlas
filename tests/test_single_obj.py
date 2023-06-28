@@ -190,7 +190,12 @@ def run_batched(problem_type, init_design_strategy, batch_size, acquisition_opti
 
 
 def run_continuous(
-    init_design_strategy, batch_size, use_descriptors, acquisition_type, acquisition_optimizer, num_init_design=5
+    init_design_strategy, 
+    batch_size, 
+    use_descriptors, 
+    acquisition_type, 
+    acquisition_optimizer, 
+    num_init_design=5
 ):
     def surface(x):
         return np.sin(8 * x[0]) - 2 * np.cos(6 * x[1]) + np.exp(-2.0 * x[2])

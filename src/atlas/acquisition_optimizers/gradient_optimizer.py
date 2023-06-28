@@ -15,11 +15,11 @@ from olympus import ParameterVector
 from olympus.campaigns import ParameterSpace
 
 from atlas import Logger
-from atlas.optimizers.acqfs import (
+from atlas.acquisition_functions.acqfs import (
 	create_available_options,
 )
-from atlas.optimizers.params import Parameters
-from atlas.optimizers.utils import (
+from atlas.params.params import Parameters
+from atlas.utils.planner_utils import (
 	cat_param_to_feat,
 	forward_normalize,
 	forward_standardize,
@@ -30,7 +30,7 @@ from atlas.optimizers.utils import (
 	reverse_normalize,
 	reverse_standardize,
 )
-from atlas.optimizers.acquisition_optimizers.base_optimizer import AcquisitionOptimizer
+from atlas.acquisition_optimizers.base_optimizer import AcquisitionOptimizer
 
 
 
