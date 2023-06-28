@@ -191,7 +191,12 @@ def run_batched(problem_type, init_design_strategy, batch_size, acquisition_opti
 
 
 def run_continuous(
-	init_design_strategy, batch_size, use_descriptors, acquisition_type, acquisition_optimizer, num_init_design=5
+    init_design_strategy, 
+    batch_size, 
+    use_descriptors, 
+    acquisition_type, 
+    acquisition_optimizer, 
+    num_init_design=5
 ):
 
 	problem_gen = ProblemGenerator(problem_type='continuous')
