@@ -25,7 +25,7 @@ from olympus import ParameterVector
 from olympus.campaigns import ParameterSpace
 
 from atlas import Logger
-from atlas.optimizers.acqfs import (
+from atlas.acquisition.acqfs import (
     FeasibilityAwareEI,
     FeasibilityAwareGeneral,
     FeasibilityAwareLCB,
@@ -36,10 +36,10 @@ from atlas.optimizers.acqfs import (
     VarianceBased,
     create_available_options,
 )
-from atlas.optimizers.acquisition_optimizers import (
-    GeneticOptimizer,
-    GradientOptimizer,
-)
+# from atlas.acquisition_optimizers.ac import (
+#     GeneticOptimizer,
+#     GradientOptimizer,
+# )
 from atlas.optimizers.base import BasePlanner
 from atlas.optimizers.gps import (
     CategoricalSingleTaskGP,
