@@ -14,71 +14,71 @@ from olympus.surfaces import Surface
 from atlas.planners.gp.planner import BoTorchPlanner
 
 CONT = {
-    "init_design_strategy": [
-        "random",
-        "sobol",
-        "lhs",
-    ],  # init design strategies
-    "batch_size": [1],  # batch size
-    "use_descriptors": [False],  # use descriptors
-    "acquisition_type": ['ei'], # 'ucb', 'variance'],
-    "acquisition_optimizer": ['pymoo'],#['gradient', 'genetic'],
+	"init_design_strategy": [
+		"random",
+		"sobol",
+		"lhs",
+	],  # init design strategies
+	"batch_size": [1],  # batch size
+	"use_descriptors": [False],  # use descriptors
+	"acquisition_type": ['ei'], # 'ucb', 'variance'],
+	"acquisition_optimizer": ['pymoo'],#['gradient', 'genetic'],
 }
 
 DISC = {
-    "init_design_strategy": ["random"],
-    "batch_size": [1],
-    "use_descriptors": [False],
-    "acquisition_type": ['ei'], #['ei', 'ucb', 'variance'],
-    "acquisition_optimizer": ['pymoo'],#['gradient', 'genetic'],
+	"init_design_strategy": ["random"],
+	"batch_size": [1],
+	"use_descriptors": [False],
+	"acquisition_type": ['ei'], #['ei', 'ucb', 'variance'],
+	"acquisition_optimizer": ['pymoo'],#['gradient', 'genetic'],
 }
 
 CAT = {
-    "init_design_strategy": ["random"],
-    "batch_size": [1],
-    "use_descriptors": [False, True],
-    "acquisition_type": ['ei'], #['ei', 'ucb', 'variance'],
-    "acquisition_optimizer": ['pymoo'],#['gradient', 'genetic'],
+	"init_design_strategy": ["random"],
+	"batch_size": [1],
+	"use_descriptors": [False, True],
+	"acquisition_type": ['ei'], #['ei', 'ucb', 'variance'],
+	"acquisition_optimizer": ['pymoo'],#['gradient', 'genetic'],
 }
 
 MIXED_CAT_CONT = {
-    "init_design_strategy": ["random"],
-    "batch_size": [1],
-    "use_descriptors":['ei'], # [False, True],
-    "acquisition_type": ['ei', 'ucb', 'variance'],
-    "acquisition_optimizer": ['pymoo'],#['gradient', 'genetic'],
+	"init_design_strategy": ["random"],
+	"batch_size": [1],
+	"use_descriptors":['ei'], # [False, True],
+	"acquisition_type": ['ei', 'ucb', 'variance'],
+	"acquisition_optimizer": ['pymoo'],#['gradient', 'genetic'],
 }
 
 MIXED_DISC_CONT = {
-    "init_design_strategy": ["random"],
-    "batch_size": [1],
-    "use_descriptors": [False],
-    "acquisition_type": ['ei'], #['ei', 'ucb', 'variance'],
-    "acquisition_optimizer": ['pymoo'],#['gradient', 'genetic'],
+	"init_design_strategy": ["random"],
+	"batch_size": [1],
+	"use_descriptors": [False],
+	"acquisition_type": ['ei'], #['ei', 'ucb', 'variance'],
+	"acquisition_optimizer": ['pymoo'],#['gradient', 'genetic'],
 }
 
 
 MIXED_CAT_DISC = {
-    "init_design_strategy": ["random"],
-    "batch_size": [1],
-    "use_descriptors": [False, True],
-    "acquisition_type": ['ei'], #['ei', 'ucb', 'variance'],
-    "acquisition_optimizer":['pymoo'],# ['gradient', 'genetic'],
+	"init_design_strategy": ["random"],
+	"batch_size": [1],
+	"use_descriptors": [False, True],
+	"acquisition_type": ['ei'], #['ei', 'ucb', 'variance'],
+	"acquisition_optimizer":['pymoo'],# ['gradient', 'genetic'],
 }
 
 MIXED_CAT_DISC_CONT = {
-    "init_design_strategy": ["random"],
-    "batch_size": [1],
-    "use_descriptors": [False, True],
-    "acquisition_type":['ei'], # ['ei', 'ucb', 'variance'],
-    "acquisition_optimizer": ['pymoo'],#['gradient', 'genetic'],
+	"init_design_strategy": ["random"],
+	"batch_size": [1],
+	"use_descriptors": [False, True],
+	"acquisition_type":['ei'], # ['ei', 'ucb', 'variance'],
+	"acquisition_optimizer": ['pymoo'],#['gradient', 'genetic'],
 }
 
 BATCHED = {
-    "problem_type": ['cont', 'disc', 'cat', 'mixed_cat_cont'],
-    "init_design_strategy": ["random"],
-    "batch_size": [2, 5],
-    "acquisition_optimizer": ['pymoo'],#['gradient', 'genetic'],
+	"problem_type": ['cont', 'disc', 'cat', 'mixed_cat_cont'],
+	"init_design_strategy": ["random"],
+	"batch_size": [2, 5],
+	"acquisition_optimizer": ['pymoo'],#['gradient', 'genetic'],
 }
 
 
@@ -288,17 +288,17 @@ def run_categorical(
 	campaign = Campaign()
 	campaign.set_param_space(param_space)
 
-    planner = BoTorchPlanner(
-        goal="minimize",
-        feas_strategy="naive-0",
-        init_design_strategy=init_design_strategy,
-        num_init_design=num_init_design,
-        batch_size=batch_size,
-        use_descriptors=use_descriptors,
-        acquisition_type=acquisition_type,
-        acquisition_optimizer_kind=acquisition_optimizer,
-    )
-    planner.set_param_space(surface.param_space)
+	planner = BoTorchPlanner(
+		goal="minimize",
+		feas_strategy="naive-0",
+		init_design_strategy=init_design_strategy,
+		num_init_design=num_init_design,
+		batch_size=batch_size,
+		use_descriptors=use_descriptors,
+		acquisition_type=acquisition_type,
+		acquisition_optimizer_kind=acquisition_optimizer,
+	)
+	planner.set_param_space(surface.param_space)
 
 	BUDGET = num_init_design + batch_size * 4
 
@@ -362,16 +362,16 @@ def run_mixed_disc_cont(
 	campaign = Campaign()
 	campaign.set_param_space(param_space)
 
-    planner = BoTorchPlanner(
-        goal="minimize",
-        feas_strategy="naive-0",
-        init_design_strategy=init_design_strategy,
-        num_init_design=num_init_design,
-        batch_size=batch_size,
-        use_descriptors=use_descriptors,
-        acquisition_type=acquisition_type,
-        acquisition_optimizer_kind=acquisition_optimizer,
-    )
+	planner = BoTorchPlanner(
+		goal="minimize",
+		feas_strategy="naive-0",
+		init_design_strategy=init_design_strategy,
+		num_init_design=num_init_design,
+		batch_size=batch_size,
+		use_descriptors=use_descriptors,
+		acquisition_type=acquisition_type,
+		acquisition_optimizer_kind=acquisition_optimizer,
+	)
 
 	BUDGET = num_init_design + batch_size * 4
 
@@ -516,10 +516,10 @@ if __name__ == "__main__":
 	)
 
 	run_mixed_cat_disc(
-	    init_design_strategy='random', 
-	    batch_size=1, 
-	    use_descriptors=True, 
-	    acquisition_type='ucb', 
-	    acquisition_optimizer='gradient', 
-	    num_init_design=5,
+		init_design_strategy='random', 
+		batch_size=1, 
+		use_descriptors=True, 
+		acquisition_type='ucb', 
+		acquisition_optimizer='gradient', 
+		num_init_design=5,
 	)
