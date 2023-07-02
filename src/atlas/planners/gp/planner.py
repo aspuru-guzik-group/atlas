@@ -59,7 +59,6 @@ from atlas.utils.planner_utils import (
     reverse_standardize,
 )
 
-
 class BoTorchPlanner(BasePlanner):
     """Wrapper for GP-based Bayesiam optimization with BoTorch
     Args:

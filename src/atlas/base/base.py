@@ -73,6 +73,9 @@ class BasePlanner(CustomPlanner):
 		moo_params: Dict[str, Union[str, float, int, bool, List]] = {},
 		goals: Optional[List[str]] = None,
 		golem_config: Optional[Dict[str, Any]] = None,
+		fidelity_params: int = None, 
+        fidelities: List[float] = None,
+        fixed_cost: Optional[float] = None,
 		**kwargs: Any,
 	):
 		"""Base optimizer class containing higher-level operations.
@@ -117,6 +120,9 @@ class BasePlanner(CustomPlanner):
 		self.goals = goals
 		self.golem_config = golem_config
 
+		self.fidelity_params = fidelity_params
+		self.fidelities = fidelities
+		self.fixed_cost = fixed_cost
 
 		# initial design point trackers
 		self.num_init_design_attempted = 0

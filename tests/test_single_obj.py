@@ -13,6 +13,8 @@ from olympus.surfaces import Surface
 
 from atlas.planners.gp.planner import BoTorchPlanner
 
+
+
 CONT = {
 	"init_design_strategy": [
 		"random",
@@ -210,7 +212,7 @@ def run_continuous(
 		num_init_design=num_init_design,
 		batch_size=batch_size,
 		acquisition_type=acquisition_type,
-		acquisition_optimizer=acquisition_optimizer,
+		acquisition_optimizer_kind=acquisition_optimizer,
 	)
 
 	planner.set_param_space(param_space)
@@ -251,7 +253,7 @@ def run_discrete(
 		num_init_design=num_init_design,
 		batch_size=batch_size,
 		acquisition_type=acquisition_type,
-		acquisition_optimizer=acquisition_optimizer,
+		acquisition_optimizer_kind=acquisition_optimizer,
 	)
 
 	planner.set_param_space(param_space)
@@ -404,7 +406,7 @@ def run_mixed_cat_disc(
 		batch_size=batch_size,
 		use_descriptors=use_descriptors,
 		acquisition_type=acquisition_type,
-		acquisition_optimizer=acquisition_optimizer,
+		acquisition_optimizer_kind=acquisition_optimizer,
 	)
 	planner.set_param_space(param_space)
 
@@ -439,7 +441,7 @@ def run_mixed_cat_disc_cont(
 		batch_size=batch_size,
 		use_descriptors=use_descriptors,
 		acquisition_type=acquisition_type,
-		acquisition_optimizer=acquisition_optimizer,
+		acquisition_optimizer_kind=acquisition_optimizer,
 	)
 	planner.set_param_space(param_space)
 
