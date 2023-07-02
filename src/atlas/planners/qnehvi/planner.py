@@ -21,7 +21,7 @@ from botorch.acquisition.multi_objective.monte_carlo import (
 )
 
 from botorch import fit_gpytorch_mll
-from botorch.fit import fit_gpytorch_model
+from botorch.fit import fit_gpytorch_mll
 from botorch.models import MixedSingleTaskGP, SingleTaskGP
 from botorch.models.kernels.categorical import CategoricalKernel
 from botorch.models.model_list_gp_regression import ModelListGP

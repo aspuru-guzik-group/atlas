@@ -102,11 +102,16 @@ class AcquisitionOptimizer:
         if self.known_constraints.has_compositional_constraint:
             results = self._apply_compositional_constraint(results)
 
+
+        # apply process-constrained batch constraint(s) if present
+        if self.known_constraints.has_batch_constraint:
+            results = self._apply_batch_constraint(results)
+
         return results
     
 
     def _apply_compositional_constraint(self, results):
-        contrained_results = []
+        constrained_results = []
         for pvec in results:
             constrained_pvec = deepcopy(pvec)
             sum_params = np.sum(
@@ -115,9 +120,21 @@ class AcquisitionOptimizer:
             assert sum_params <= 1.
             # update dependent parameter
             constrained_pvec[self.known_constraints.compositional_constraint_param_names[-1]] = 1. - sum_params 
-            contrained_results.append(constrained_pvec)
+            constrained_results.append(constrained_pvec)
 
-        return contrained_results
+        return constrained_results
+
+
+    def _apply_batch_constraint(self, results):
+        constrained_results = []
+        for pvec in results:
+            constrained_pvec = deepcopy(pvec)
+            for constrained_param_name in self.known_constraints.batch_constrained_param_names:
+                constrained_pvec[constrained_param_name] = results[0][constrained_param_name]
+            constrained_results.append(constrained_pvec)
+
+        return constrained_results
+
 
 
 

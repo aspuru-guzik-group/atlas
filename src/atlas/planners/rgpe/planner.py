@@ -17,14 +17,10 @@ from botorch.acquisition import (
     qExpectedImprovement,
     qNoisyExpectedImprovement,
 )
-from botorch.fit import fit_gpytorch_model
+from botorch.fit import fit_gpytorch_mll
 from botorch.models import MixedSingleTaskGP, SingleTaskGP
 from botorch.models.gpytorch import GPyTorchModel
-from botorch.optim import (
-    optimize_acqf,
-    optimize_acqf_discrete,
-    optimize_acqf_mixed,
-)
+
 from botorch.sampling.samplers import SobolQMCNormalSampler
 from gpytorch.distributions import MultivariateNormal
 from gpytorch.lazy import PsdSumLazyTensor
@@ -48,10 +44,7 @@ from atlas.optimizers.acquisition_optimizers.base_optimizer import (
     AcquisitionOptimizer,
 )
 from atlas.optimizers.base import BasePlanner
-from atlas.optimizers.gps import (
-    CategoricalSingleTaskGP,
-    ClassificationGPMatern,
-)
+
 from atlas.optimizers.utils import (
     Scaler,
     cat_param_to_feat,
@@ -215,7 +208,7 @@ class RGPEPlanner(BasePlanner):
                 mll = ExactMarginalLogLikelihood(model.likelihood, model).to(
                     train_X
                 )
-                fit_gpytorch_model(mll)
+                fit_gpytorch_mll(mll)
             else:
                 model.load_state_dict(state_dict)
 

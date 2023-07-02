@@ -17,7 +17,7 @@ from botorch.acquisition import (
     qNoisyExpectedImprovement,
     qUpperConfidenceBound,
 )
-from botorch.fit import fit_gpytorch_model
+from botorch.fit import fit_gpytorch_mll
 from botorch.models import MixedSingleTaskGP, SingleTaskGP
 
 from gpytorch.mlls import ExactMarginalLogLikelihood
@@ -39,6 +39,7 @@ from atlas.acquisition_functions.acqfs import (
 from atlas.acquisition_optimizers import (
     GeneticOptimizer,
     GradientOptimizer,
+    PymooGAOptimizer
 )
 from atlas.base.base import BasePlanner
 from atlas.gps.gps import (
@@ -95,7 +96,7 @@ class BoTorchPlanner(BasePlanner):
         num_init_design: int = 5,
         init_design_strategy: str = "random",
         acquisition_type: str = "ei",  # qei, ei, ucb, variance, general
-        acquisition_optimizer_kind: str = "gradient",  # gradient, genetic
+        acquisition_optimizer_kind: str = "gradient",  # gradient, genetic, pymoo
         vgp_iters: int = 2000,
         vgp_lr: float = 0.1,
         max_jitter: float = 1e-1,
@@ -103,6 +104,7 @@ class BoTorchPlanner(BasePlanner):
         known_constraints: Optional[List[Callable]] = None,
         compositional_params: Optional[List[int]] = None,
         permutation_params: Optional[List[int]] = None,
+        batch_constrained_params: Optional[List[int]] = None,
         general_parameters: Optional[List[int]] = None,
         is_moo: bool = False,
         value_space: Optional[ParameterSpace] = None,
@@ -159,7 +161,7 @@ class BoTorchPlanner(BasePlanner):
         # fit the GP
         start_time = time.time()
         with gpytorch.settings.cholesky_jitter(self.max_jitter):
-            fit_gpytorch_model(mll)
+            fit_gpytorch_mll(mll)
         gp_train_time = time.time() - start_time
         Logger.log(
             f"Regression surrogate GP trained in {round(gp_train_time,3)} sec",
@@ -445,6 +447,20 @@ class BoTorchPlanner(BasePlanner):
                 )
             elif self.acquisition_optimizer_kind == "genetic":
                 acquisition_optimizer = GeneticOptimizer(
+                    self.params_obj,
+                    self.acquisition_type,
+                    self.acqf,
+                    self.known_constraints,
+                    self.batch_size,
+                    self.feas_strategy,
+                    self.fca_constraint,
+                    self._params,
+                    self.timings_dict,
+                    use_reg_only=use_reg_only,
+                )
+
+            elif self.acquisition_optimizer_kind == 'pymoo':
+                acquisition_optimizer = PymooGAOptimizer(
                     self.params_obj,
                     self.acquisition_type,
                     self.acqf,

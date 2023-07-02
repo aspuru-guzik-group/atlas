@@ -19,7 +19,7 @@ from botorch.acquisition import (
     qNoisyExpectedImprovement,
     qUpperConfidenceBound,
 )
-from botorch.fit import fit_gpytorch_model
+from botorch.fit import fit_gpytorch_mll
 from botorch.models import MixedSingleTaskGP, SingleTaskGP
 from botorch.models.kernels.categorical import CategoricalKernel
 from botorch.optim import (
@@ -234,7 +234,7 @@ class MedusaPlanner(BasePlanner):
         # fit the GP
         start_time = time.time()
         with gpytorch.settings.cholesky_jitter(self.max_jitter):
-            fit_gpytorch_model(mll)
+            fit_gpytorch_mll(mll)
         gp_train_time = time.time() - start_time
         Logger.log(
             f"Regression surrogate GP trained in {round(gp_train_time,3)} sec",

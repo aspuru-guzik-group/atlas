@@ -598,7 +598,6 @@ def run_mixed_cat_disc_large_space(init_design_strategy, batch_size, use_descrip
     assert all(kcs)
 
 
-
 def run_compositional_constraint_cont(
     init_design_strategy, batch_size, num_init_design=5
 ):
@@ -779,6 +778,137 @@ def run_pending_experiment_constraint_cat(init_design_strategy, batch_size, use_
     assert len(campaign.observations.get_values()) == BUDGET
 
 
+def run_batch_constrained_disc(init_design_strategy, batch_size, use_descriptors, num_init_design=5):
+
+    assert batch_size > 1
+    num_init_design = batch_size
+
+    def surface(x):
+        return np.sin(8 * x[0]) - 2 * np.cos(6 * x[1]) + np.exp(-2.0 * x[2])
+
+    param_space = ParameterSpace()
+    param_0 = ParameterDiscrete(
+        name="param_0",
+        options=[0.0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.0],
+    )
+    param_1 = ParameterDiscrete(
+        name="param_1",
+        options=[0.0, 0.25, 0.5, 0.75, 1.0],
+    )
+    param_2 = ParameterDiscrete(
+        name="param_2",
+        options=[0.0, 0.25, 0.5, 0.75, 1.0],
+    )
+    param_space.add(param_0)
+    param_space.add(param_1)
+    param_space.add(param_2)
+
+    planner = BoTorchPlanner(
+        goal="minimize",
+        init_design_strategy=init_design_strategy,
+        num_init_design=num_init_design,
+        batch_size=batch_size,
+        acquisition_type='qei',
+        acquisition_optimizer_kind='gradient',
+        known_constraints=[known_constraints_fully_disc],
+        batch_constrained_params=[0], # first param same across batch
+    )
+
+    planner.set_param_space(param_space)
+
+    campaign = Campaign()
+    campaign.set_param_space(param_space)
+
+    BUDGET = num_init_design + batch_size * 4
+
+    while len(campaign.observations.get_values()) < BUDGET:
+
+        samples = planner.recommend(campaign.observations)
+        for sample in samples:
+            sample_arr = sample.to_array()
+            measurement = surface(sample_arr)
+            campaign.add_observation(sample_arr, measurement)
+
+    assert len(campaign.observations.get_params()) == BUDGET
+    assert len(campaign.observations.get_values()) == BUDGET
+
+    # check if batch constrained param is the same across all batches
+
+    # validate batch constraint
+    meas_params = campaign.observations.get_params()
+    meas_params = meas_params.reshape(
+        (int(meas_params.shape[0]/batch_size), batch_size, len(param_space))
+    )
+    for batch in meas_params:
+        assert (batch==batch[0,:])[0, :].all() # first param is batch constrained
+    
+        
+def run_pymoo(init_design_strategy, batch_size, use_descriptors, num_init_design=5):
+
+    def surface(x):
+        
+        return np.sin(8 * float(x[0])) - 2 * np.cos(6 * float(x[1])) + np.exp(-2.0 * float(x[2]))
+
+
+    param_space = ParameterSpace()
+    param_0 = ParameterContinuous(name="param_0", low=0.0, high=1.0)
+    param_1 = ParameterContinuous(name="param_1", low=0.0, high=1.0)
+    #param_1 = ParameterDiscrete(name="param_1", options=[0.0, 0.5, 1.0])
+    param_2 = ParameterContinuous(name="param_2", low=0.0, high=1.0)
+    #param_2 = ParameterCategorical(name="param_2", options=['x1', 'x2', 'x3'])
+    param_space.add(param_0)
+    param_space.add(param_1)
+    param_space.add(param_2)
+
+    if batch_size > 1:
+        acquisition_type='qei'
+    else:
+        acquisition_type='ei'
+
+    planner = BoTorchPlanner(
+        goal="minimize",
+        feas_strategy="fwa",
+        init_design_strategy=init_design_strategy,
+        num_init_design=num_init_design,
+        batch_size=batch_size,
+        acquisition_type=acquisition_type,
+        acquisition_optimizer_kind='pymoo',
+        known_constraints=[known_constraints_cont],
+    )
+
+    planner.set_param_space(param_space)
+
+    campaign = Campaign()
+    campaign.set_param_space(param_space)
+
+    BUDGET = num_init_design + batch_size * 4
+
+    while len(campaign.observations.get_values()) < BUDGET:
+
+        samples = planner.recommend(campaign.observations)
+        for sample in samples:
+            sample_arr = sample.to_array()
+            measurement = surface(sample_arr)
+            campaign.add_observation(sample_arr, measurement)
+
+            print('-'*75)
+            print('SAMPLE : ', sample)
+            print('MEASUREMENT : ', measurement)
+            print('-'*75)
+
+
+    assert len(campaign.observations.get_params()) == BUDGET
+    assert len(campaign.observations.get_values()) == BUDGET
+
+    # check that all the measured values pass the known constraint
+    meas_params = campaign.observations.get_params()
+
+    kcs = [known_constraints_cont(param) for param in meas_params]
+
+    assert all(kcs)
+
+
+ 
 
 if  __name__ == '__main__':
     #print(type(known_constraints_cont))
@@ -798,4 +928,8 @@ if  __name__ == '__main__':
 
     #run_permutation_constraint_mixed_cat_disc('random', 1, num_init_design=5)
 
-    run_pending_experiment_constraint_cat('random', 1, False )
+    #run_pending_experiment_constraint_cat('random', 1, False )
+
+    #run_batch_constrained_disc('random', 3, False, 3)
+
+    run_pymoo('random', 2, False, 5)

@@ -65,6 +65,7 @@ class BasePlanner(CustomPlanner):
 		known_constraints: Optional[List[Callable]] = None,
 		compositional_params: Optional[List[int]] = None,
         permutation_params: Optional[List[int]] = None,
+		batch_constrained_params: Optional[List[int]] = None,
 		general_parameters: Optional[List[int]] = None,
 		is_moo: bool = False,
 		value_space: Optional[ParameterSpace] = None,
@@ -235,6 +236,8 @@ class BasePlanner(CustomPlanner):
 			self.has_descriptors,
 			self.compositional_params,
 			self.permutation_params,
+			self.batch_constrained_params,
+
 		)
 
 	def build_train_classification_gp(
@@ -785,6 +788,7 @@ class BasePlanner(CustomPlanner):
 			self.num_init_design_attempted += 1
 
 		# apply compositional constraint to dependent param is required
+		# TODO: make this methods in the known constraints class
 		if self.known_constraints.has_compositional_constraint:
 			contrained_results = []
 			for pvec in return_params:
@@ -796,8 +800,18 @@ class BasePlanner(CustomPlanner):
 				# update dependent parameter
 				constrained_pvec[self.known_constraints.compositional_constraint_param_names[-1]] = 1. - sum_params 
 				contrained_results.append(constrained_pvec)
-				
-			return contrained_results
+
+			return_params = contrained_results
+
+		if self.known_constraints.has_batch_constraint:
+			constrained_results = []
+			for pvec in return_params:
+				constrained_pvec = deepcopy(pvec)
+				for constrained_param_name in self.known_constraints.batch_constrained_param_names:
+					constrained_pvec[constrained_param_name] = return_params[0][constrained_param_name]
+				constrained_results.append(constrained_pvec)
+			
+			return_params = constrained_results
 
 		return return_params
 	

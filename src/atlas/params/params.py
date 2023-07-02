@@ -280,7 +280,7 @@ class Parameters():
 						)
 					)
 			expanded.append(expand)
-		expanded = np.array(expanded)
+		expanded = np.array(expanded).astype(float) # will always be floats
 		if return_scaled:
 			expanded = forward_normalize(expanded, self._mins_x, self._maxs_x)
 

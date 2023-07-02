@@ -154,6 +154,10 @@ class PendingExperimentConstraint:
     
 
 
+
+
+
+
 class KnownConstraints:
     """ user-level known constraints wrapper
 
@@ -175,12 +179,21 @@ class KnownConstraints:
             has_descriptors: bool,
             compositional_params: Optional[List[int]] = None,
             permutation_params: Optional[List[int]] = None,
+            batch_constrained_params: Optional[List[int]] = None,
         ) -> None:
         self.param_space = param_space
         self.known_constraints = known_constraints
         self.has_descriptors = has_descriptors
         self.compositional_params = compositional_params
         self.permutation_params = permutation_params
+        self.batch_constrained_params = batch_constrained_params
+
+        # deal with process-constrained batch constraints
+        if self.batch_constrained_params:
+            self.has_batch_constraint = True
+        else:
+            self.has_batch_constraint = False
+
 
         # deal with compositional constraint
         if self.compositional_params:
@@ -213,6 +226,10 @@ class KnownConstraints:
     def is_empty(self):
         return self.known_constraints==[]
     
+    @property
+    def batch_constrained_param_names(self):
+        return [self.param_space[idx].name for idx in self.batch_constrained_params]
+
     @property 
     def compositional_constraint_param_names(self):
         return [self.param_space[idx].name for idx in self.compositional_params]

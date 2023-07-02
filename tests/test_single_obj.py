@@ -17,43 +17,43 @@ CONT = {
         "random",
         "sobol",
         "lhs",
-    ],  # init design strategues
+    ],  # init design strategies
     "batch_size": [1],  # batch size
     "use_descriptors": [False],  # use descriptors
-    "acquisition_type": ['ei', 'ucb', 'variance'],
-    "acquisition_optimizer": ['gradient', 'genetic'],
+    "acquisition_type": ['ei'], # 'ucb', 'variance'],
+    "acquisition_optimizer": ['pymoo'],#['gradient', 'genetic'],
 }
 
 DISC = {
     "init_design_strategy": ["random"],
     "batch_size": [1],
     "use_descriptors": [False],
-    "acquisition_type": ['ei', 'ucb', 'variance'],
-    "acquisition_optimizer": ['gradient', 'genetic'],
+    "acquisition_type": ['ei'], #['ei', 'ucb', 'variance'],
+    "acquisition_optimizer": ['pymoo'],#['gradient', 'genetic'],
 }
 
 CAT = {
     "init_design_strategy": ["random"],
     "batch_size": [1],
     "use_descriptors": [False, True],
-    "acquisition_type": ['ei', 'ucb', 'variance'],
-    "acquisition_optimizer": ['gradient', 'genetic'],
+    "acquisition_type": ['ei'], #['ei', 'ucb', 'variance'],
+    "acquisition_optimizer": ['pymoo'],#['gradient', 'genetic'],
 }
 
 MIXED_CAT_CONT = {
     "init_design_strategy": ["random"],
     "batch_size": [1],
-    "use_descriptors": [False, True],
+    "use_descriptors":['ei'], # [False, True],
     "acquisition_type": ['ei', 'ucb', 'variance'],
-    "acquisition_optimizer": ['gradient', 'genetic'],
+    "acquisition_optimizer": ['pymoo'],#['gradient', 'genetic'],
 }
 
 MIXED_DISC_CONT = {
     "init_design_strategy": ["random"],
     "batch_size": [1],
     "use_descriptors": [False],
-    "acquisition_type": ['ei', 'ucb', 'variance'],
-    "acquisition_optimizer": ['gradient', 'genetic'],
+    "acquisition_type": ['ei'], #['ei', 'ucb', 'variance'],
+    "acquisition_optimizer": ['pymoo'],#['gradient', 'genetic'],
 }
 
 
@@ -61,23 +61,23 @@ MIXED_CAT_DISC = {
     "init_design_strategy": ["random"],
     "batch_size": [1],
     "use_descriptors": [False, True],
-    "acquisition_type": ['ei', 'ucb', 'variance'],
-    "acquisition_optimizer": ['gradient', 'genetic'],
+    "acquisition_type": ['ei'], #['ei', 'ucb', 'variance'],
+    "acquisition_optimizer":['pymoo'],# ['gradient', 'genetic'],
 }
 
 MIXED_CAT_DISC_CONT = {
     "init_design_strategy": ["random"],
     "batch_size": [1],
     "use_descriptors": [False, True],
-    "acquisition_type": ['ei', 'ucb', 'variance'],
-    "acquisition_optimizer": ['gradient', 'genetic'],
+    "acquisition_type":['ei'], # ['ei', 'ucb', 'variance'],
+    "acquisition_optimizer": ['pymoo'],#['gradient', 'genetic'],
 }
 
 BATCHED = {
     "problem_type": ['cont', 'disc', 'cat', 'mixed_cat_cont'],
     "init_design_strategy": ["random"],
     "batch_size": [2, 5],
-    "acquisition_optimizer": ['gradient', 'genetic'],
+    "acquisition_optimizer": ['pymoo'],#['gradient', 'genetic'],
 }
 
 
@@ -215,7 +215,7 @@ def run_continuous(
         num_init_design=num_init_design,
         batch_size=batch_size,
         acquisition_type=acquisition_type,
-        acquisition_optimizer=acquisition_optimizer,
+        acquisition_optimizer_kind=acquisition_optimizer,
     )
 
     planner.set_param_space(param_space)
@@ -267,7 +267,7 @@ def run_discrete(
         num_init_design=num_init_design,
         batch_size=batch_size,
         acquisition_type=acquisition_type,
-        acquisition_optimizer=acquisition_optimizer,
+        acquisition_optimizer_kind=acquisition_optimizer,
     )
 
     planner.set_param_space(param_space)
@@ -307,7 +307,7 @@ def run_categorical(
         batch_size=batch_size,
         use_descriptors=use_descriptors,
         acquisition_type=acquisition_type,
-        acquisition_optimizer=acquisition_optimizer,
+        acquisition_optimizer_kind=acquisition_optimizer,
     )
     planner.set_param_space(surface.param_space)
 
@@ -385,7 +385,7 @@ def run_mixed_cat_cont(
         batch_size=batch_size,
         use_descriptors=use_descriptors,
         acquisition_type=acquisition_type,
-        acquisition_optimizer=acquisition_optimizer,
+        acquisition_optimizer_kind=acquisition_optimizer,
     )
     planner.set_param_space(param_space)
 
@@ -431,7 +431,7 @@ def run_mixed_disc_cont(
         batch_size=batch_size,
         use_descriptors=use_descriptors,
         acquisition_type=acquisition_type,
-        acquisition_optimizer=acquisition_optimizer,
+        acquisition_optimizer_kind=acquisition_optimizer,
     )
 
     planner.set_param_space(param_space)
@@ -465,9 +465,9 @@ def run_mixed_cat_disc(
             factor = 10.0
 
         return (
-            np.sin(8.0 * x["param_1"])
-            - 2.0 * np.cos(6.0 * x["param_1"])
-            + np.exp(-2.0 * x["param_2"])
+            np.sin(8.0 * int(x["param_1"]))
+            - 2.0 * np.cos(6.0 * int(x["param_1"]))
+            + np.exp(-2.0 * int(x["param_2"]))
             + 2.0 * (1.0 / factor)
         )
 
@@ -502,7 +502,7 @@ def run_mixed_cat_disc(
         batch_size=batch_size,
         use_descriptors=use_descriptors,
         acquisition_type=acquisition_type,
-        acquisition_optimizer=acquisition_optimizer,
+        acquisition_optimizer_kind=acquisition_optimizer,
     )
 
     planner.set_param_space(param_space)
@@ -581,7 +581,7 @@ def run_mixed_cat_disc_cont(
         batch_size=batch_size,
         use_descriptors=use_descriptors,
         acquisition_type=acquisition_type,
-        acquisition_optimizer=acquisition_optimizer,
+        acquisition_optimizer_kind=acquisition_optimizer,
     )
 
     planner.set_param_space(param_space)
@@ -595,6 +595,7 @@ def run_mixed_cat_disc_cont(
 
         samples = planner.recommend(campaign.observations)
         for sample in samples:
+
 
             measurement = surface(sample)
             campaign.add_observation(sample, measurement)
@@ -628,12 +629,20 @@ if __name__ == "__main__":
     #     num_init_design=5,
     # )
 
-    run_categorical(
+    # run_categorical(
+    #     init_design_strategy='random', 
+    #     batch_size=1, 
+    #     use_descriptors=False, 
+    #     acquisition_type='ei', 
+    #     acquisition_optimizer='pymoo', 
+    #     num_init_design=5
+    # )
+
+    run_mixed_cat_disc_cont(
         init_design_strategy='random', 
         batch_size=1, 
         use_descriptors=False, 
         acquisition_type='ei', 
-        acquisition_optimizer='gradient', 
+        acquisition_optimizer='pymoo', 
         num_init_design=5
     )
-

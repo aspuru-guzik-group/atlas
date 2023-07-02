@@ -427,7 +427,7 @@ class FeasibilityAwareEI(ExpectedImprovement, FeasibilityAwareAcquisition):
         self.set_p_feas_postprocess()
 
     def forward(self, X):
-        acqf = super().forward(X)  # get the EI acquisition
+        acqf = super().forward(X) # get the EI acquisition
         return self.compute_combined_acqf(acqf, X)
 
 

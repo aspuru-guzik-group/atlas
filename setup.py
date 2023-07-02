@@ -30,6 +30,8 @@ setup(
     package_dir={"": "src"},
     zip_safe=False,
     tests_require=["pytest"],
-    install_requires=["numpy", "pandas", "rich", "deap", "botorch", "matter-chimera", "matter-golem"],
+    install_requires=["numpy", "pandas", "rich", "deap", "pymoo",
+                      'sobol-seq', "pyDOE", "botorch", 
+                      "matter-chimera", "matter-golem"],
     python_requires=">=3.6",
 )

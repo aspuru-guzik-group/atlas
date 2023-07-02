@@ -14,7 +14,6 @@ from botorch.acquisition import (
     qExpectedImprovement,
     qNoisyExpectedImprovement,
 )
-from botorch.fit import fit_gpytorch_model
 from botorch.models.gpytorch import GPyTorchModel
 from botorch.optim import (
     optimize_acqf,

@@ -273,8 +273,8 @@ class GradientOptimizer(AcquisitionOptimizer):
 						)
 					#best_idx = torch.argmax(acq_values)
 					best_idxs_ =  torch.argsort(acq_values, descending=True)
-					print('num best idxs : ', len(best_idxs_))
-					print('num to sample : ', int(len(best_idxs_)*0.015))
+					# print('num best idxs : ', len(best_idxs_))
+					# print('num to sample : ', int(len(best_idxs_)*0.015))
 					best_idx = best_idxs_[torch.randint(low=0, high=int(len(best_idxs_)*0.015), size=(1,))]
 					candidate_list.append(choices_batched[best_idx])
 					acq_value_list.append(acq_values[best_idx])
