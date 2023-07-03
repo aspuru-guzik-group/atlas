@@ -208,7 +208,6 @@ class BoTorchPlanner(BasePlanner):
             )
 
 
-
             # builds and fits the regression surrogate model
             self.reg_model = self.build_train_regression_gp(
                 self.train_x_scaled_reg, self.train_y_scaled_reg

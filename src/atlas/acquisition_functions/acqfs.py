@@ -311,7 +311,6 @@ class FeasibilityAwareGeneral(
         general_expanded = torch.tensor(np.array(general_expanded))
 
         X_sns_empty[:, self.params_obj.exp_general_mask] = general_expanded
-        # forward normalize
         X_sns_empty = forward_normalize(
             X_sns_empty,
             self.params_obj._mins_x,
@@ -522,62 +521,6 @@ class FeasibilityAwareLCB(LowerConfidenceBound, FeasibilityAwareAcquisition):
 
     def forward(self, X):
         acqf = super().forward(X)
-        return self.compute_combined_acqf(acqf, X)
-
-
-class FeasibilityAwareqNEHVI(
-    qNoisyExpectedHypervolumeImprovement, FeasibilityAwareAcquisition
-):
-    def __init__(
-        self,
-        reg_model,
-        cla_model,
-        cla_likelihood,
-        param_space,
-        feas_strategy,
-        feas_param,
-        infeas_ratio,
-        acqf_min_max,
-        # qNEHVI-specific parameters ----
-        ref_point,
-        sampler,
-        X_baseline,
-        prune_baseline=False,
-        # --------------------------------
-        use_p_feas_only=False,
-        use_reg_only=False,
-        use_min_filter=True,
-        objective=IdentityMCMultiOutputObjective(),
-        **kwargs,
-    ) -> None:
-        super().__init__(
-            model=reg_model,
-            ref_point=ref_point,  # reference point --> make this the worst measured objective value in each dim (list)
-            X_baseline=X_baseline,  # normalized x values (observed parameters)
-            prune_baseline=prune_baseline,  # prune baseline points that have estimated zero probability
-            sampler=sampler,  # instance of SobolQMCNormalSampler for continuous variables
-            objective=objective,
-            # **kwargs,
-        )
-        self.reg_model = reg_model
-        self.cla_model = cla_model
-        self.cla_likelihood = cla_likelihood
-        self.param_space = param_space
-        self.feas_strategy = feas_strategy
-        self.feas_param = feas_param
-        self.feas_strategy = feas_strategy
-        self.feas_param = feas_param
-        self.infeas_ratio = infeas_ratio
-        self.acqf_min_max = acqf_min_max
-        self.use_p_feas_only = use_p_feas_only
-        self.use_reg_only = use_reg_only
-        self.use_min_filter = use_min_filter
-        self.objective = objective
-        # set the p_feas postprocessing step
-        self.set_p_feas_postprocess()
-
-    def forward(self, X):
-        acqf = -super().forward(X)  # why do we seem to need negative sign??
         return self.compute_combined_acqf(acqf, X)
 
 

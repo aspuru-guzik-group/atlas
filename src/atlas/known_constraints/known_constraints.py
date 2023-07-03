@@ -262,6 +262,7 @@ class KnownConstraints:
     def remove_pending_experiments(self):
         """ remove pending experiment constraint
         """
+        # TODO: delete this potentially ...
         return None
 
     def _validate_known_constraints(self):

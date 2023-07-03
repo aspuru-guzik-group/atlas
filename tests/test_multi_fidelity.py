@@ -39,7 +39,7 @@ def run_continuous():
 		num_init_design=num_init_design, 
 		batch_size=batch_size, 
 		fidelity_params=2,
-		fidelities=[0.5, 1.0], # should remove this
+		fidelities=[0.5, 1.0], # should remove this, can get from the fidelity params and param space...
 		fixed_cost=5.0,
 	)
 
