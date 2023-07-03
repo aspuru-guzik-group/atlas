@@ -26,7 +26,7 @@ setup(
     author="Riley Hickman",
     author_email="riley.hickman@mail.utoronto.ca",
     # license='XXX',
-    packages=find_packages(where='src', include=["atlas"]),
+    packages=find_packages(where='src', include=["atlas*"]),
     package_dir={"": "src"},
     zip_safe=False,
     tests_require=["pytest"],
