@@ -27,6 +27,7 @@ from atlas.gps.gps import (
 	ClassificationGPMatern,
 )
 from atlas.params.params import Parameters
+from atlas.unknown_constraints.unknown_constraints import UnknownConstraints
 from atlas.utils.planner_utils import (
 	cat_param_to_feat,
 	forward_normalize,
@@ -700,6 +701,13 @@ class BasePlanner(CustomPlanner):
 			observations=observations,
 			has_descriptors=self.has_descriptors,
 			general_parameters=self.general_parameters,
+		)
+
+		# generate unknown constraints object
+		self.unknown_constraints = UnknownConstraints(
+			params_obj=self.params_obj,
+			feas_strategy=self.feas_strategy,
+			feas_param=self.feas_param,
 		)
 
 

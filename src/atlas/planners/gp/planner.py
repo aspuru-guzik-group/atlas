@@ -47,6 +47,7 @@ from atlas.gps.gps import (
     ClassificationGPMatern,
 )
 from atlas.params.params import Parameters
+
 from atlas.utils.planner_utils import (
     cat_param_to_feat,
     forward_normalize,
@@ -191,81 +192,22 @@ class BoTorchPlanner(BasePlanner):
                 self.train_y_scaled_reg,
             ) = self.build_train_data()
 
-            use_p_feas_only = False
-            # check to see if we are using the naive approaches
-            if "naive-" in self.feas_strategy:
-                infeas_ix = torch.where(self.train_y_scaled_cla == 1.0)[0]
-                feas_ix = torch.where(self.train_y_scaled_cla == 0.0)[0]
-                # checking if we have at least one objective function measurement
-                #  and at least one infeasible point (i.e. at least one point to replace)
-                if np.logical_and(
-                    self.train_y_scaled_reg.size(0) >= 1,
-                    infeas_ix.shape[0] >= 1,
-                ):
-                    if self.feas_strategy == "naive-replace":
-                        # NOTE: check to see if we have a trained regression surrogate model
-                        # if not, wait for the following iteration to make replacements
-                        if hasattr(self, "reg_model"):
-                            # if we have a trained regression model, go ahead and make replacement
-                            new_train_y_scaled_reg = deepcopy(
-                                self.train_y_scaled_cla
-                            ).double()
+            # handle naive unknown constriants strategies if relevant
+            # TODO: put this in build_train_data method
+            (
+                self.train_x_scaled_reg,
+                self.train_y_scaled_reg,
+                self.train_x_scaled_cla,
+                self.train_y_scaled_cla,
+                use_p_feas_only
+            ) = self.unknown_constraints.handle_naive_feas_strategies(
+                self.train_x_scaled_reg,
+                self.train_y_scaled_reg,
+                self.train_x_scaled_cla,
+                self.train_y_scaled_cla,
+            )
 
-                            input = self.train_x_scaled_cla[infeas_ix].double()
 
-                            posterior = self.reg_model.posterior(X=input)
-                            pred_mu = posterior.mean.detach()
-
-                            new_train_y_scaled_reg[
-                                infeas_ix
-                            ] = pred_mu.squeeze(-1)
-                            new_train_y_scaled_reg[
-                                feas_ix
-                            ] = self.train_y_scaled_reg.squeeze(-1)
-
-                            self.train_x_scaled_reg = deepcopy(
-                                self.train_x_scaled_cla
-                            ).double()
-                            self.train_y_scaled_reg = (
-                                new_train_y_scaled_reg.view(
-                                    self.train_y_scaled_cla.size(0), 1
-                                ).double()
-                            )
-
-                        else:
-                            use_p_feas_only = True
-
-                    elif self.feas_strategy == "naive-0":
-                        new_train_y_scaled_reg = deepcopy(
-                            self.train_y_scaled_cla
-                        ).double()
-
-                        worst_obj = torch.amax(
-                            self.train_y_scaled_reg[
-                                ~self.train_y_scaled_reg.isnan()
-                            ]
-                        )
-
-                        to_replace = torch.ones(infeas_ix.size()) * worst_obj
-
-                        new_train_y_scaled_reg[infeas_ix] = to_replace.double()
-                        new_train_y_scaled_reg[
-                            feas_ix
-                        ] = self.train_y_scaled_reg.squeeze()
-
-                        self.train_x_scaled_reg = (
-                            self.train_x_scaled_cla.double()
-                        )
-                        self.train_y_scaled_reg = new_train_y_scaled_reg.view(
-                            self.train_y_scaled_cla.size(0), 1
-                        )
-
-                    else:
-                        raise NotImplementedError
-                else:
-                    # if we are not able to use the naive strategies, propose randomly
-                    # do nothing at all and use the feasibilty surrogate as the acquisition
-                    use_p_feas_only = True
 
             # builds and fits the regression surrogate model
             self.reg_model = self.build_train_regression_gp(
