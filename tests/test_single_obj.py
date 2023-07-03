@@ -23,7 +23,7 @@ CONT = {
 	],  # init design strategies
 	"batch_size": [1],  # batch size
 	"use_descriptors": [False],  # use descriptors
-	"acquisition_type": ['ei'], # 'ucb', 'variance'],
+	"acquisition_type": ['ei', 'ucb', 'variance'], # 'ucb', 'variance'],
 	"acquisition_optimizer": ['pymoo'],#['gradient', 'genetic'],
 }
 
@@ -31,7 +31,7 @@ DISC = {
 	"init_design_strategy": ["random"],
 	"batch_size": [1],
 	"use_descriptors": [False],
-	"acquisition_type": ['ei'], #['ei', 'ucb', 'variance'],
+	"acquisition_type": ['ei', 'ucb', 'variance'],
 	"acquisition_optimizer": ['pymoo'],#['gradient', 'genetic'],
 }
 
@@ -39,7 +39,7 @@ CAT = {
 	"init_design_strategy": ["random"],
 	"batch_size": [1],
 	"use_descriptors": [False, True],
-	"acquisition_type": ['ei'], #['ei', 'ucb', 'variance'],
+	"acquisition_type": ['ei', 'ucb', 'variance'],
 	"acquisition_optimizer": ['pymoo'],#['gradient', 'genetic'],
 }
 
@@ -55,7 +55,7 @@ MIXED_DISC_CONT = {
 	"init_design_strategy": ["random"],
 	"batch_size": [1],
 	"use_descriptors": [False],
-	"acquisition_type": ['ei'], #['ei', 'ucb', 'variance'],
+	"acquisition_type": ['ei', 'ucb', 'variance'],
 	"acquisition_optimizer": ['pymoo'],#['gradient', 'genetic'],
 }
 
@@ -64,7 +64,7 @@ MIXED_CAT_DISC = {
 	"init_design_strategy": ["random"],
 	"batch_size": [1],
 	"use_descriptors": [False, True],
-	"acquisition_type": ['ei'], #['ei', 'ucb', 'variance'],
+	"acquisition_type": ['ei', 'ucb', 'variance'],
 	"acquisition_optimizer":['pymoo'],# ['gradient', 'genetic'],
 }
 
@@ -72,7 +72,7 @@ MIXED_CAT_DISC_CONT = {
 	"init_design_strategy": ["random"],
 	"batch_size": [1],
 	"use_descriptors": [False, True],
-	"acquisition_type":['ei'], # ['ei', 'ucb', 'variance'],
+	"acquisition_type": ['ei', 'ucb', 'variance'],
 	"acquisition_optimizer": ['pymoo'],#['gradient', 'genetic'],
 }
 
@@ -300,7 +300,7 @@ def run_categorical(
 		acquisition_type=acquisition_type,
 		acquisition_optimizer_kind=acquisition_optimizer,
 	)
-	planner.set_param_space(surface.param_space)
+	planner.set_param_space(surface_callable.param_space)
 
 	BUDGET = num_init_design + batch_size * 4
 
@@ -374,6 +374,7 @@ def run_mixed_disc_cont(
 		acquisition_type=acquisition_type,
 		acquisition_optimizer_kind=acquisition_optimizer,
 	)
+	planner.set_param_space(param_space)
 
 	BUDGET = num_init_design + batch_size * 4
 
@@ -468,7 +469,7 @@ if __name__ == "__main__":
 		batch_size=1, 
 		use_descriptors=False, 
 		acquisition_type='ei', 
-		acquisition_optimizer='gradient',
+		acquisition_optimizer='pymoo',
 		num_init_design=5,
 	)
 
@@ -477,7 +478,7 @@ if __name__ == "__main__":
 		batch_size=1, 
 		use_descriptors=False, 
 		acquisition_type='ei', 
-		acquisition_optimizer='gradient',
+		acquisition_optimizer='pymoo',
 		num_init_design=5,
 	)
 	
@@ -486,7 +487,7 @@ if __name__ == "__main__":
 		batch_size=1, 
 		use_descriptors=True, 
 		acquisition_type='ei', 
-		acquisition_optimizer='gradient',
+		acquisition_optimizer='pymoo',
 		num_init_design=5,
 	)
 	
@@ -495,7 +496,7 @@ if __name__ == "__main__":
 		batch_size=1, 
 		use_descriptors=True, 
 		acquisition_type='ei', 
-		acquisition_optimizer='gradient',
+		acquisition_optimizer='pymoo',
 		num_init_design=5,
 		)
 	
@@ -504,7 +505,7 @@ if __name__ == "__main__":
 		batch_size=1, 
 		use_descriptors=False, 
 		acquisition_type='ei', 
-		acquisition_optimizer='gradient',
+		acquisition_optimizer='pymoo',
 		num_init_design=5,
 		)
 	
@@ -513,7 +514,7 @@ if __name__ == "__main__":
 		batch_size=1, 
 		use_descriptors=True, 
 		acquisition_type='ei', 
-		acquisition_optimizer='gradient',
+		acquisition_optimizer='pymoo',
 		num_init_design=5,
 	)
 
@@ -521,7 +522,7 @@ if __name__ == "__main__":
 		init_design_strategy='random', 
 		batch_size=1, 
 		use_descriptors=True, 
-		acquisition_type='ucb', 
-		acquisition_optimizer='gradient', 
+		acquisition_type='ei', 
+		acquisition_optimizer='pymoo', 
 		num_init_design=5,
 	)
