@@ -1,89 +1,95 @@
 #!/usr/bin/env python
 
-# import os
-#
-# import numpy as np
-# import pytest
-# from olympus.campaigns import Campaign, ParameterSpace
-# from olympus.objects import (
-#     ParameterCategorical,
-#     ParameterContinuous,
-#     ParameterDiscrete,
-# )
-# from olympus.scalarizers import Scalarizer
-# from olympus.surfaces import Surface
-#
-# from atlas.optimizers.dkt.planner import DKTPlanner
-# from atlas.utils.synthetic_data import trig_factory
-#
-#
-# def run_continuous(init_design_strategy):
-#     def surface(x):
-#         return np.sin(8 * x)
-#
-#     # define the meta-training tasks
-#     train_tasks = trig_factory(
-#         num_samples=20,
-#         as_numpy=True,
-#         # scale_range=[[7, 9], [7, 9]],
-#         # scale_range=[[-9, -7], [-9, -7]],
-#         scale_range=[[-8.5, -7.5], [7.5, 8.5]],
-#         shift_range=[-0.02, 0.02],
-#         amplitude_range=[0.2, 1.2],
-#     )
-#     valid_tasks = trig_factory(
-#         num_samples=5,
-#         as_numpy=True,
-#         # scale_range=[[7, 9], [7, 9]],
-#         # scale_range=[[-9, -7], [-9, -7]],
-#         scale_range=[[-8.5, -7.5], [7.5, 8.5]],
-#         shift_range=[-0.02, 0.02],
-#         amplitude_range=[0.2, 1.2],
-#     )
-#
-#     param_space = ParameterSpace()
-#     # add continuous parameter
-#     param_0 = ParameterContinuous(name="param_0", low=0.0, high=1.0)
-#     param_space.add(param_0)
-#
-#     planner = DKTPlanner(
-#         goal="minimize",
-#         warm_start=False,
-#         train_tasks=train_tasks,
-#         valid_tasks=valid_tasks,
-#         model_path="./tmp_models/",
-#         init_design_strategy=init_design_strategy,
-#         num_init_design=4,
-#         batch_size=1,
-#         from_disk=False,
-#         hyperparams={
-#             "model": {
-#                 "epochs": 4000,
-#             }
-#         },
-#     )
-#
-#     planner.set_param_space(param_space)
-#
-#     # make the campaign
-#     campaign = Campaign()
-#     campaign.set_param_space(param_space)
-#
-#     BUDGET = 10
-#
-#     while len(campaign.observations.get_values()) < BUDGET:
-#
-#         samples = planner.recommend(campaign.observations)
-#         for sample in samples:
-#             sample_arr = sample.to_array()
-#             measurement = surface(sample_arr)
-#             campaign.add_observation(sample_arr, measurement)
-#
-#     os.system("rm -r ./tmp_models/")
-#
-#     assert len(campaign.observations.get_params()) == BUDGET
-#     assert len(campaign.observations.get_values()) == BUDGET
-#
+import os
+
+import numpy as np
+import pytest
+from olympus.campaigns import Campaign, ParameterSpace
+from olympus.objects import (
+    ParameterCategorical,
+    ParameterContinuous,
+    ParameterDiscrete,
+)
+from olympus.scalarizers import Scalarizer
+from olympus.surfaces import Surface
+
+from atlas.planners.dkt.planner import DKTPlanner
+from atlas.utils.synthetic_data import trig_factory
+
+
+def run_continuous(init_design_strategy):
+    def surface(x):
+        return np.sin(8 * x)
+
+    # define the meta-training tasks
+    train_tasks = trig_factory(
+        num_samples=20,
+        as_numpy=True,
+        # scale_range=[[7, 9], [7, 9]],
+        # scale_range=[[-9, -7], [-9, -7]],
+        scale_range=[[-8.5, -7.5], [7.5, 8.5]],
+        shift_range=[-0.02, 0.02],
+        amplitude_range=[0.2, 1.2],
+    )
+    valid_tasks = trig_factory(
+        num_samples=5,
+        as_numpy=True,
+        # scale_range=[[7, 9], [7, 9]],
+        # scale_range=[[-9, -7], [-9, -7]],
+        scale_range=[[-8.5, -7.5], [7.5, 8.5]],
+        shift_range=[-0.02, 0.02],
+        amplitude_range=[0.2, 1.2],
+    )
+
+    param_space = ParameterSpace()
+    # add continuous parameter
+    param_0 = ParameterContinuous(name="param_0", low=0.0, high=1.0)
+    param_space.add(param_0)
+
+    planner = DKTPlanner(
+        goal="minimize",
+        init_design_strategy=init_design_strategy,
+        num_init_design=4,
+        batch_size=1,
+        acquisition_type='ei',
+        acquisition_optimizer_kind='pymoo',
+        # meta-learning stuff
+        from_disk=False,
+        hyperparams={
+            "model": {
+                "epochs": 6000,
+            }
+        },
+        warm_start=False, 
+        model_path='./tmp_models',
+        train_tasks=train_tasks,
+        valid_tasks=valid_tasks,
+    )
+
+    planner.set_param_space(param_space)
+
+    # make the campaign
+    campaign = Campaign()
+    campaign.set_param_space(param_space)
+
+    BUDGET = 12
+
+    while len(campaign.observations.get_values()) < BUDGET:
+
+        samples = planner.recommend(campaign.observations)
+        for sample in samples:
+            sample_arr = sample.to_array()
+            measurement = surface(sample_arr)
+            campaign.add_observation(sample_arr, measurement)
+
+            print('SAMPLE : ', sample)
+            print('MEASUREMENT : ', measurement)
+
+    os.system("rm -r ./tmp_models/")
+
+    assert len(campaign.observations.get_params()) == BUDGET
+    assert len(campaign.observations.get_values()) == BUDGET
+
 #
 # def test_continuous_hypervolume():
 #
@@ -344,6 +350,6 @@
 # 	assert campaign.observations.get_values().shape[1] == len(moo_surface.value_space)
 
 
-# if __name__ == "__main__":
-#     # run_continuous('lhs')
-#     test_continuous_hypervolume()
+if __name__ == "__main__":
+    run_continuous('lhs')
+    #test_continuous_hypervolume()

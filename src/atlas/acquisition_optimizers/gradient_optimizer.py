@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+import copy
+import time
+import multiprocessing
+from multiprocessing import Process, Manager
 
 import botorch
 import numpy as np
@@ -31,6 +35,8 @@ from atlas.utils.planner_utils import (
 	reverse_standardize,
 )
 from atlas.acquisition_optimizers.base_optimizer import AcquisitionOptimizer
+
+from atlas.optimizers.adam import AdamOptimizer
 
 
 
@@ -76,6 +82,13 @@ class GradientOptimizer(AcquisitionOptimizer):
 
 		self.kind = 'gradient'
 
+		# adam config
+		self.convergence_dx = 1e-7
+		self.max_iter = 10
+
+		self.num_cpus = multiprocessing.cpu_count()
+
+
 	def _optimize(self):
 
 		best_idx = None  # only needed for the fully categorical case
@@ -111,13 +124,62 @@ class GradientOptimizer(AcquisitionOptimizer):
 
 		return self.postprocess_results(results, best_idx)
 
+	def _within_bounds(self, sample):
+		return None
+
+	def _project_sample_to_bounds(self, sample):
+		return None
+
+	def _optimize_fully_continuous_thread(self, samples, cont_optimizer, sample_list, acqf_list):
+
+		for sample in samples:
+			sample = sample[0, :]
+			# reset Adam optimizer for each sample
+			cont_optimizer.reset()
+
+			prev_optimized = torch.clone(sample)
+			optimized = torch.clone(sample)
+
+			for iter_ix in range(self.max_iter):
+				optimized = cont_optimizer.compute_update(optimized)
+
+				# evaluate whether the optimized sample violates the known constraints
+				kc_vals = [kc(optimized.detach().numpy()) for kc in self.known_constraints]
+				
+				if not all(kc_vals):
+					# return previous sample
+					optimized = torch.clone(prev_optimized)
+					break
+				
+				# check for convergence 
+				if torch.any(torch.norm(prev_optimized - optimized)) < self.convergence_dx:
+					break
+				else:
+					prev_optimized = torch.clone(optimized)
+			acqf_val = self.acqf(optimized.view(1, optimized.shape[0]))
+			sample_list.append(optimized)
+			acqf_list.append(acqf_val)
+
+		return sample, acqf_val
+
 	def _optimize_fully_continuous(self):
+
+
+		cont_optimizer = AdamOptimizer(
+			acqf=self.acqf, 
+			select_params=[True for _ in range(len(self.param_space))]
+		)
+
 
 		(
 			nonlinear_inequality_constraints,
 			batch_initial_conditions,
 			_
 		) = self.gen_initial_conditions()
+		# TODO: this will not work for batches
+		# batch_initial_conditions = batch_initial_conditions.squeeze(1) # (num_samples, num_params)
+
+		# start_time = time.time()
 
 		results, _ = optimize_acqf(
 			acq_function=self.acqf,
@@ -128,6 +190,96 @@ class GradientOptimizer(AcquisitionOptimizer):
 			nonlinear_inequality_constraints=nonlinear_inequality_constraints,
 			batch_initial_conditions=batch_initial_conditions,
 		)
+		# optimized_samples = torch.empty((batch_initial_conditions.shape[0], len(self.param_space)))
+		# acqf_vals = torch.empty((batch_initial_conditions.shape[0], 1))
+
+		#------------
+		# SEQUENTIAL
+		#------------
+		# for sample_ix, sample in enumerate(batch_initial_conditions):
+		# 	sample = sample[0, :]
+		# 	# reset Adam optimizer for each sample
+		# 	cont_optimizer.reset()
+
+		# 	prev_optimized = torch.clone(sample)
+		# 	optimized = torch.clone(sample)
+
+		# 	for iter_ix in range(max_iter):
+		# 		optimized = cont_optimizer.compute_update(optimized)
+
+		# 		# evaluate whether the optimized sample violates the known constraints
+		# 		kc_vals = [kc(optimized.detach().numpy()) for kc in self.known_constraints]
+				
+		# 		if not all(kc_vals):
+		# 			# return previous sample
+		# 			optimized = torch.clone(prev_optimized)
+		# 			break
+				
+		# 		# check for convergence 
+		# 		if torch.any(torch.norm(prev_optimized - optimized)) < convergence_dx:
+		# 			break
+		# 		else:
+		# 			prev_optimized = torch.clone(optimized)
+
+		# 	#print(self.acqf(optimized.view(1, optimized.shape[0])).shape)
+		# 	acqf_vals[sample_ix, :] = self.acqf(optimized.view(1, optimized.shape[0]))
+		# 	#quit()
+				
+		# 	optimized_samples[sample_ix, :] = optimized
+
+		# best_ix = torch.argmin(acqf_vals)
+		# best_sample = optimized_samples[best_ix]
+
+		# results = best_sample.view(1, best_sample.shape[0])
+
+		# elapsed_time = time.time() - start_time
+		# Logger.log(f'Acqf opt completed in {round(elapsed_time,3)} sec', 'INFO')
+
+		# print(results.shape)
+
+
+		#-----
+		# MP
+		#-----
+		# sample_list = Manager().list()
+		# acqf_list = Manager().list()
+
+		# num_samples_batch = (batch_initial_conditions.shape[0]/torch.tensor([self.num_cpus])).to(torch.int32)
+		# num_mp_batches = (batch_initial_conditions.shape[0]/num_samples_batch).to(torch.int32)
+		# samples_ix = 0
+		# processes = []
+		# for mp_batch in range(num_mp_batches):
+		# 	process = Process(
+		# 		target = self._optimize_fully_continuous_thread,
+		# 		args=(
+		# 			batch_initial_conditions[samples_ix:samples_ix+num_samples_batch, :],
+		# 			cont_optimizer,
+		# 			sample_list, 
+		# 			acqf_list,
+		# 		)
+		# 	)
+		# 	processes.append(process)
+		# 	process.start()
+
+		# for process in processes:
+		# 	process.join()
+
+		# #optimized_samples = torch.Tensor(num_samples_batch*num_mp_batches, len(self.param_space))
+		# #acqf_vals = torch.Tensor(num_samples_batch*num_mp_batches, 1 )
+		# print(sample_list)
+		# optimized_samples = torch.cat(tuple(sample_list))
+		# acqf_vals = torch.cat(tuple(acqf_list))
+
+
+		# best_ix = torch.argmin(acqf_vals)
+		# best_sample = optimized_samples[best_ix]
+
+		# results = best_sample.view(1, best_sample.shape[0])
+
+		# elapsed_time = time.time() - start_time
+		# Logger.log(f'Acqf opt completed in {round(elapsed_time,3)} sec', 'INFO')
+
+		# print(results.shape)
 
 		return results
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import os
 import pickle
 import sys
@@ -22,34 +23,40 @@ from botorch.optim import (
 )
 from gpytorch.distributions import MultivariateNormal
 from gpytorch.models import GP
-from olympus import ParameterVector
+from olympus import ParameterVector, ParameterSpace
 from olympus.planners import AbstractPlanner, CustomPlanner, Planner
 from olympus.scalarizers import Scalarizer
 
 from atlas import Logger
 from atlas.networks.dkt.dkt import DKT
-from atlas.optimizers.acqfs import (
+from atlas.acquisition_functions.acqfs import (
     FeasibilityAwareEI,
     FeasibilityAwareGeneral,
     FeasibilityAwareQEI,
     create_available_options,
     get_batch_initial_conditions,
 )
-from atlas.optimizers.acquisition_optimizers.base_optimizer import (
-    AcquisitionOptimizer,
+from atlas.acquisition_optimizers import (
+    GeneticOptimizer,
+    GradientOptimizer,
+    PymooGAOptimizer
 )
-from atlas.optimizers.base import BasePlanner
-from atlas.optimizers.gps import (
+from atlas.base.base import BasePlanner
+from atlas.gps.gps import (
     CategoricalSingleTaskGP,
     ClassificationGPMatern,
 )
-from atlas.optimizers.utils import (
+from atlas.params.params import Parameters
+from atlas.unknown_constraints.unknown_constraints import UnknownConstraints
+
+from atlas.base.base import BasePlanner
+
+from atlas.utils.planner_utils import (
     Scaler,
     cat_param_to_feat,
     flip_source_tasks,
     forward_normalize,
     forward_standardize,
-
     get_cat_dims,
     get_fixed_features_list,
     infer_problem_type,
@@ -57,7 +64,6 @@ from atlas.optimizers.utils import (
     reverse_normalize,
     reverse_standardize,
 )
-
 
 class DKTModel(GP, GPyTorchModel):
 
@@ -93,19 +99,33 @@ class DKTPlanner(BasePlanner):
 
     def __init__(
         self,
-        goal="minimize",
-        feas_strategy="naive-0",
-        feas_param=0.2,
-        batch_size=1,
-        random_seed=None,
-        num_init_design=5,
-        init_design_strategy="random",
-        vgp_iters=1000,
-        vgp_lr=0.1,
-        max_jitter=1e-1,
-        cla_threshold=0.5,
-        known_constraints=None,
-        general_parmeters=None,
+		goal: str,
+		feas_strategy: Optional[str] = "naive-0",
+		feas_param: Optional[float] = 0.2,
+		use_min_filter: bool = True,
+		batch_size: int = 1,
+		batched_strategy: str = 'sequential', # sequential or greedy
+		random_seed: Optional[int] = None,
+		use_descriptors: bool = False,
+		num_init_design: int = 5,
+		init_design_strategy: str = "random",
+		acquisition_type: str = "ei",  # ei, ucb
+		acquisition_optimizer_kind: str = "gradient",  # gradient, genetic
+		vgp_iters: int = 2000,
+		vgp_lr: float = 0.1,
+		max_jitter: float = 1e-1,
+		cla_threshold: float = 0.5,
+		known_constraints: Optional[List[Callable]] = None,
+		compositional_params: Optional[List[int]] = None,
+        permutation_params: Optional[List[int]] = None,
+		batch_constrained_params: Optional[List[int]] = None,
+		general_parameters: Optional[List[int]] = None,
+		is_moo: bool = False,
+		value_space: Optional[ParameterSpace] = None,
+		scalarizer_kind: Optional[str] = "Hypervolume",
+		moo_params: Dict[str, Union[str, float, int, bool, List]] = {},
+		goals: Optional[List[str]] = None,
+		golem_config: Optional[Dict[str, Any]] = None,
         # meta-learning stuff
         warm_start=False,
         model_path="./.tmp_models",
@@ -113,12 +133,6 @@ class DKTPlanner(BasePlanner):
         train_tasks=[],
         valid_tasks=None,
         hyperparams={},
-        # moo stuff
-        is_moo=False,
-        value_space=None,
-        scalarizer_kind="Hypervolume",
-        moo_params={},
-        goals=None,
         **kwargs,
     ):
 
@@ -161,7 +175,7 @@ class DKTPlanner(BasePlanner):
         self._train_tasks = self.scaler.fit_transform_tasks(self._train_tasks)
         self._valid_tasks = self.scaler.transform_tasks(self._valid_tasks)
 
-    def _load_model(self):
+    def _load_model(self) -> None:
         # calculate the dimensionality
         x_dim = 0
         for param in self.param_space:
@@ -183,7 +197,7 @@ class DKTPlanner(BasePlanner):
             hyperparams=self.hyperparams,
         )
 
-    def _meta_train(self):
+    def _meta_train(self) -> None:
         """train the model on the source tasks before commencing the
         target optimization
         """
@@ -210,43 +224,25 @@ class DKTPlanner(BasePlanner):
                 "INFO",
             )
 
-    def _ask(self):
+    def _ask(self) -> List[ParameterVector]:
         """query the planner for a batch of new parameter points to measure"""
 
         # check in the reg model has been meta-trained
         if not hasattr(self, "model"):
             self._meta_train()
 
+
         # if we have all nan values, just keep randomly sampling
         if np.logical_or(
             len(self._values) < self.num_init_design,
             np.all(np.isnan(self._values)),
         ):
+            return_params = self.initial_design()
 
-            # set parameter space for the initial design planner
-            self.init_design_planner.set_param_space(self.param_space)
-
-            # sample using initial design strategy (with same batch size)
-            return_params = []
-            for _ in range(self.batch_size):
-                # TODO: this is pretty sloppy - consider standardizing this
-                if self.init_design_strategy == "random":
-                    self.init_design_planner._tell(
-                        iteration=self.num_init_design_completed
-                    )
-                else:
-                    self.init_design_planner.tell()
-                rec_params = self.init_design_planner.ask()
-                if isinstance(rec_params, list):
-                    return_params.append(rec_params[0])
-                elif isinstance(rec_params, ParameterVector):
-                    return_params.append(rec_params)
-                else:
-                    raise TypeError
-                self.num_init_design_completed += (
-                    1  # batch_size always 1 for init design planner
-                )
         else:
+            # timings dictionary for analysis
+            self.timings_dict = {}
+
             # use GP surrogate to propose the samples
             # get the scaled parameters and values for both the regression and classification data
             (
@@ -256,91 +252,31 @@ class DKTPlanner(BasePlanner):
                 self.train_y_scaled_reg,
             ) = self.build_train_data()
 
-            use_p_feas_only = False
-            # check to see if we are using the naive approaches
-            if "naive-" in self.feas_strategy:
-                infeas_ix = torch.where(self.train_y_scaled_cla == 1.0)[0]
-                feas_ix = torch.where(self.train_y_scaled_cla == 0.0)[0]
-                # checking if we have at least one objective function measurement
-                #  and at least one infeasible point (i.e. at least one point to replace)
-                if np.logical_and(
-                    self.train_y_scaled_reg.size(0) >= 1,
-                    infeas_ix.shape[0] >= 1,
-                ):
-                    if self.feas_strategy == "naive-replace":
-                        # NOTE: check to see if we have a trained regression surrogate model
-                        # if not, wait for the following iteration to make replacements
-                        if hasattr(self, "reg_model"):
-                            # if we have a trained regression model, go ahead and make replacement
-                            new_train_y_scaled_reg = deepcopy(
-                                self.train_y_scaled_cla
-                            ).double()
-
-                            input = self.train_x_scaled_cla[infeas_ix].double()
-
-                            posterior = self.reg_model.posterior(X=input)
-                            pred_mu = posterior.mean.detach()
-
-                            new_train_y_scaled_reg[
-                                infeas_ix
-                            ] = pred_mu.squeeze(-1)
-                            new_train_y_scaled_reg[
-                                feas_ix
-                            ] = self.train_y_scaled_reg.squeeze(-1)
-
-                            self.train_x_scaled_reg = deepcopy(
-                                self.train_x_scaled_cla
-                            ).double()
-                            self.train_y_scaled_reg = (
-                                new_train_y_scaled_reg.view(
-                                    self.train_y_scaled_cla.size(0), 1
-                                ).double()
-                            )
-
-                        else:
-                            use_p_feas_only = True
-
-                    elif self.feas_strategy == "naive-0":
-                        new_train_y_scaled_reg = deepcopy(
-                            self.train_y_scaled_cla
-                        ).double()
-
-                        worst_obj = torch.amax(
-                            self.train_y_scaled_reg[
-                                ~self.train_y_scaled_reg.isnan()
-                            ]
-                        )
-
-                        to_replace = torch.ones(infeas_ix.size()) * worst_obj
-
-                        new_train_y_scaled_reg[infeas_ix] = to_replace.double()
-                        new_train_y_scaled_reg[
-                            feas_ix
-                        ] = self.train_y_scaled_reg.squeeze()
-
-                        self.train_x_scaled_reg = (
-                            self.train_x_scaled_cla.double()
-                        )
-                        self.train_y_scaled_reg = new_train_y_scaled_reg.view(
-                            self.train_y_scaled_cla.size(0), 1
-                        )
-
-                    else:
-                        raise NotImplementedError
-                else:
-                    # if we are not able to use the naive strategies, propose randomly
-                    # do nothing at all and use the feasibilty surrogate as the acquisition
-                    use_p_feas_only = True
-
-            # builds and fits the regression surrogate model
-            # self.reg_model = self.build_train_regression_gp(self.train_x_scaled_reg, self.train_y_scaled_reg)
+            # handle naive unknown constriants strategies if relevant
+            # TODO: put this in build_train_data method
+            (
+                self.train_x_scaled_reg,
+                self.train_y_scaled_reg,
+                self.train_x_scaled_cla,
+                self.train_y_scaled_cla,
+                use_p_feas_only
+            ) = self.unknown_constraints.handle_naive_feas_strategies(
+                self.train_x_scaled_reg,
+                self.train_y_scaled_reg,
+                self.train_x_scaled_cla,
+                self.train_y_scaled_cla,
+            )
 
             # builds the regression model
             self.reg_model = DKTModel(
                 self.model, self.train_x_scaled_reg, self.train_y_scaled_reg
             )
 
-            if not "naive-" in self.feas_strategy:
+            # TODO: can probably put this bit in the unknown constraints module
+            if (
+                not "naive-" in self.feas_strategy
+                and torch.sum(self.train_y_scaled_cla).item() != 0.0
+            ):
                 # build and train the classification surrogate model
                 (
                     self.cla_model,
@@ -352,8 +288,22 @@ class DKTPlanner(BasePlanner):
                 self.cla_model.eval()
                 self.cla_likelihood.eval()
 
+                use_reg_only = False
+
+                # estimate the max and min of the cla surrogate
+                (
+                    self.cla_surr_min_,
+                    self.cla_surr_max_,
+                ) = self.get_cla_surr_min_max(num_samples=5000)
+                self.fca_cutoff = (
+                    self.cla_surr_max_ - self.cla_surr_min_
+                ) * self.feas_param + self.cla_surr_min_
+
             else:
+                use_reg_only = True
                 self.cla_model, self.cla_likelihood = None, None
+                self.cla_surr_min_, self.cla_surr_max_ = None, None
+
 
             # get the incumbent point
             f_best_argmin = torch.argmin(self.train_y_scaled_reg)
@@ -367,7 +317,15 @@ class DKTPlanner(BasePlanner):
             # get the approximate max and min of the acquisition function without the feasibility contribution
             acqf_min_max = self.get_aqcf_min_max(self.reg_model, f_best_scaled)
 
-            if self.batch_size == 1:
+            if self.acquisition_type == "ei":
+                if (
+                    self.batch_size > 1
+                    and self.batched_strategy == "sequential"
+                ):
+                    Logger.log(
+                        'Cannot use "sequential" batched strategy with EI acquisition function',
+                        "FATAL",
+                    )
                 self.acqf = FeasibilityAwareEI(
                     self.reg_model,
                     self.cla_model,
@@ -378,8 +336,17 @@ class DKTPlanner(BasePlanner):
                     self.feas_param,
                     infeas_ratio,
                     acqf_min_max,
+                    use_min_filter=self.use_min_filter,
+                    use_reg_only=use_reg_only,
                 )
-            elif self.batch_size > 1:
+
+            elif self.acquisition_type == "qei":
+                if not self.batch_size > 1:
+                    Logger.log(
+                        "QEI acquisition function can only be used if batch size > 1",
+                        "FATAL",
+                    )
+
                 self.acqf = FeasibilityAwareQEI(
                     self.reg_model,
                     self.cla_model,
@@ -390,38 +357,61 @@ class DKTPlanner(BasePlanner):
                     self.feas_param,
                     infeas_ratio,
                     acqf_min_max,
+                    use_min_filter=self.use_min_filter,
+                    use_reg_only=use_reg_only,
+                )
+            else:
+                Logger.log(
+                    'DKT planner requires using either EI or QEI acquisiton function', 'FATAL'
                 )
 
-            bounds = get_bounds(
-                self.param_space,
-                self._mins_x,
-                self._maxs_x,
-                self.has_descriptors,
-            )
+            # set acquisition optimizer
+            if self.acquisition_optimizer_kind == "gradient":
+                acquisition_optimizer = GradientOptimizer(
+                    self.params_obj,
+                    self.acquisition_type,
+                    self.acqf,
+                    self.known_constraints,
+                    self.batch_size,
+                    self.feas_strategy,
+                    self.fca_constraint,
+                    self._params,
+                    self.batched_strategy,
+                    self.timings_dict,
+                    use_reg_only=use_reg_only,
+                )
+            elif self.acquisition_optimizer_kind == "genetic":
+                acquisition_optimizer = GeneticOptimizer(
+                    self.params_obj,
+                    self.acquisition_type,
+                    self.acqf,
+                    self.known_constraints,
+                    self.batch_size,
+                    self.feas_strategy,
+                    self.fca_constraint,
+                    self._params,
+                    self.timings_dict,
+                    use_reg_only=use_reg_only,
+                )
 
-            print("PROBLEM TYPE : ", self.problem_type)
+            elif self.acquisition_optimizer_kind == 'pymoo':
+                acquisition_optimizer = PymooGAOptimizer(
+                    self.params_obj,
+                    self.acquisition_type,
+                    self.acqf,
+                    self.known_constraints,
+                    self.batch_size,
+                    self.feas_strategy,
+                    self.fca_constraint,
+                    self._params,
+                    self.timings_dict,
+                    use_reg_only=use_reg_only,
+                )
 
-            # -------------------------------
-            # optimize acquisition function
-            # -------------------------------
-
-            acquisition_optimizer = AcquisitionOptimizer(
-                self.acquisition_optimizer_kind,
-                self.param_space,
-                self.acqf,
-                bounds,
-                self.known_constraints,
-                self.batch_size,
-                self.feas_strategy,
-                self.fca_constraint,
-                self.has_descriptors,
-                self._params,
-                self._mins_x,
-                self._maxs_x,
-            )
             return_params = acquisition_optimizer.optimize()
 
         return return_params
+
 
     def get_aqcf_min_max(self, reg_model, f_best_scaled, num_samples=2000):
         """computes the min and max value of the acquisition function without
@@ -436,13 +426,13 @@ class DKTPlanner(BasePlanner):
             acqf = qExpectedImprovement(
                 reg_model, f_best_scaled, objective=None, maximize=False
             )
-        samples, _ = propose_randomly(num_samples, self.param_space)
+        samples, _ = propose_randomly(num_samples, self.param_space, self.has_descriptors)
         if (
             not self.problem_type == "fully_categorical"
             and not self.has_descriptors
         ):
             # we dont scale the parameters if we have a one-hot-encoded representation
-            samples = forward_normalize(samples, self._mins_x, self._maxs_x)
+            samples = forward_normalize(samples, self.params_obj._mins_x, self.params_obj._maxs_x)
 
         acqf_vals = acqf(
             torch.tensor(samples)
