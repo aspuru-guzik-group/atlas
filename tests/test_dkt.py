@@ -47,7 +47,7 @@ def run_continuous(init_design_strategy):
     param_space.add(param_0)
 
     planner = DKTPlanner(
-        goal="minimize",
+        goal="maximize",
         init_design_strategy=init_design_strategy,
         num_init_design=4,
         batch_size=1,
