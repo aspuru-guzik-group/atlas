@@ -15,7 +15,6 @@ from olympus.scalarizers import Scalarizer
 from olympus.surfaces import Surface
 
 from atlas.planners.gp.planner import BoTorchPlanner
-from atlas.planners.qnehvi.planner import qNEHVIPlanner
 from problem_generator import ProblemGenerator, KnownConstraintsGenerator
 from problem_generator import HybridSurface
 
@@ -93,34 +92,21 @@ def run_continuous(
     problem_gen = ProblemGenerator(problem_type='continuous')
     surface_callable, param_space = problem_gen.generate_instance()
     known_constraints = KnownConstraintsGenerator().get_constraint('continuous')
-    # def surface(x):
-    #     if np.random.uniform() > 0.2:
-    #         return (
-    #             np.sin(8 * x[0]) - 2 * np.cos(6 * x[1]) + np.exp(-2.0 * x[2])
-    #         )
-    #     else:
-    #         return np.nan
 
-    # split = feas_strategy_param.split("_")
-    # feas_strategy, feas_param = split[0], float(split[1])
 
-    # param_space = ParameterSpace()
-    # param_0 = ParameterContinuous(name="param_0", low=0.0, high=1.0)
-    # param_1 = ParameterContinuous(name="param_1", low=0.0, high=1.0)
-    # param_2 = ParameterContinuous(name="param_2", low=0.0, high=1.0)
-    # param_space.add(param_0)
-    # param_space.add(param_1)
-    # param_space.add(param_2)
+    split = feas_strategy_param.split('_')
+    feas_strategy, feas_param = split[0], float(split[1])
 
-    # planner = BoTorchPlanner(
-    #     goal="minimize",
-    #     feas_strategy=feas_strategy,
-    #     feas_param=feas_param,
-    #     init_design_strategy=init_design_strategy,
-    #     num_init_design=num_init_design,
-    #     acquisition_optimizer_kind=acquisition_optimizer,
-    #     batch_size=batch_size,
-    # )
+    planner = BoTorchPlanner(
+        goal="minimize",
+        feas_strategy=feas_strategy,
+        feas_param=feas_param,
+        init_design_strategy=init_design_strategy,
+        num_init_design=num_init_design,
+        acquisition_optimizer_kind=acquisition_optimizer,
+        use_descriptors=use_descriptors,
+        batch_size=batch_size,
+    )
 
     planner.set_param_space(param_space)
 
@@ -134,12 +120,66 @@ def run_continuous(
         samples = planner.recommend(campaign.observations)
         for sample in samples:
             sample = sample.to_array()
-            measurement = surface_callable.run(sample)
+            if known_constraints(sample):
+                measurement = surface_callable.run(sample)
+            else:
+                measurement = np.array([[np.nan]])
+            print('sample :', sample)
+            print('measurement :', measurement)
             campaign.add_observation(sample, measurement)
 
     assert len(campaign.observations.get_params()) == BUDGET
     assert len(campaign.observations.get_values()) == BUDGET
 
+def run_discrete(    
+    init_design_strategy,
+    batch_size,
+    feas_strategy_param,
+    use_descriptors,
+    acquisition_optimizer,
+    num_init_design=5,
+):
+    problem_gen = ProblemGenerator(problem_type='discrete')
+    surface_callable, param_space = problem_gen.generate_instance()
+    known_constraints = KnownConstraintsGenerator().get_constraint('discrete')
+
+
+    split = feas_strategy_param.split('_')
+    feas_strategy, feas_param = split[0], float(split[1])
+
+    planner = BoTorchPlanner(
+        goal="minimize",
+        feas_strategy=feas_strategy,
+        feas_param=feas_param,
+        init_design_strategy=init_design_strategy,
+        num_init_design=num_init_design,
+        acquisition_optimizer_kind=acquisition_optimizer,
+        use_descriptors=use_descriptors,
+        batch_size=batch_size,
+    )
+
+    planner.set_param_space(param_space)
+
+    campaign = Campaign()
+    campaign.set_param_space(param_space)
+
+    BUDGET = num_init_design + batch_size * 4
+
+    while len(campaign.observations.get_values()) < BUDGET:
+
+        samples = planner.recommend(campaign.observations)
+        for sample in samples:
+            sample = sample.to_array()
+            if known_constraints(sample):
+                measurement = surface_callable.run(sample)
+            else:
+                measurement = np.array([[np.nan]])
+            print('sample :', sample)
+            print('measurement :', measurement)
+            campaign.add_observation(sample, measurement)
+
+    assert len(campaign.observations.get_params()) == BUDGET
+    assert len(campaign.observations.get_values()) == BUDGET
 
 def run_categorical(
     init_design_strategy,
@@ -292,11 +332,10 @@ def run_qnehvi_mixed_cat_disc(
 
 if __name__ == "__main__":
 
-    # run_continuous('random', 1, 'fwa-0', False)
+    run_continuous('random', 1, 'fwa_0', False, 'gradient')
     # run_continuous('random', 1, 'naive-0_0', False)
     
     #run_qnehvi_mixed_cat_disc('random', 1, 'naive-0_0', False)
     #run_qnehvi_mixed_cat_disc('random', 1, 'fia_1', False)
     #run_qnehvi_mixed_cat_disc('random', 2, 'fia_1', False)
     #run_qnehvi_mixed_cat_disc('random', 1, 'fca_0.5', False)
-    pass
