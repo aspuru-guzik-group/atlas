@@ -454,20 +454,7 @@ class BoTorchPlanner(BasePlanner):
                 objective=None,
                 maximize=False,
             )
-        elif self.acquisition_type == "ucbv2":
-
-            def acqf(X):
-                posterior = self.reg_model.posterior(
-                    X=X,
-                )
-                mean = posterior.mean.squeeze(-2).squeeze(
-                    -1
-                )  # removing redundant dimensions
-                sigma = (
-                    posterior.variance.clamp_min(1e-12).sqrt().view(mean.shape)
-                )
-                return -mean, sigma
-
+    
         elif self.acquisition_type == "variance":
             acqf = VarianceBased(reg_model)
 
@@ -500,28 +487,11 @@ class BoTorchPlanner(BasePlanner):
             .double()
         )
 
-        if not self.acquisition_type == "ucbv2":
-            min_ = torch.amin(acqf_vals).item()
-            max_ = torch.amax(acqf_vals).item()
+        min_ = torch.amin(acqf_vals).item()
+        max_ = torch.amax(acqf_vals).item()
 
-            if np.abs(max_ - min_) < 1e-6:
-                max_ = 1.0
-                min_ = 0.0
+        if np.abs(max_ - min_) < 1e-6:
+            max_ = 1.0
+            min_ = 0.0
 
-            return min_, max_
-        else:
-            min_mean_ = torch.amin(acqf_vals[0]).item()
-            max_mean_ = torch.amax(acqf_vals[0]).item()
-
-            min_sigma_ = torch.amin(acqf_vals[1]).item()
-            max_sigma_ = torch.amax(acqf_vals[1]).item()
-
-            if np.abs(max_mean_ - min_mean_) < 1e-6:
-                max_mean_ = 1.0
-                min_mean_ = 0.0
-
-            if np.abs(max_sigma_ - min_sigma_) < 1e-6:
-                max_sigma_ = 1.0
-                min_sigma_ = 0.0
-
-            return (min_mean_, max_mean_), (min_sigma_, max_sigma_)
+        return min_, max_

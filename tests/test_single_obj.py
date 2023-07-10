@@ -464,65 +464,65 @@ def run_mixed_cat_disc_cont(
 if __name__ == "__main__":
 	# pass
 	
-	run_discrete(
-		init_design_strategy='random', 
-		batch_size=1, 
-		use_descriptors=False, 
-		acquisition_type='ei', 
-		acquisition_optimizer='pymoo',
-		num_init_design=5,
-	)
+	# run_discrete(
+	# 	init_design_strategy='random', 
+	# 	batch_size=1, 
+	# 	use_descriptors=False, 
+	# 	acquisition_type='ei', 
+	# 	acquisition_optimizer='pymoo',
+	# 	num_init_design=5,
+	# )
 
 	run_continuous(
 		init_design_strategy='random', 
 		batch_size=1, 
 		use_descriptors=False, 
 		acquisition_type='ei', 
-		acquisition_optimizer='pymoo',
+		acquisition_optimizer='gradient',
 		num_init_design=5,
 	)
 	
-	run_categorical(
-		init_design_strategy='random', 
-		batch_size=1, 
-		use_descriptors=True, 
-		acquisition_type='ei', 
-		acquisition_optimizer='pymoo',
-		num_init_design=5,
-	)
+	# run_categorical(
+	# 	init_design_strategy='random', 
+	# 	batch_size=1, 
+	# 	use_descriptors=True, 
+	# 	acquisition_type='ei', 
+	# 	acquisition_optimizer='pymoo',
+	# 	num_init_design=5,
+	# )
 	
-	run_mixed_cat_cont(
-		init_design_strategy='random', 
-		batch_size=1, 
-		use_descriptors=True, 
-		acquisition_type='ei', 
-		acquisition_optimizer='pymoo',
-		num_init_design=5,
-		)
+	# run_mixed_cat_cont(
+	# 	init_design_strategy='random', 
+	# 	batch_size=1, 
+	# 	use_descriptors=True, 
+	# 	acquisition_type='ei', 
+	# 	acquisition_optimizer='pymoo',
+	# 	num_init_design=5,
+	# 	)
 	
-	run_mixed_disc_cont(
-		init_design_strategy='random', 
-		batch_size=1, 
-		use_descriptors=False, 
-		acquisition_type='ei', 
-		acquisition_optimizer='pymoo',
-		num_init_design=5,
-		)
+	# run_mixed_disc_cont(
+	# 	init_design_strategy='random', 
+	# 	batch_size=1, 
+	# 	use_descriptors=False, 
+	# 	acquisition_type='ei', 
+	# 	acquisition_optimizer='pymoo',
+	# 	num_init_design=5,
+	# 	)
 	
-	run_mixed_cat_disc_cont(
-		init_design_strategy='random', 
-		batch_size=1, 
-		use_descriptors=True, 
-		acquisition_type='ei', 
-		acquisition_optimizer='pymoo',
-		num_init_design=5,
-	)
+	# run_mixed_cat_disc_cont(
+	# 	init_design_strategy='random', 
+	# 	batch_size=1, 
+	# 	use_descriptors=True, 
+	# 	acquisition_type='ei', 
+	# 	acquisition_optimizer='pymoo',
+	# 	num_init_design=5,
+	# )
 
-	run_mixed_cat_disc(
-		init_design_strategy='random', 
-		batch_size=1, 
-		use_descriptors=True, 
-		acquisition_type='ei', 
-		acquisition_optimizer='pymoo', 
-		num_init_design=5,
-	)
+	# run_mixed_cat_disc(
+	# 	init_design_strategy='random', 
+	# 	batch_size=1, 
+	# 	use_descriptors=True, 
+	# 	acquisition_type='ei', 
+	# 	acquisition_optimizer='pymoo', 
+	# 	num_init_design=5,
+	# )

@@ -90,9 +90,11 @@ class AdamOptimizer:
         gradients = torch.zeros((len(sample),), **self.tkwargs)
         perturb = torch.zeros((len(sample),), **self.tkwargs)
 
+        sample_to_acqf = sample.view(1, sample.shape[0])
+
         for i in self.select_idx:
             perturb[i] += self.dx
-            gradient = (self.acqf(sample + perturb) - self.acqf(sample - perturb)) / (2. * self.dx)
+            gradient = (self.acqf(sample_to_acqf + perturb) - self.acqf(sample_to_acqf - perturb)) / (2. * self.dx)
             gradients[i] = gradient
             perturb[i] -= self.dx
 

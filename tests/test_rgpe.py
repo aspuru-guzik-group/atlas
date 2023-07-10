@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-
 import os
 
 import numpy as np
@@ -49,12 +48,16 @@ def run_continuous(init_design_strategy):
 
     planner = RGPEPlanner(
         goal="minimize",
-        warm_start=False,
+        init_design_strategy=init_design_strategy,
+        num_init_design=5,
+        batch_size=1,
+        acquisition_type='ei',
+        acquisition_optimizer_kind='pymoo',
+        # meta-learning stuff
         train_tasks=train_tasks,
         valid_tasks=valid_tasks,
-        init_design_strategy=init_design_strategy,
-        num_init_design=4,
-        batch_size=1,
+        cache_weights=False, 
+        hyperparams={},
     )
 
     planner.set_param_space(param_space)
@@ -63,7 +66,7 @@ def run_continuous(init_design_strategy):
     campaign = Campaign()
     campaign.set_param_space(param_space)
 
-    BUDGET = 10
+    BUDGET = 12
 
     while len(campaign.observations.get_values()) < BUDGET:
 
@@ -72,6 +75,9 @@ def run_continuous(init_design_strategy):
             sample_arr = sample.to_array()
             measurement = surface(sample_arr)
             campaign.add_observation(sample_arr, measurement)
+
+            print('SAMPLE : ', sample)
+            print('MEASUREMENT : ', measurement)
 
     assert len(campaign.observations.get_params()) == BUDGET
     assert len(campaign.observations.get_values()) == BUDGET
