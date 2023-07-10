@@ -106,12 +106,12 @@ class UnknownConstraints:
                 # do nothing at all and use the feasibilty surrogate as the acquisition
                 use_p_feas_only = True
 
-            return ( 
-                train_x_scaled_reg,
-                train_y_scaled_reg,
-                train_x_scaled_cla,
-                train_y_scaled_cla,
-                use_p_feas_only
-            )
+        return ( 
+            train_x_scaled_reg,
+            train_y_scaled_reg,
+            train_x_scaled_cla,
+            train_y_scaled_cla,
+            use_p_feas_only
+        )
 
 

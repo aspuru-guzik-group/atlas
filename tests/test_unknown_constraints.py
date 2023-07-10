@@ -15,7 +15,6 @@ from olympus.scalarizers import Scalarizer
 from olympus.surfaces import Surface
 
 from atlas.planners.gp.planner import BoTorchPlanner
-from atlas.planners.qnehvi.planner import qNEHVIPlanner
 from problem_generator import ProblemGenerator, KnownConstraintsGenerator
 from problem_generator import HybridSurface
 
@@ -93,48 +92,36 @@ def run_continuous(
     problem_gen = ProblemGenerator(problem_type='continuous')
     surface_callable, param_space = problem_gen.generate_instance()
     known_constraints = KnownConstraintsGenerator().get_constraint('continuous')
-    # def surface(x):
-    #     if np.random.uniform() > 0.2:
-    #         return (
-    #             np.sin(8 * x[0]) - 2 * np.cos(6 * x[1]) + np.exp(-2.0 * x[2])
-    #         )
-    #     else:
-    #         return np.nan
 
-    # split = feas_strategy_param.split("_")
-    # feas_strategy, feas_param = split[0], float(split[1])
+    split = feas_strategy_param.split("_")
+    feas_strategy, feas_param = split[0], float(split[1])
 
-    # param_space = ParameterSpace()
-    # param_0 = ParameterContinuous(name="param_0", low=0.0, high=1.0)
-    # param_1 = ParameterContinuous(name="param_1", low=0.0, high=1.0)
-    # param_2 = ParameterContinuous(name="param_2", low=0.0, high=1.0)
-    # param_space.add(param_0)
-    # param_space.add(param_1)
-    # param_space.add(param_2)
-
-    # planner = BoTorchPlanner(
-    #     goal="minimize",
-    #     feas_strategy=feas_strategy,
-    #     feas_param=feas_param,
-    #     init_design_strategy=init_design_strategy,
-    #     num_init_design=num_init_design,
-    #     acquisition_optimizer_kind=acquisition_optimizer,
-    #     batch_size=batch_size,
-    # )
+    planner = BoTorchPlanner(
+        goal="minimize",
+        feas_strategy=feas_strategy,
+        feas_param=feas_param,
+        init_design_strategy=init_design_strategy,
+        num_init_design=num_init_design,
+        acquisition_optimizer_kind=acquisition_optimizer,
+        batch_size=batch_size,
+    )
 
     planner.set_param_space(param_space)
 
     campaign = Campaign()
     campaign.set_param_space(param_space)
 
-    BUDGET = num_init_design + batch_size * 4
-
+    BUDGET = num_init_design + batch_size * 10
+    
     while len(campaign.observations.get_values()) < BUDGET:
 
         samples = planner.recommend(campaign.observations)
         for sample in samples:
             sample = sample.to_array()
-            measurement = surface_callable.run(sample)
+            if known_constraints(sample):
+                measurement = surface_callable.run(sample)[0] # return float only
+            else:
+                measurement = np.array([np.nan])
             campaign.add_observation(sample, measurement)
 
     assert len(campaign.observations.get_params()) == BUDGET
@@ -292,11 +279,10 @@ def run_qnehvi_mixed_cat_disc(
 
 if __name__ == "__main__":
 
-    # run_continuous('random', 1, 'fwa-0', False)
+    run_continuous('random', 1, 'fwa_0', False, 'pymoo')
     # run_continuous('random', 1, 'naive-0_0', False)
     
     #run_qnehvi_mixed_cat_disc('random', 1, 'naive-0_0', False)
     #run_qnehvi_mixed_cat_disc('random', 1, 'fia_1', False)
     #run_qnehvi_mixed_cat_disc('random', 2, 'fia_1', False)
     #run_qnehvi_mixed_cat_disc('random', 1, 'fca_0.5', False)
-    pass
