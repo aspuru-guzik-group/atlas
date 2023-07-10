@@ -566,7 +566,7 @@ def run_permutation_constraint_mixed_cat_disc(
 		
 	assert all([val==sorted(val) for val in vals])
 
-	
+
 def run_pending_experiment_constraint_cat(init_design_strategy, batch_size, use_descriptors, num_init_design=5):
 	surface_kind = "CatDejong"
 	surface = Surface(kind=surface_kind, param_dim=2, num_opts=5)
@@ -690,7 +690,7 @@ def run_batch_constrained_disc(init_design_strategy, batch_size, use_descriptors
 	)
 	for batch in meas_params:
 		assert (batch==batch[0,:])[0, :].all() # first param is batch constrained
-	
+		
 		
 def run_pymoo(init_design_strategy, batch_size, use_descriptors, num_init_design=5):
 
@@ -757,9 +757,9 @@ def run_pymoo(init_design_strategy, batch_size, use_descriptors, num_init_design
 	assert all(kcs)
 
 
- 
 
-if  __name__ == '__main__':
+
+if __name__ == '__main__':
 	#print(type(known_constraints_cont))
 	
 	#WORKING

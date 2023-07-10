@@ -8,7 +8,10 @@ from olympus.objects import (
     ParameterCategorical,
     ParameterContinuous,
     ParameterDiscrete,
+    ParameterVector,
 )
+
+
 
 class ProblemGenerator():
 
@@ -18,8 +21,10 @@ class ProblemGenerator():
          self.accepted_problem_types = ['continuous', 'discrete', 'categorical', 'contrained_continuous', 'contrained_discrete', 'contrained_cat']
          self.use_descriptors = use_descriptors
 
+
      def check_problem_type(self):
          return self.problem_type in self.accepted_problem_types
+
 
      @property
      def allowed_cont_surfaces(self):
@@ -30,6 +35,7 @@ class ProblemGenerator():
      def allowed_cat_surfaces(self):
          return ['CatDejong', 'CatAckley', 'CatMichalewicz']
 
+
      def add_descriptors(self, cat_surface):
         if self.use_descriptors:
             for param in cat_surface.param_space:
@@ -39,6 +45,7 @@ class ProblemGenerator():
             pass
         return cat_surface
         
+
      def generate_instance(self):
 
          if self.problem_type == 'continuous':
@@ -131,12 +138,15 @@ class ProblemGenerator():
 
 class KnownConstraintsGenerator():
 
+
     def __init__(self):
         pass
+
 
     def get_constraint(self, problem_type:str):
         return getattr(self, f'known_constraint_{problem_type}')
     
+
     @staticmethod
     def known_constraint_continuous(params):
         x0 = params[0]
@@ -234,8 +244,8 @@ class KnownConstraintsGenerator():
             return False
         
         return True
-   
-    
+
+
     @staticmethod
     def known_constraint_cat_disc_cont(params):
         x0 = params[0] # categorical
@@ -281,12 +291,18 @@ class HybridSurface:
 
     def run(self, params):
     
-        params_arr = params.to_array()
+        if isinstance(params, ParameterVector):
+            params = params.to_array()
+        elif isinstance(params, np.ndarray):
+            pass
+        else:
+            raise TypeError
+
         counter = 0
         objs = []
         for surface in self.surfaces:
             end_counter = counter+len(surface.param_space)
-            relevant_params_arr  = params_arr[counter:end_counter]
+            relevant_params_arr  = params[counter:end_counter]
             if surface.param_space[0].type == 'categorical':
                 pass
             else:
@@ -297,6 +313,7 @@ class HybridSurface:
             counter = end_counter
 
         return np.sum(objs)
+
 
 
 if __name__ == '__main__':
