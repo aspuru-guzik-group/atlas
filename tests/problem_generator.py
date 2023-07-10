@@ -15,20 +15,23 @@ from olympus.objects import (
 
 class ProblemGenerator():
 
-
-     def __init__(self, problem_type: str, use_descriptors=False):
+     def __init__(self, problem_type: str, use_descriptors=False, is_moo=False):
          self.problem_type = problem_type
          self.accepted_problem_types = ['continuous', 'discrete', 'categorical', 'contrained_continuous', 'contrained_discrete', 'contrained_cat']
          self.use_descriptors = use_descriptors
+         self.is_moo = is_moo
 
 
      def check_problem_type(self):
          return self.problem_type in self.accepted_problem_types
 
-
      @property
      def allowed_cont_surfaces(self):
          return ['Dejong', 'Schwefel', 'Branin',  'AckleyPath', 'Denali']
+     
+     @property
+     def allowed_cont_moo_surfaces(self):
+         return ['MultFonseca', 'MultZdt1', 'MultZdt2', 'MultZdt3']
 
 
      @property
@@ -49,10 +52,16 @@ class ProblemGenerator():
      def generate_instance(self):
 
          if self.problem_type == 'continuous':
-
-             surface_choice = str(np.random.choice(self.allowed_cont_surfaces, size=None))
-             print(surface_choice)
-             surface_callable = Surface(kind=surface_choice)
+            
+             if self.is_moo:
+                 # multi-objective
+                 surface_choice = str(np.random.choice(self.allowed_cont_moo_surfaces, size=None))
+                 surface_callable = Surface(kind=surface_choice, value_dim=2)
+             else:
+                 # single objective
+                 surface_choice = str(np.random.choice(self.allowed_cont_surfaces, size=None))
+                 surface_callable = Surface(kind=surface_choice)
+        
 
              print(surface_callable.param_space)
 
