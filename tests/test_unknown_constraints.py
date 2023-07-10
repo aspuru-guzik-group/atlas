@@ -93,10 +93,16 @@ def run_continuous(
     surface_callable, param_space = problem_gen.generate_instance()
     known_constraints = KnownConstraintsGenerator().get_constraint('continuous')
 
+<<<<<<< HEAD
 
     split = feas_strategy_param.split('_')
     feas_strategy, feas_param = split[0], float(split[1])
 
+=======
+    split = feas_strategy_param.split("_")
+    feas_strategy, feas_param = split[0], float(split[1])
+
+>>>>>>> 7696ee233af7e2b0bcee0cfff91d73021871a245
     planner = BoTorchPlanner(
         goal="minimize",
         feas_strategy=feas_strategy,
@@ -104,7 +110,10 @@ def run_continuous(
         init_design_strategy=init_design_strategy,
         num_init_design=num_init_design,
         acquisition_optimizer_kind=acquisition_optimizer,
+<<<<<<< HEAD
         use_descriptors=use_descriptors,
+=======
+>>>>>>> 7696ee233af7e2b0bcee0cfff91d73021871a245
         batch_size=batch_size,
     )
 
@@ -113,19 +122,25 @@ def run_continuous(
     campaign = Campaign()
     campaign.set_param_space(param_space)
 
-    BUDGET = num_init_design + batch_size * 4
-
+    BUDGET = num_init_design + batch_size * 10
+    
     while len(campaign.observations.get_values()) < BUDGET:
 
         samples = planner.recommend(campaign.observations)
         for sample in samples:
             sample = sample.to_array()
             if known_constraints(sample):
+<<<<<<< HEAD
                 measurement = surface_callable.run(sample)
             else:
                 measurement = np.array([[np.nan]])
             print('sample :', sample)
             print('measurement :', measurement)
+=======
+                measurement = surface_callable.run(sample)[0] # return float only
+            else:
+                measurement = np.array([np.nan])
+>>>>>>> 7696ee233af7e2b0bcee0cfff91d73021871a245
             campaign.add_observation(sample, measurement)
 
     assert len(campaign.observations.get_params()) == BUDGET
@@ -332,10 +347,18 @@ def run_qnehvi_mixed_cat_disc(
 
 if __name__ == "__main__":
 
+<<<<<<< HEAD
     run_continuous('random', 1, 'fwa_0', False, 'gradient')
+=======
+    run_continuous('random', 1, 'fwa_0', False, 'pymoo')
+>>>>>>> 7696ee233af7e2b0bcee0cfff91d73021871a245
     # run_continuous('random', 1, 'naive-0_0', False)
     
     #run_qnehvi_mixed_cat_disc('random', 1, 'naive-0_0', False)
     #run_qnehvi_mixed_cat_disc('random', 1, 'fia_1', False)
     #run_qnehvi_mixed_cat_disc('random', 2, 'fia_1', False)
+<<<<<<< HEAD
     #run_qnehvi_mixed_cat_disc('random', 1, 'fca_0.5', False)
+=======
+    #run_qnehvi_mixed_cat_disc('random', 1, 'fca_0.5', False)
+>>>>>>> 7696ee233af7e2b0bcee0cfff91d73021871a245
