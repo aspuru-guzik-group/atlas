@@ -15,7 +15,7 @@ class ProblemGenerator():
 
      def __init__(self, problem_type: str, use_descriptors=False):
          self.problem_type = problem_type
-         self.accepted_problem_types = ['continuous', 'discrete', 'categorical']
+         self.accepted_problem_types = ['continuous', 'discrete', 'categorical', 'contrained_continuous', 'contrained_discrete', 'contrained_cat']
          self.use_descriptors = use_descriptors
 
      def check_problem_type(self):
@@ -126,6 +126,145 @@ class ProblemGenerator():
           hybrid_surface_callable = HybridSurface(surfaces=[surface_callable_cat, surface_callable_disc, surface_callable_cont])
 
           return hybrid_surface_callable, hybrid_surface_callable.param_space
+         
+
+
+class KnownConstraintsGenerator():
+
+    def __init__(self):
+        pass
+
+    def get_constraint(self, problem_type:str):
+        return getattr(self, f'known_constraint_{problem_type}')
+    
+    @staticmethod
+    def known_constraint_continuous(params):
+        x0 = params[0]
+        x1 = params[1]
+        y = (x0-0.5)**2 + (x1-0.5)**2
+        if np.abs(x0-x1)<0.1:
+            return False
+        
+        if 0.05 < y < 0.15:
+            return False
+        
+        else:
+            return True
+  
+
+    @staticmethod
+    def known_constraint_discrete(params):  
+        x0 = params[0]
+        x1 = params[1]
+        y = (x0-0.5)**2 + (x1-0.5)**2
+        if np.abs(x0-x1)<0.1:
+            return False
+        
+        if 0.05 < y < 0.15:
+            return False
+        
+        else:
+            return True
+
+
+    @staticmethod
+    def known_constraint_categorical(params):
+       # if params[0] == 'x13' and params[1] =='x2': --> as "params[0]" is x and "params[1]" is y, imagine a grid.
+       # if params[0] == 'x13' this blocks out the entirity of the x axis of x = 13
+       # if params[0] == 'x13' and params[1] in ['x2', 'x15'] --> this is how to do straight line
+       # total of 441 blocks --> need 30-50% infesable
+        x0 = params[0]
+        x1 = params[1]
+        
+        conditions = (
+            (x0 == ['x2', 'x6', 'x9', 'x13', 'x17']),
+            (x1 == ['x3', 'x6', 'x10', 'x15', 'x19']),
+            (x0 == 'x5' and x1 in ['x7']),
+            (x0 == 'x4' and x1 in ['x12', 'x13', 'x17']),
+            (x0 == 'x11' and x1 in ['x8', 'x12', 'x13', 'x17']),
+            (x0 == 'x15' and x1 in ['x12', 'x13', 'x17']),
+            (x0 == 'x19' and x1 in ['x8', 'x12', 'x13', 'x21']),
+            (x0 == 'x20' and x1 in ['x8', 'x13', 'x17', 'x21']),
+            (x1 == 'x2' and x0 in ['x3', 'x4']),
+            (x1 == 'x1' and x0 in ['x18', 'x19'])
+        )
+        #print(params, conditions)
+        return not any(conditions)
+    
+
+    @staticmethod
+    def known_constraint_cat_disc(params):
+        x0 = params[0] # categorical
+        x1 = params[1] # categorical
+        x2 = float(params[2]) # discrete
+        x3 = float(params[3]) # discrete
+
+        np.random.seed(100700)
+        arr = np.random.randint(21, size=(208,2))
+        for x in arr:
+            if [x0, x1] == [f'x{x[0]}', f'x{1}']:
+                return False
+
+        if np.abs(x2-x3)<0.1:
+            return False
+        
+        if 0.5 < x2 < 0.15:
+            return False
+        
+        return True
+
+
+    @staticmethod
+    def known_constraint_cat_cont(params):
+        x0 = params[0] # categorical
+        x1 = params[1] # categorical
+        x2 = float(params[2]) # continuous
+        x3 = float(params[3]) # continuous
+
+        np.random.seed(100700)
+        arr = np.random.randint(21, size=(208,2))
+        for x in arr:
+            if [x0, x1] == [f'x{x[0]}', f'x{1}']:
+                return False
+        
+        if np.abs(x2-x3)<0.1:
+            return False
+        
+        if 0.15 < x2 < 0.5:
+            return False
+        
+        return True
+   
+    
+    @staticmethod
+    def known_constraint_cat_disc_cont(params):
+        x0 = params[0] # categorical
+        x1 = params[1] # categorical
+        x2 = float(params[2]) # discrete
+        x3 = float(params[3]) # discrete
+        x4 = float(params[4]) # continuous
+        x5 = float(params[5]) # continuous
+       
+        np.random.seed(100700)
+        arr = np.random.randint(21, size=(208,2))
+        for x in arr:
+            if [x0, x1] == [f'x{x[0]}', f'x{1}']:
+                return False
+        
+        if np.abs(x2-x3)<0.1:
+            return False
+        
+        if 0.15 < x2 < 0.5:
+            return False
+        
+        if np.abs(x4-x5)<0.1:
+            return False
+        
+        if 0.15 < x4 < 0.5:
+            return False
+        
+        return True
+    
 
 
 class HybridSurface:

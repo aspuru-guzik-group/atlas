@@ -9,12 +9,15 @@ from olympus.objects import (
     ParameterCategorical,
     ParameterContinuous,
     ParameterDiscrete,
+    ParameterVector,
 )
 from olympus.scalarizers import Scalarizer
 from olympus.surfaces import Surface
 
 from atlas.planners.gp.planner import BoTorchPlanner
 from atlas.planners.qnehvi.planner import qNEHVIPlanner
+from problem_generator import ProblemGenerator, KnownConstraintsGenerator
+from problem_generator import HybridSurface
 
 CONT = {
     "init_design_strategy": [
@@ -87,34 +90,37 @@ def run_continuous(
     acquisition_optimizer,
     num_init_design=5,
 ):
-    def surface(x):
-        if np.random.uniform() > 0.2:
-            return (
-                np.sin(8 * x[0]) - 2 * np.cos(6 * x[1]) + np.exp(-2.0 * x[2])
-            )
-        else:
-            return np.nan
+    problem_gen = ProblemGenerator(problem_type='continuous')
+    surface_callable, param_space = problem_gen.generate_instance()
+    known_constraints = KnownConstraintsGenerator().get_constraint('continuous')
+    # def surface(x):
+    #     if np.random.uniform() > 0.2:
+    #         return (
+    #             np.sin(8 * x[0]) - 2 * np.cos(6 * x[1]) + np.exp(-2.0 * x[2])
+    #         )
+    #     else:
+    #         return np.nan
 
-    split = feas_strategy_param.split("_")
-    feas_strategy, feas_param = split[0], float(split[1])
+    # split = feas_strategy_param.split("_")
+    # feas_strategy, feas_param = split[0], float(split[1])
 
-    param_space = ParameterSpace()
-    param_0 = ParameterContinuous(name="param_0", low=0.0, high=1.0)
-    param_1 = ParameterContinuous(name="param_1", low=0.0, high=1.0)
-    param_2 = ParameterContinuous(name="param_2", low=0.0, high=1.0)
-    param_space.add(param_0)
-    param_space.add(param_1)
-    param_space.add(param_2)
+    # param_space = ParameterSpace()
+    # param_0 = ParameterContinuous(name="param_0", low=0.0, high=1.0)
+    # param_1 = ParameterContinuous(name="param_1", low=0.0, high=1.0)
+    # param_2 = ParameterContinuous(name="param_2", low=0.0, high=1.0)
+    # param_space.add(param_0)
+    # param_space.add(param_1)
+    # param_space.add(param_2)
 
-    planner = BoTorchPlanner(
-        goal="minimize",
-        feas_strategy=feas_strategy,
-        feas_param=feas_param,
-        init_design_strategy=init_design_strategy,
-        num_init_design=num_init_design,
-        acquisition_optimizer_kind=acquisition_optimizer,
-        batch_size=batch_size,
-    )
+    # planner = BoTorchPlanner(
+    #     goal="minimize",
+    #     feas_strategy=feas_strategy,
+    #     feas_param=feas_param,
+    #     init_design_strategy=init_design_strategy,
+    #     num_init_design=num_init_design,
+    #     acquisition_optimizer_kind=acquisition_optimizer,
+    #     batch_size=batch_size,
+    # )
 
     planner.set_param_space(param_space)
 
@@ -127,9 +133,9 @@ def run_continuous(
 
         samples = planner.recommend(campaign.observations)
         for sample in samples:
-            sample_arr = sample.to_array()
-            measurement = surface(sample_arr)
-            campaign.add_observation(sample_arr, measurement)
+            sample = sample.to_array()
+            measurement = surface_callable.run(sample)
+            campaign.add_observation(sample, measurement)
 
     assert len(campaign.observations.get_params()) == BUDGET
     assert len(campaign.observations.get_values()) == BUDGET
