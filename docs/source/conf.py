@@ -190,7 +190,8 @@ spelling_show_suggestions = True
 
 
 def setup(app):
-    app.add_stylesheet("custom.css")
+    #app.add_stylesheet("custom.css") # required update for sphinx >= 3.3.1
+    app.add_css_file("custom.css")
     try:
         import re
 
