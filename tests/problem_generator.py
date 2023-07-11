@@ -324,6 +324,7 @@ class HybridSurface:
     def __init__(self, surfaces, is_moo=False):
         self.surfaces = surfaces 
         self.is_moo = is_moo
+        
         self.param_space = ParameterSpace()
         counter = 0 
         for surface in self.surfaces:
@@ -332,6 +333,12 @@ class HybridSurface:
                 self.param_space.add(param)
 
                 counter+=1
+        
+        self.value_space = ParameterSpace()
+        self.value_space.add(ParameterContinuous(name='obj0'))
+        if self.is_moo:
+            self.value_space.add(ParameterContinuous(name='obj1'))
+
 
     def run(self, params):
     
@@ -357,7 +364,7 @@ class HybridSurface:
             counter = end_counter
 
         if self.is_moo:
-            return np.array(objs)[:2]
+            return np.array(objs)[:2].squeeze()
         else:
             return np.sum(objs)
 

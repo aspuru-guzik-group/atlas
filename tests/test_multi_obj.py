@@ -393,8 +393,9 @@ def run_mixed_disc_cont(
 	batch_size,
 	use_descriptors,
 	scalarizer_kind,
+	acquisition_optimizer,
 	num_init_design=5,
-	acquisition_type='ei', 
+
 ):
 
 	problem_gen = ProblemGenerator(problem_type='mixed_disc_cont', is_moo=True)	
@@ -410,7 +411,7 @@ def run_mixed_disc_cont(
 		init_design_strategy=init_design_strategy,
 		batch_size=batch_size,
 		use_descriptors=use_descriptors,
-		acquisition_type=acquisition_type,
+		acquisition_optimizer_kind=acquisition_optimizer,
 		is_moo=True,
 		value_space=surface_callable.value_space,
 		scalarizer_kind=scalarizer_kind,
@@ -431,7 +432,7 @@ def run_mixed_disc_cont(
 		samples = planner.recommend(campaign.observations)
 
 		for sample in samples:
-			measurement, _, __ = surface_callable.run(sample, return_paramvector=True)
+			measurement = surface_callable.run(sample)
 			campaign.add_and_scalarize(sample, measurement, scalarizer)
 
 	assert len(campaign.observations.get_params()) == BUDGET
@@ -452,5 +453,12 @@ if __name__ == "__main__":
 	# run_continuous('random', 1, False, 'Hypervolume', 'pymoo', 5)
 	# run_discrete('random', 1, False, 'Hypervolume', 'pymoo', 5)
 	# run_categorical('random', 1, False, 'Hypervolume', 'pymoo', 5)
-	# run_mixed_disc_cont('random', 1, False, 'Hypervolume', 'pymoo', 5)
+	run_mixed_disc_cont(
+		init_design_strategy='random',
+		batch_size=1,
+		use_descriptors=False,
+		scalarizer_kind='Hypervolume',
+		acquisition_optimizer='pymoo',
+		num_init_design=5,
+	)
 	
