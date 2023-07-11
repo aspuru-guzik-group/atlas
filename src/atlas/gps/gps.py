@@ -18,6 +18,7 @@ from gpytorch.variational import (
     UnwhitenedVariationalStrategy,
     VariationalStrategy,
 )
+from gpytorch.kernels.fingerprint_kernels.tanimoto_kernel import TanimotoKernel
 
 from gpytorch.priors import NormalPrior
 
@@ -120,6 +121,27 @@ class CategoricalSingleTaskGP(ExactGP, GPyTorchModel):
 
 #         # create the covariance module and subset batch dict
 
+
+
+class TanimotoGP(ExactGP):
+
+    _num_outputs = 1
+
+    def __init__(self, train_x: torch.Tensor, train_y: torch.Tensor):
+        """ Single task GP for molecular fingerprint inputs
+        Args:
+                train_x (torch.tensor): 2D tensor with training inputs
+                train_y (torch.tensor): 2D tensor with training targets
+        """
+        super().__init__(train_x, train_y.squeeze(-1), GaussianLikelihood)
+        self.mean_module = gpytorch.means.ConstantMean()
+        self.covar_module = ScaleKernel(base_kernel=TanimotoKernel())
+        self.to(train_x)
+
+    def forward(self, x):
+        mean_x = self.mean_module(x)
+        covar_x = self.covar_module(x)
+        return MultivariateNormal(mean_x, covar_x)
 
 
 
