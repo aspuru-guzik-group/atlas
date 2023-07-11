@@ -212,6 +212,28 @@ class KnownConstraintsGenerator():
     
 
     @staticmethod
+    def known_constraint_disc_cont(params):
+        x0 = float(params[0]) #continuous
+        x1 = float(params[1]) #continuous
+        x2 = float(params[2]) #discrete
+        x3 = float(params[3]) #discrete
+
+        if np.abs(x0-x1)<0.1:
+            return False
+        
+        if 0.15 < x0 < 0.5:
+            return False
+        
+        if np.abs(x2-x3)<0.1:
+            return False
+        
+        if 0.15 < x2 < 0.5:
+            return False
+        
+        return True
+
+
+    @staticmethod
     def known_constraint_cat_disc(params):
         x0 = params[0] # categorical
         x1 = params[1] # categorical

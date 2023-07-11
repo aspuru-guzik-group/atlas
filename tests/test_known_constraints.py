@@ -191,6 +191,51 @@ def run_categorical(
 	assert all(kcs)
 
 
+def run_mixed_disc_cont(
+	init_design_strategy, batch_size, use_descriptors, acquisition_optimizer_kind, num_init_design=5,
+):
+
+	problem_gen = ProblemGenerator(problem_type='mixed_disc_cont')
+	surface_callable, param_space = problem_gen.generate_instance()
+	known_constraints = KnownConstraintsGenerator().get_constraint('disc_cont')
+
+	planner = BoTorchPlanner(
+		goal="minimize",
+		feas_strategy="naive-0",
+		init_design_strategy=init_design_strategy,
+		num_init_design=num_init_design,
+		batch_size=batch_size,
+		use_descriptors=use_descriptors,
+		acquisition_optimizer_kind=acquisition_optimizer_kind,
+		known_constraints=[known_constraints],
+	)
+
+	planner.set_param_space(param_space)
+
+	campaign = Campaign()
+	campaign.set_param_space(param_space)
+
+	BUDGET = num_init_design + batch_size * 4 
+
+	while len(campaign.observations.get_values()) < BUDGET:
+
+		samples = planner.recommend(campaign.observations)
+		print(samples)
+		print('len(samples) : ', len(samples))
+		for sample in samples:
+			measurement = surface_callable.run(sample)
+			campaign.add_observation(sample, measurement)
+	
+
+	assert len(campaign.observations.get_params()) == BUDGET
+	assert len(campaign.observations.get_values()) == BUDGET
+
+	# check that all the measured values pass the known constraint
+	meas_params = campaign.observations.get_params()
+	kcs = [known_constraints(param) for param in meas_params]
+	assert all(kcs)
+
+
 def run_mixed_cat_disc(
 	init_design_strategy, batch_size, use_descriptors, acquisition_optimizer_kind, num_init_design=5,
 ):
@@ -764,14 +809,15 @@ if __name__ == '__main__':
 	
 	#WORKING
 
-	# run_continuous('random', 1, False, 'pymoo')
-	# run_discrete('random', 1, False, 'gradient')
-	# run_categorical('random', 1, False, 'pymoo')
-	# run_mixed_cat_disc('random', 1, False, 'pymoo')
-	# run_mixed_cat_cont('random', 1, False, 'pymoo')
-	# run_mixed_cat_disc_cont('random', 1, False, 'pymoo')
-	# run_compositional_constraint_cont('random', 1, num_init_design=5)
-	# run_permutation_constraint_mixed_cat_disc('random', 1, num_init_design=5)
+	run_continuous('random', 1, False, 'pymoo')
+	run_discrete('random', 1, False, 'gradient')
+	run_categorical('random', 1, False, 'pymoo')
+	run_mixed_cat_disc('random', 1, False, 'pymoo')
+	run_mixed_cat_cont('random', 1, False, 'pymoo')
+	run_mixed_cat_disc_cont('random', 1, False, 'pymoo')
+	run_compositional_constraint_cont('random', 1, num_init_design=5)
+	run_permutation_constraint_mixed_cat_disc('random', 1, num_init_design=5)
+	run_mixed_disc_cont('random', 1, False, 'pymoo')
 
 	#NOT WORKING
 	

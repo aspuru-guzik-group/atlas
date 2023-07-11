@@ -289,45 +289,35 @@ def run_discrete(
 	batch_size,
 	use_descriptors,
 	scalarizer_kind,
+	acquisition_optimizer,
 	num_init_design=5,
-	acquisition_type='ei', 
 ):
 
-	moo_surface = Surface(kind="MultFonseca")
-
-	param_space = ParameterSpace()
-	param_0 = ParameterDiscrete(
-		name="param_0", options=[0.0, 0.25, 0.5, 0.75, 1.0]
-	)
-	param_1 = ParameterDiscrete(
-		name="param_1", options=[0.0, 0.25, 0.5, 0.75, 1.0]
-	)
-	param_space.add(param_0)
-	param_space.add(param_1)
-
+	problem_gen = ProblemGenerator(problem_type='discrete', is_moo=True)	
+	surface_callable, param_space = problem_gen.generate_instance()
+	
 	scalarizer, moo_params, goals = generate_scalarizer_object(
-		scalarizer_kind, moo_surface.value_space
+		scalarizer_kind, surface_callable.value_space
 	)
 
 	planner = BoTorchPlanner(
 		goal="minimize",
-		feas_strategy="naive-0",
 		init_design_strategy=init_design_strategy,
 		batch_size=batch_size,
 		use_descriptors=use_descriptors,
-		acquisition_type=acquisition_type,
 		is_moo=True,
-		value_space=moo_surface.value_space,
+		acquisition_optimizer_kind=acquisition_optimizer,
+		value_space=surface_callable.value_space,
 		scalarizer_kind=scalarizer_kind,
 		moo_params=moo_params,
 		goals=goals,
 	)
 
-	planner.set_param_space(param_space)
+	planner.set_param_space(surface_callable.param_space)
 
 	campaign = Campaign()
-	campaign.set_param_space(param_space)
-	campaign.set_value_space(moo_surface.value_space)
+	campaign.set_param_space(surface_callable.param_space)
+	campaign.set_value_space(surface_callable.value_space)
 
 	BUDGET = num_init_design + batch_size * 4
 
@@ -336,14 +326,13 @@ def run_discrete(
 		samples = planner.recommend(campaign.observations)
 
 		for sample in samples:
-			sample_arr = sample.to_array()
-			measurement = moo_surface.run(sample_arr, return_paramvector=True)
-			campaign.add_and_scalarize(sample_arr, measurement, scalarizer)
+			measurement = surface_callable.run(sample, return_paramvector=True)
+			campaign.add_and_scalarize(sample, measurement, scalarizer)
 
 	assert len(campaign.observations.get_params()) == BUDGET
 	assert len(campaign.observations.get_values()) == BUDGET
 	assert campaign.observations.get_values().shape[1] == len(
-		moo_surface.value_space
+		surface_callable.value_space
 	)
 
 
@@ -399,49 +388,57 @@ def run_mixed_cat_cont(
 	)
 
 
-#
-# def run_mixed_dis_cont(init_design_strategy, batch_size, use_descriptors, scalarizer_kind, num_init_design=5,):
-#
-#
-#
-# 	scalarizer, moo_params, goals = generate_scalarizer_object(scalarizer_kind, moo_surface.value_space)
-#
-# 	planner = BoTorchPlanner(
-# 		goal='minimize',
-# 		feas_strategy='naive-0',
-# 		init_design_strategy=init_design_strategy,
-# 		batch_size=batch_size,
-# 		use_descriptors=use_descriptors,
-# 		is_moo=True,
-# 		value_space=moo_surface.value_space,
-# 		scalarizer_kind=scalarizer_kind,
-# 		moo_params=moo_params,
-# 		goals=goals,
-# 	)
-#
-#
-# 	planner.set_param_space(moo_surface.param_space)
-#
-# 	campaign = Campaign()
-# 	campaign.set_param_space(moo_surface.param_space)
-# 	campaign.set_value_space(moo_surface.value_space)
-#
-# 	BUDGET = num_init_design + batch_size*4
-#
-# 	while len(campaign.observations.get_values()) < BUDGET:
-#
-# 		samples = planner.recommend(campaign.observations)
-#
-# 		for sample in samples:
-# 			sample_arr = sample.to_array()
-# 			measurement = moo_surface.run(sample_arr, return_paramvector=True)
-#
-# 			campaign.add_and_scalarize(sample_arr, measurement, scalarizer)
-#
-#
-# 	assert len(campaign.observations.get_params())==BUDGET
-# 	assert len(campaign.observations.get_values())==BUDGET
-# 	assert campaign.observations.get_values().shape[1] == len(moo_surface.value_space)
+def run_mixed_disc_cont(
+	init_design_strategy,
+	batch_size,
+	use_descriptors,
+	scalarizer_kind,
+	num_init_design=5,
+	acquisition_type='ei', 
+):
+
+	problem_gen = ProblemGenerator(problem_type='mixed_disc_cont', is_moo=True)	
+	surface_callable, param_space = problem_gen.generate_instance()
+
+	scalarizer, moo_params, goals = generate_scalarizer_object(
+		scalarizer_kind, surface_callable.value_space
+	)
+
+	planner = BoTorchPlanner(
+		goal="minimize",
+		feas_strategy="naive-0",
+		init_design_strategy=init_design_strategy,
+		batch_size=batch_size,
+		use_descriptors=use_descriptors,
+		acquisition_type=acquisition_type,
+		is_moo=True,
+		value_space=surface_callable.value_space,
+		scalarizer_kind=scalarizer_kind,
+		moo_params=moo_params,
+		goals=goals,
+	)
+
+	planner.set_param_space(surface_callable.param_space)
+
+	campaign = Campaign()
+	campaign.set_param_space(surface_callable.param_space)
+	campaign.set_value_space(surface_callable.value_space)
+
+	BUDGET = num_init_design + batch_size * 4
+
+	while len(campaign.observations.get_values()) < BUDGET:
+
+		samples = planner.recommend(campaign.observations)
+
+		for sample in samples:
+			measurement, _, __ = surface_callable.run(sample, return_paramvector=True)
+			campaign.add_and_scalarize(sample, measurement, scalarizer)
+
+	assert len(campaign.observations.get_params()) == BUDGET
+	assert len(campaign.observations.get_values()) == BUDGET
+	assert campaign.observations.get_values().shape[1] == len(
+		surface_callable.value_space
+	)
 
 
 if __name__ == "__main__":
@@ -451,11 +448,9 @@ if __name__ == "__main__":
 	# 	use_descriptors=False,
 	# 	scalarizer_kind='Chimera',
 	# )
-	run_continuous(
-		init_design_strategy='random',
-		batch_size=1,
-		use_descriptors=False,
-		scalarizer_kind='Hypervolume',
-		acquisition_optimizer='pymoo',
-		num_init_design=5,
-	)
+
+	# run_continuous('random', 1, False, 'Hypervolume', 'pymoo', 5)
+	# run_discrete('random', 1, False, 'Hypervolume', 'pymoo', 5)
+	# run_categorical('random', 1, False, 'Hypervolume', 'pymoo', 5)
+	# run_mixed_disc_cont('random', 1, False, 'Hypervolume', 'pymoo', 5)
+	

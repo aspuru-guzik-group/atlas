@@ -225,6 +225,53 @@ def run_categorical(
     assert len(campaign.observations.get_params()) == BUDGET
     assert len(campaign.observations.get_values()) == BUDGET
 
+def run_mixed_disc_cont(    
+    init_design_strategy,
+    batch_size,
+    feas_strategy_param,
+    use_descriptors,
+    acquisition_optimizer,
+    num_init_design=5,
+):
+
+    problem_gen = ProblemGenerator(problem_type='mixed_disc_cont')
+    surface_callable, param_space = problem_gen.generate_instance()
+    known_constraints = KnownConstraintsGenerator().get_constraint('disc_cont')
+
+    split = feas_strategy_param.split("_")
+    feas_strategy, feas_param = split[0], float(split[1])
+
+    campaign = Campaign()
+    campaign.set_param_space(param_space)
+
+    planner = BoTorchPlanner(
+        goal="minimize",
+        feas_strategy=feas_strategy,
+        feas_param=feas_param,
+        init_design_strategy=init_design_strategy,
+        num_init_design=num_init_design,
+        batch_size=batch_size,
+        acquisition_optimizer_kind=acquisition_optimizer,
+        use_descriptors=use_descriptors,
+    )
+    planner.set_param_space(param_space)
+
+    BUDGET = num_init_design + batch_size * 10
+
+    while len(campaign.observations.get_values()) < BUDGET:
+
+        samples = planner.recommend(campaign.observations)
+        for sample in samples:
+            sample = sample.to_array()
+            if known_constraints(sample):
+                measurement = surface_callable.run(sample) 
+            else:
+                measurement = np.nan
+            campaign.add_observation(sample, measurement)
+
+    assert len(campaign.observations.get_params()) == BUDGET
+    assert len(campaign.observations.get_values()) == BUDGET
+
 
 def run_mixed_cat_disc(    
     init_design_strategy,
@@ -371,11 +418,14 @@ def run_mixed_cat_disc_cont(
 
 
 if __name__ == "__main__":
+    pass
 
-    run_continuous('random', 1, 'fwa_0', False, 'pymoo')
-    run_discrete('random', 1, 'fwa_0', False, 'pymoo')
-    run_categorical('random', 1, 'fwa_0', False, 'pymoo')
-    run_mixed_cat_disc('random', 1, 'fwa_0', False, 'pymoo')
-    run_mixed_cat_cont('random', 1, 'fwa_0', False, 'pymoo')
-    run_mixed_cat_disc_cont('random', 1, 'fwa_0', False, 'pymoo')
+    # run_continuous('random', 1, 'fwa_0', False, 'pymoo')
+    # run_discrete('random', 1, 'fwa_0', False, 'pymoo')
+    # run_categorical('random', 1, 'fwa_0', False, 'pymoo')
+    # run_mixed_disc_cont('random', 1, 'fwa_0', False, 'pymoo')
+    # run_mixed_cat_disc('random', 1, 'fwa_0', False, 'pymoo')
+    # run_mixed_cat_cont('random', 1, 'fwa_0', False, 'pymoo')
+    # run_mixed_cat_disc_cont('random', 1, 'fwa_0', False, 'pymoo')
+    
  
