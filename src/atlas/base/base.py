@@ -398,7 +398,10 @@ class BasePlanner(CustomPlanner):
 
 		return model, likelihood
 
-	def build_train_data(self) -> Tuple[torch.Tensor, torch.tensor]:
+	def build_train_data(
+			self, 
+			return_scaled_input:bool=True,
+		) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
 		"""build the training dataset at each iteration"""
 		if self.is_moo:
 			# parameters should be the same for each objective
@@ -493,8 +496,8 @@ class BasePlanner(CustomPlanner):
 		return (
 			torch.tensor(train_x_cla).float(),
 			torch.tensor(train_y_cla).squeeze().float(),
-			torch.tensor(train_x_reg).double(),
-			torch.tensor(train_y_reg).double(),
+			torch.tensor(train_x_reg, **self.tkwargs),
+			torch.tensor(train_y_reg, **self.tkwargs),
 		)
 
 	def reg_surrogate(
