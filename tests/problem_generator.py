@@ -104,7 +104,10 @@ class ProblemGenerator():
             surface_callable_cat = Surface(kind=surface_choice_cat, num_opts=21)
             surface_callable_cont  = Surface(kind=surface_choice_cont)
             surface_callable_cat = self.add_descriptors(surface_callable_cat)
-            hybrid_surface_callable = HybridSurface(surfaces=[surface_callable_cat, surface_callable_cont])
+            hybrid_surface_callable = HybridSurface(
+                surfaces=[surface_callable_cat, surface_callable_cont],
+                is_moo=self.is_moo,
+            )
 
             return hybrid_surface_callable, hybrid_surface_callable.param_space
 
@@ -115,7 +118,10 @@ class ProblemGenerator():
           surface_callable_disc = Surface(kind=surface_choice_disc)
           surface_callable_cont  = Surface(kind=surface_choice_cont)
 
-          hybrid_surface_callable = HybridSurface(surfaces=[surface_callable_disc, surface_callable_cont])
+          hybrid_surface_callable = HybridSurface(
+            surfaces=[surface_callable_disc, surface_callable_cont],
+            is_moo=self.is_moo,
+          )
 
           return hybrid_surface_callable, hybrid_surface_callable.param_space
 
@@ -126,7 +132,10 @@ class ProblemGenerator():
           surface_callable_cat = Surface(kind=surface_choice_cat, num_opts=21)
           surface_callable_disc  = Surface(kind=surface_choice_disc)
           surface_callable_cat = self.add_descriptors(surface_callable_cat)
-          hybrid_surface_callable = HybridSurface(surfaces=[surface_callable_cat, surface_callable_disc])
+          hybrid_surface_callable = HybridSurface(
+            surfaces=[surface_callable_cat, surface_callable_disc],
+            is_moo=self.is_moo,
+          )
 
           return hybrid_surface_callable, hybrid_surface_callable.param_space
 
@@ -139,7 +148,10 @@ class ProblemGenerator():
           surface_callable_cont  = Surface(kind=surface_choice_cont)
           surface_callable_cat = self.add_descriptors(surface_callable_cat)
           
-          hybrid_surface_callable = HybridSurface(surfaces=[surface_callable_cat, surface_callable_disc, surface_callable_cont])
+          hybrid_surface_callable = HybridSurface(
+            surfaces=[surface_callable_cat, surface_callable_disc, surface_callable_cont],
+            is_moo=self.is_moo,
+          )
 
           return hybrid_surface_callable, hybrid_surface_callable.param_space
          
@@ -287,8 +299,9 @@ class KnownConstraintsGenerator():
 
 
 class HybridSurface:
-    def __init__(self, surfaces):
+    def __init__(self, surfaces, is_moo=False):
         self.surfaces = surfaces 
+        self.is_moo = is_moo
         self.param_space = ParameterSpace()
         counter = 0 
         for surface in self.surfaces:
@@ -321,7 +334,10 @@ class HybridSurface:
 
             counter = end_counter
 
-        return np.sum(objs)
+        if self.is_moo:
+            return np.array(objs)[:2]
+        else:
+            return np.sum(objs)
 
 
 
