@@ -20,6 +20,7 @@ from botorch.acquisition import (
 from botorch.fit import fit_gpytorch_mll
 from botorch.models import MixedSingleTaskGP, SingleTaskGP
 
+from botorch.models.transforms.outcome import Standardize
 
 
 from gpytorch.mlls import ExactMarginalLogLikelihood
@@ -115,13 +116,17 @@ class MultiFidelityPlanner(BasePlanner):
         # new stuff ----------------
         fidelity_params: int = None, 
         fidelities: List[float] = None,
-        fixed_cost: Optional[float] = None,
+        fixed_cost: Optional[float] = 5.0,
         **kwargs: Any,
     ):
         local_args = {
             key: val for key, val in locals().items() if key != "self"
         }
         super().__init__(**local_args)
+        self.tkwargs = {
+            "dtype": torch.double,
+            "device": "cpu", #torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+        }
 
         # check if we have any fidelity param dims specified
         if not self.fidelity_params:
@@ -133,7 +138,7 @@ class MultiFidelityPlanner(BasePlanner):
         elif not self.fidelities[-1]==1.0:
             Logger.log('Conventionally the target (final) fidelity is set to 1.0', 'FATAL')
         else:
-            self.fidelities = torch.Tensor(self.fidelities).double()
+            self.fidelities = torch.Tensor(self.fidelities).to(**self.tkwargs)
 
         # target fidelity must always be 1.0
         self.target_fidelities = {self.fidelity_params: 1.0}
@@ -149,12 +154,13 @@ class MultiFidelityPlanner(BasePlanner):
         self.current_ask_fidelity = 1.
 
 
-    def _project(X: torch.Tensor):
-        project_to_target_fidelity(X=X, target_fidelities=target_fidelities)
+    def _project(self, X: torch.Tensor):
+        return project_to_target_fidelity(X=X, target_fidelities=self.target_fidelities)
         
 
-    def set_current_ask_fidelity(fidelity: float) -> None:
+    def set_current_ask_fidelity(self, fidelity: float) -> None:
         setattr(self, 'current_ask_fidelity', fidelity)
+
  
     def build_train_regression_gp(
         self, train_x: torch.Tensor, train_y: torch.Tensor,
@@ -200,13 +206,21 @@ class MultiFidelityPlanner(BasePlanner):
                 self.train_y_scaled_cla,
                 self.train_x_scaled_reg,
                 self.train_y_scaled_reg,
-            ) = self.build_train_data()
-            
+            ) = self.build_train_data(return_scaled_input=True)
+
+            print(self.train_x_scaled_reg)
+
+
+            #  prepare multifidelity data
+            # _ = self.prepare_multifidelity_train_data(
+            #     self.train_x_reg, self.train_y_reg,
+            # )
+
             # TODO: handle unknown constraints
 
             # build and fit regression surrogate model
             self.reg_model = self.build_train_regression_gp(
-                self.train_x_scaled_reg.double(), self.train_y_scaled_reg.double(),
+                self.train_x_scaled_reg, self.train_y_scaled_reg,
             )
 
             # TODO: handle unknown constraints
@@ -222,21 +236,20 @@ class MultiFidelityPlanner(BasePlanner):
                 columns=[self.fidelity_params],
                 values=[1], # TODO: is this right for all cases??
             )
-            print(self.params_obj.bounds)
 
             # optimize the fixed feature acquisition function
             _, current_value = optimize_acqf(
                 acq_function=curr_val_acqf,
                 bounds=self.params_obj.bounds[:, :-1], # this will only work if last dim in fidelity
                 q=1, # batch_size always 1 here
-                num_restarts=10,
-                raw_samples=1024,
+                num_restarts=5,
+                raw_samples=100,
                 options={"batch_limit": 10, "maxiter": 200},
             )
 
             self.mfkg_acqf = qMultiFidelityKnowledgeGradient(
                 model=self.reg_model,
-                num_fantasies=20, # change this to 128 for production
+                num_fantasies=128, # change this to 128 for production
                 current_value=current_value,
                 cost_aware_utilty=self.cost_aware_utility,
                 project=self._project,
@@ -244,32 +257,46 @@ class MultiFidelityPlanner(BasePlanner):
 
             # optimize the knowledge gradient
             fixed_features_list = [{self.fidelity_params:fidelity} for fidelity in self.fidelities]
-            # res, _ = optimize_acqf_mixed(
-            #     acq_function=self.mfkg_acqf,
-            #     bounds=self.params_obj.bounds,
-            #     fixed_features_list=fixed_features_list,
-            #     q=self.batch_size,
-            #     num_restarts=5,
-            #     raw_samples=128,
-            #     options={'batch_limit':5, 'max_iter': 200},
-            # )
 
-            # try pymoo acsqf optimization
-            acquisition_optimizer = PymooGAOptimizer(
-                self.params_obj,
-                    self.acquisition_type,
-                    self.mfkg_acqf,#self.acqf,
-                    self.known_constraints,
-                    self.batch_size,
-                    self.feas_strategy,
-                    None,# self.fca_constraint
-                    self._params,
-                    {},#self.timings_dict,
-                    use_reg_only=use_reg_only,
+            res, _ = optimize_acqf_mixed(
+                acq_function=self.mfkg_acqf.to(self.tkwargs['device']),
+                bounds=self.params_obj.bounds.to(**self.tkwargs),
+                fixed_features_list=fixed_features_list,
+                q=self.batch_size,
+                num_restarts=5,
+                raw_samples=100,
+                options={'batch_limit':5, 'max_iter': 200},
             )
 
-            return_params = acquisition_optimizer.optimize()
+            # try pymoo acsqf optimization
+            # acquisition_optimizer = PymooGAOptimizer(
+            #     self.params_obj,
+            #         self.acquisition_type,
+            #         self.mfkg_acqf,#self.acqf,
+            #         self.known_constraints,
+            #         self.batch_size,
+            #         self.feas_strategy,
+            #         None,# self.fca_constraint
+            #         self._params,
+            #         {},#self.timings_dict,
+            #         use_reg_only=use_reg_only,
+            # )
+
+            # return_params = acquisition_optimizer.optimize()
             
+            print('raw scaled res : ', res)
+
+            # reverse normalize
+            res_unscaled_np = reverse_normalize(res.detach().numpy(), self.params_obj._mins_x, self.params_obj._maxs_x)
+            
+            # convert to parameter vector
+            return_params = []
+            for res in res_unscaled_np:
+                return_params.append(
+                   ParameterVector().from_dict({
+                       p.name: r for p, r in zip(self.param_space, res)
+                   }) 
+                )
 
 
             # get the cost value
