@@ -90,6 +90,81 @@ def run_continuous(init_design_strategy):
     assert len(campaign.observations.get_params()) == BUDGET
     assert len(campaign.observations.get_values()) == BUDGET
 
+
+def run_discrete(init_design_strategy):
+    def surface(x):
+        return np.sin(8 * x)
+
+    # define the meta-training tasks
+    train_tasks = trig_factory(
+        num_samples=20,
+        as_numpy=True,
+        # scale_range=[[7, 9], [7, 9]],
+        # scale_range=[[-9, -7], [-9, -7]],
+        scale_range=[[-8.5, -7.5], [7.5, 8.5]],
+        shift_range=[-0.02, 0.02],
+        amplitude_range=[0.2, 1.2],
+    )
+    valid_tasks = trig_factory(
+        num_samples=5,
+        as_numpy=True,
+        # scale_range=[[7, 9], [7, 9]],
+        # scale_range=[[-9, -7], [-9, -7]],
+        scale_range=[[-8.5, -7.5], [7.5, 8.5]],
+        shift_range=[-0.02, 0.02],
+        amplitude_range=[0.2, 1.2],
+    )
+
+    param_space = ParameterSpace()
+    # add discrete parameter
+    param_0 = ParameterDiscrete(name="param_0", options=list(np.linspace(0, 1, 40)))
+    param_space.add(param_0)
+
+    planner = DKTPlanner(
+        goal="minimize",
+        init_design_strategy=init_design_strategy,
+        num_init_design=4,
+        batch_size=1,
+        acquisition_type='ei',
+        acquisition_optimizer_kind='pymoo',
+        # meta-learning stuff
+        from_disk=False,
+        hyperparams={
+            "model": {
+                "epochs": 6000,
+            }
+        },
+        warm_start=False, 
+        model_path='./tmp_models',
+        train_tasks=train_tasks,
+        valid_tasks=valid_tasks,
+    )
+
+    planner.set_param_space(param_space)
+
+    # make the campaign
+    campaign = Campaign()
+    campaign.set_param_space(param_space)
+
+    BUDGET = 12
+
+    while len(campaign.observations.get_values()) < BUDGET:
+
+        samples = planner.recommend(campaign.observations)
+        for sample in samples:
+            sample_arr = sample.to_array()
+            measurement = surface(sample_arr)
+            campaign.add_observation(sample_arr, measurement)
+
+            print('SAMPLE : ', sample)
+            print('MEASUREMENT : ', measurement)
+
+    os.system("rm -r ./tmp_models/")
+
+    assert len(campaign.observations.get_params()) == BUDGET
+    assert len(campaign.observations.get_values()) == BUDGET
+
+
 #
 # def test_continuous_hypervolume():
 #
@@ -351,5 +426,8 @@ def run_continuous(init_design_strategy):
 
 
 if __name__ == "__main__":
-    run_continuous('lhs')
+    # run_continuous('lhs')
+    run_discrete('random')
     #test_continuous_hypervolume()
+
+    pass

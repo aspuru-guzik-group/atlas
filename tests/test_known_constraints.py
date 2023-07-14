@@ -149,7 +149,11 @@ def run_discrete(
 
 
 def run_categorical(
-	init_design_strategy, batch_size, use_descriptors, acquisition_optimizer_kind , num_init_design=5
+	init_design_strategy,
+	batch_size, 
+	use_descriptors, 
+	acquisition_optimizer_kind , 
+	num_init_design=5
 ):
 
 	problem_gen = ProblemGenerator(problem_type='categorical')
@@ -192,7 +196,11 @@ def run_categorical(
 
 
 def run_mixed_disc_cont(
-	init_design_strategy, batch_size, use_descriptors, acquisition_optimizer_kind, num_init_design=5,
+	init_design_strategy, 
+	batch_size, 
+	use_descriptors, 
+	acquisition_optimizer_kind, 
+	num_init_design=5,
 ):
 
 	problem_gen = ProblemGenerator(problem_type='mixed_disc_cont')
@@ -222,6 +230,7 @@ def run_mixed_disc_cont(
 		samples = planner.recommend(campaign.observations)
 		print(samples)
 		print('len(samples) : ', len(samples))
+		
 		for sample in samples:
 			measurement = surface_callable.run(sample)
 			campaign.add_observation(sample, measurement)
@@ -364,7 +373,6 @@ def run_mixed_cat_disc_cont(
 	meas_params = campaign.observations.get_params()
 	kcs = [known_constraints(param) for param in meas_params]
 	assert all(kcs)
-
 
 
 def run_compositional_constraint_cont(
@@ -676,22 +684,20 @@ def run_pymoo(init_design_strategy, batch_size, use_descriptors, num_init_design
 	assert all(kcs)
 
 
-
-
 if __name__ == '__main__':
 	#print(type(known_constraints_cont))
 	
 	#WORKING
 
 	run_continuous('random', 1, False, 'pymoo')
-	run_discrete('random', 1, False, 'gradient')
-	run_categorical('random', 1, False, 'pymoo')
-	run_mixed_cat_disc('random', 1, False, 'pymoo')
-	run_mixed_cat_cont('random', 1, False, 'pymoo')
-	run_mixed_cat_disc_cont('random', 1, False, 'pymoo')
-	run_compositional_constraint_cont('random', 1, num_init_design=5)
-	run_permutation_constraint_mixed_cat_disc('random', 1, num_init_design=5)
-	run_mixed_disc_cont('random', 1, False, 'pymoo')
+	# run_discrete('random', 1, False, 'gradient')
+	# run_categorical('random', 1, False, 'pymoo')
+	# run_mixed_cat_disc('random', 1, False, 'pymoo')
+	# run_mixed_cat_cont('random', 1, False, 'pymoo')
+	# run_mixed_cat_disc_cont('random', 1, False, 'pymoo')
+	# run_compositional_constraint_cont('random', 1, num_init_design=5)
+	# run_permutation_constraint_mixed_cat_disc('random', 1, num_init_design=5)
+	# run_mixed_disc_cont('random', 1, False, 'pymoo')
 
 	#NOT WORKING
 	
@@ -701,4 +707,3 @@ if __name__ == '__main__':
 	#run_pending_experiment_constraint_cat('random', 1, False, 'gradient')
 	#run_batch_constrained_disc('random', 3, False, 3)
 	#run_pymoo('random', 2, False, 5)
-	pass
