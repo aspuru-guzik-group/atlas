@@ -16,6 +16,8 @@ from olympus.surfaces import Surface
 
 from atlas.planners.gp.planner import BoTorchPlanner
 from problem_generator import ProblemGenerator
+from problem_generator import KnownConstraintsGenerator
+from problem_generator import HybridSurface
 
 
 CONT = {
@@ -28,11 +30,13 @@ CONT = {
 	"use_descriptors": [False],  # use descriptors
 }
 
+
 DISC = {
 	"init_design_strategy": ["random"],
 	"batch_size": [1],
 	"use_descriptors": [False],
 }
+
 
 CAT = {
 	"init_design_strategy": ["random"],
@@ -40,11 +44,13 @@ CAT = {
 	"use_descriptors": [False, True],
 }
 
+
 MIXED_CAT_CONT = {
 	"init_design_strategy": ["random"],
 	"batch_size": [1],
 	"use_descriptors": [False, True],
 }
+
 
 MIXED_DISC_CONT = {
 	"init_design_strategy": ["random"],
@@ -58,6 +64,7 @@ MIXED_CAT_DISC = {
 	"batch_size": [1],
 	"use_descriptors": [False, True],
 }
+
 
 MIXED_CAT_DISC_CONT = {
 	"init_design_strategy": ["random"],
@@ -161,7 +168,7 @@ def generate_scalarizer_object(scalarizer_kind, value_space):
 	return scalarizer, moo_params, goals
 
 
-def run_batched(problem_type, init_design_strategy, batch_size, ):
+def run_batched(problem_type, init_design_strategy, batch_size):
 
 	if problem_type == 'cont':
 		run_continuous(init_design_strategy, batch_size, False, 'Hypervolume', num_init_design=5,acquisition_type='qei',)
@@ -186,10 +193,16 @@ def run_continuous(
 	scalarizer_kind,
 	acquisition_optimizer,
 	num_init_design=5,
+	is_constrained=False
 ):
 
 	problem_gen = ProblemGenerator(problem_type='continuous', is_moo=True)	
 	surface_callable, param_space = problem_gen.generate_instance()
+
+	if is_constrained:
+		known_constraints = [KnownConstraintsGenerator().get_constraint('continuous')]
+	else:
+		known_constraints = None
 	
 	scalarizer, moo_params, goals = generate_scalarizer_object(
 		scalarizer_kind, surface_callable.value_space
@@ -206,6 +219,7 @@ def run_continuous(
 		scalarizer_kind=scalarizer_kind,
 		moo_params=moo_params,
 		goals=goals,
+		known_constraints=known_constraints,
 	)
 
 	planner.set_param_space(surface_callable.param_space)
@@ -229,59 +243,11 @@ def run_continuous(
 	assert campaign.observations.get_values().shape[1] == len(
 		surface_callable.value_space
 	)
-
-
-def run_categorical(
-	init_design_strategy,
-	batch_size,
-	use_descriptors,
-	scalarizer_kind,
-	num_init_design=5,
-	acquisition_type='ei', 
-):
-
-	moo_surface = Dataset(kind="redoxmers")
-
-	scalarizer, moo_params, goals = generate_scalarizer_object(
-		scalarizer_kind, moo_surface.value_space
-	)
-
-	planner = BoTorchPlanner(
-		goal="minimize",
-		feas_strategy="naive-0",
-		init_design_strategy=init_design_strategy,
-		batch_size=batch_size,
-		use_descriptors=use_descriptors,
-		acquisition_type=acquisition_type, 
-		is_moo=True,
-		value_space=moo_surface.value_space,
-		scalarizer_kind=scalarizer_kind,
-		moo_params=moo_params,
-		goals=goals,
-	)
-
-	planner.set_param_space(moo_surface.param_space)
-
-	campaign = Campaign()
-	campaign.set_param_space(moo_surface.param_space)
-	campaign.set_value_space(moo_surface.value_space)
-
-	BUDGET = num_init_design + batch_size * 4
-
-	while len(campaign.observations.get_values()) < BUDGET:
-
-		samples = planner.recommend(campaign.observations)
-
-		for sample in samples:
-			sample_arr = sample.to_array()
-			measurement = moo_surface.run(sample_arr, return_paramvector=True)
-			campaign.add_and_scalarize(sample_arr, measurement, scalarizer)
-
-	assert len(campaign.observations.get_params()) == BUDGET
-	assert len(campaign.observations.get_values()) == BUDGET
-	assert campaign.observations.get_values().shape[1] == len(
-		moo_surface.value_space
-	)
+	
+	if is_constrained:
+		meas_params = campaign.observations.get_params()
+		kcs = [known_constraints[0](param) for param in meas_params]
+		assert all(kcs)
 
 
 def run_discrete(
@@ -291,11 +257,17 @@ def run_discrete(
 	scalarizer_kind,
 	acquisition_optimizer,
 	num_init_design=5,
+	is_constrained=False
 ):
 
 	problem_gen = ProblemGenerator(problem_type='discrete', is_moo=True)	
 	surface_callable, param_space = problem_gen.generate_instance()
 	
+	if is_constrained:
+		known_constraints = [KnownConstraintsGenerator().get_constraint('discrete')]
+	else:
+		known_constraints = None
+
 	scalarizer, moo_params, goals = generate_scalarizer_object(
 		scalarizer_kind, surface_callable.value_space
 	)
@@ -311,6 +283,7 @@ def run_discrete(
 		scalarizer_kind=scalarizer_kind,
 		moo_params=moo_params,
 		goals=goals,
+		known_constraints=known_constraints
 	)
 
 	planner.set_param_space(surface_callable.param_space)
@@ -334,72 +307,30 @@ def run_discrete(
 	assert campaign.observations.get_values().shape[1] == len(
 		surface_callable.value_space
 	)
+	
+	if is_constrained:
+		meas_params = campaign.observations.get_params()
+		kcs = [known_constraints[0](param) for param in meas_params]
+		assert all(kcs)
 
 
-def run_mixed_cat_cont(
-	init_design_strategy,
-	batch_size,
-	use_descriptors,
-	scalarizer_kind,
-	num_init_design=5,
-	acquisition_type='ei', 
-):
-
-	moo_surface = Emulator(dataset="suzuki_i", model="BayesNeuralNet")
-
-	scalarizer, moo_params, goals = generate_scalarizer_object(
-		scalarizer_kind, moo_surface.value_space
-	)
-
-	planner = BoTorchPlanner(
-		goal="minimize",
-		feas_strategy="naive-0",
-		init_design_strategy=init_design_strategy,
-		batch_size=batch_size,
-		use_descriptors=use_descriptors,
-		acquisition_type=acquisition_type,
-		is_moo=True,
-		value_space=moo_surface.value_space,
-		scalarizer_kind=scalarizer_kind,
-		moo_params=moo_params,
-		goals=goals,
-	)
-
-	planner.set_param_space(moo_surface.param_space)
-
-	campaign = Campaign()
-	campaign.set_param_space(moo_surface.param_space)
-	campaign.set_value_space(moo_surface.value_space)
-
-	BUDGET = num_init_design + batch_size * 4
-
-	while len(campaign.observations.get_values()) < BUDGET:
-
-		samples = planner.recommend(campaign.observations)
-
-		for sample in samples:
-			measurement, _, __ = moo_surface.run(sample, return_paramvector=True)
-			campaign.add_and_scalarize(sample, measurement, scalarizer)
-
-	assert len(campaign.observations.get_params()) == BUDGET
-	assert len(campaign.observations.get_values()) == BUDGET
-	assert campaign.observations.get_values().shape[1] == len(
-		moo_surface.value_space
-	)
-
-
-def run_mixed_disc_cont(
+def run_categorical(
 	init_design_strategy,
 	batch_size,
 	use_descriptors,
 	scalarizer_kind,
 	acquisition_optimizer,
 	num_init_design=5,
-
+	is_constrained=False
 ):
 
-	problem_gen = ProblemGenerator(problem_type='mixed_disc_cont', is_moo=True)	
+	problem_gen = ProblemGenerator(problem_type='categorical', is_moo=True)	
 	surface_callable, param_space = problem_gen.generate_instance()
+
+	if is_constrained:
+		known_constraints = [KnownConstraintsGenerator().get_constraint('categorical')]
+	else:
+		known_constraints = None
 
 	scalarizer, moo_params, goals = generate_scalarizer_object(
 		scalarizer_kind, surface_callable.value_space
@@ -417,6 +348,139 @@ def run_mixed_disc_cont(
 		scalarizer_kind=scalarizer_kind,
 		moo_params=moo_params,
 		goals=goals,
+		known_constraints=known_constraints
+	)
+
+	planner.set_param_space(surface_callable.param_space)
+
+	campaign = Campaign()
+	campaign.set_param_space(surface_callable.param_space)
+	campaign.set_value_space(surface_callable.value_space)
+
+	BUDGET = num_init_design + batch_size * 4
+
+	while len(campaign.observations.get_values()) < BUDGET:
+
+		samples = planner.recommend(campaign.observations)
+
+		for sample in samples:
+			measurement = surface_callable.run(sample)
+			campaign.add_and_scalarize(sample, measurement, scalarizer)
+
+	assert len(campaign.observations.get_params()) == BUDGET
+	assert len(campaign.observations.get_values()) == BUDGET
+	assert campaign.observations.get_values().shape[1] == len(
+		surface_callable.value_space
+	)
+	
+	if is_constrained:
+		meas_params = campaign.observations.get_params()
+		kcs = [known_constraints[0](param) for param in meas_params]
+		assert all(kcs)
+
+
+def run_mixed_disc_cont(
+	init_design_strategy,
+	batch_size,
+	use_descriptors,
+	scalarizer_kind,
+	acquisition_optimizer,
+	num_init_design=5,
+	is_constrained=False
+
+):
+
+	problem_gen = ProblemGenerator(problem_type='mixed_disc_cont', is_moo=True)	
+	surface_callable, param_space = problem_gen.generate_instance()
+
+	if is_constrained:
+		known_constraints = [KnownConstraintsGenerator().get_constraint('disc_cont')]
+	else:
+		known_constraints = None
+
+	scalarizer, moo_params, goals = generate_scalarizer_object(
+		scalarizer_kind, surface_callable.value_space
+	)
+
+	planner = BoTorchPlanner(
+		goal="minimize",
+		feas_strategy="naive-0",
+		init_design_strategy=init_design_strategy,
+		batch_size=batch_size,
+		use_descriptors=use_descriptors,
+		acquisition_optimizer_kind=acquisition_optimizer,
+		is_moo=True,
+		value_space=surface_callable.value_space,
+		scalarizer_kind=scalarizer_kind,
+		moo_params=moo_params,
+		goals=goals,
+		known_constraints=known_constraints
+	)
+
+	planner.set_param_space(surface_callable.param_space)
+
+	campaign = Campaign()
+	campaign.set_param_space(surface_callable.param_space)
+	campaign.set_value_space(surface_callable.value_space)
+
+	BUDGET = num_init_design + batch_size * 4
+
+	while len(campaign.observations.get_values()) < BUDGET:
+
+		samples = planner.recommend(campaign.observations)
+
+		for sample in samples:
+			measurement = surface_callable.run(sample)
+			campaign.add_and_scalarize(sample, measurement, scalarizer)
+
+	assert len(campaign.observations.get_params()) == BUDGET
+	assert len(campaign.observations.get_values()) == BUDGET
+	assert campaign.observations.get_values().shape[1] == len(
+		surface_callable.value_space
+	)
+	
+	if is_constrained:
+		meas_params = campaign.observations.get_params()
+		kcs = [known_constraints[0](param) for param in meas_params]
+		assert all(kcs)
+
+
+def run_mixed_cat_disc(
+	init_design_strategy,
+	batch_size,
+	use_descriptors,
+	scalarizer_kind,
+	acquisition_optimizer,
+	num_init_design=5,
+	is_constrained=False
+
+):
+
+	problem_gen = ProblemGenerator(problem_type='mixed_cat_disc', is_moo=True)	
+	surface_callable, param_space = problem_gen.generate_instance()
+
+	if is_constrained:
+		known_constraints = [KnownConstraintsGenerator().get_constraint('cat_disc')]
+	else:
+		known_constraints = None
+
+	scalarizer, moo_params, goals = generate_scalarizer_object(
+		scalarizer_kind, surface_callable.value_space
+	)
+
+	planner = BoTorchPlanner(
+		goal="minimize",
+		feas_strategy="naive-0",
+		init_design_strategy=init_design_strategy,
+		batch_size=batch_size,
+		use_descriptors=use_descriptors,
+		acquisition_optimizer_kind=acquisition_optimizer,
+		is_moo=True,
+		value_space=surface_callable.value_space,
+		scalarizer_kind=scalarizer_kind,
+		moo_params=moo_params,
+		goals=goals,
+		known_constraints=known_constraints
 	)
 
 	planner.set_param_space(surface_callable.param_space)
@@ -441,24 +505,150 @@ def run_mixed_disc_cont(
 		surface_callable.value_space
 	)
 
+	if is_constrained:
+		meas_params = campaign.observations.get_params()
+		kcs = [known_constraints[0](param) for param in meas_params]
+		assert all(kcs)
+
+
+def run_mixed_cat_cont(
+	init_design_strategy,
+	batch_size,
+	use_descriptors,
+	scalarizer_kind,
+	acquisition_optimizer,
+	num_init_design=5,
+	is_constrained=False
+):
+
+	problem_gen = ProblemGenerator(problem_type='mixed_cat_cont', is_moo=True)	
+	surface_callable, param_space = problem_gen.generate_instance()
+
+	if is_constrained:
+		known_constraints = [KnownConstraintsGenerator().get_constraint('cat_cont')]
+	else:
+		known_constraints = None
+
+	scalarizer, moo_params, goals = generate_scalarizer_object(
+		scalarizer_kind, surface_callable.value_space
+	)
+
+	planner = BoTorchPlanner(
+		goal="minimize",
+		feas_strategy="naive-0",
+		init_design_strategy=init_design_strategy,
+		batch_size=batch_size,
+		use_descriptors=use_descriptors,
+		acquisition_optimizer_kind=acquisition_optimizer,
+		is_moo=True,
+		value_space=surface_callable.value_space,
+		scalarizer_kind=scalarizer_kind,
+		moo_params=moo_params,
+		goals=goals,
+		known_constraints=known_constraints
+	)
+
+	planner.set_param_space(surface_callable.param_space)
+
+	campaign = Campaign()
+	campaign.set_param_space(surface_callable.param_space)
+	campaign.set_value_space(surface_callable.value_space)
+
+	BUDGET = num_init_design + batch_size * 4
+
+	while len(campaign.observations.get_values()) < BUDGET:
+
+		samples = planner.recommend(campaign.observations)
+
+		for sample in samples:
+			measurement = surface_callable.run(sample)
+			campaign.add_and_scalarize(sample, measurement, scalarizer)
+
+	assert len(campaign.observations.get_params()) == BUDGET
+	assert len(campaign.observations.get_values()) == BUDGET
+	assert campaign.observations.get_values().shape[1] == len(
+		surface_callable.value_space
+	)
+
+	if is_constrained:
+		meas_params = campaign.observations.get_params()
+		kcs = [known_constraints[0](param) for param in meas_params]
+		assert all(kcs)
+
+
+def run_mixed_cat_disc_cont(
+	init_design_strategy,
+	batch_size,
+	use_descriptors,
+	scalarizer_kind,
+	acquisition_optimizer,
+	num_init_design=5,
+	is_constrained=False
+):
+
+	problem_gen = ProblemGenerator(problem_type='mixed_cat_disc_cont', is_moo=True)	
+	surface_callable, param_space = problem_gen.generate_instance()
+
+	if is_constrained:
+		known_constraints = [KnownConstraintsGenerator().get_constraint('cat_disc_cont')]
+	else:
+		known_constraints = None
+
+	scalarizer, moo_params, goals = generate_scalarizer_object(
+		scalarizer_kind, surface_callable.value_space
+	)
+
+	planner = BoTorchPlanner(
+		goal="minimize",
+		feas_strategy="naive-0",
+		init_design_strategy=init_design_strategy,
+		batch_size=batch_size,
+		use_descriptors=use_descriptors,
+		acquisition_optimizer_kind=acquisition_optimizer,
+		is_moo=True,
+		value_space=surface_callable.value_space,
+		scalarizer_kind=scalarizer_kind,
+		moo_params=moo_params,
+		goals=goals,
+		known_constraints=known_constraints
+	)
+
+	planner.set_param_space(surface_callable.param_space)
+
+	campaign = Campaign()
+	campaign.set_param_space(surface_callable.param_space)
+	campaign.set_value_space(surface_callable.value_space)
+
+	BUDGET = num_init_design + batch_size * 4
+
+	while len(campaign.observations.get_values()) < BUDGET:
+
+		samples = planner.recommend(campaign.observations)
+
+		for sample in samples:
+			measurement = surface_callable.run(sample)
+			campaign.add_and_scalarize(sample, measurement, scalarizer)
+
+	assert len(campaign.observations.get_params()) == BUDGET
+	assert len(campaign.observations.get_values()) == BUDGET
+	assert campaign.observations.get_values().shape[1] == len(
+		surface_callable.value_space
+	)
+
+	if is_constrained:
+		meas_params = campaign.observations.get_params()
+		kcs = [known_constraints[0](param) for param in meas_params]
+		assert all(kcs)
+
 
 if __name__ == "__main__":
-	# run_mixed_cat_cont(
-	# 	init_design_strategy='random',
-	# 	batch_size=1,
-	# 	use_descriptors=False,
-	# 	scalarizer_kind='Chimera',
-	# )
 
-	# run_continuous('random', 1, False, 'Hypervolume', 'pymoo', 5)
-	# run_discrete('random', 1, False, 'Hypervolume', 'pymoo', 5)
-	# run_categorical('random', 1, False, 'Hypervolume', 'pymoo', 5)
-	run_mixed_disc_cont(
-		init_design_strategy='random',
-		batch_size=1,
-		use_descriptors=False,
-		scalarizer_kind='Hypervolume',
-		acquisition_optimizer='pymoo',
-		num_init_design=5,
-	)
+	run_continuous('random', 1, False, 'Hypervolume', 'pymoo', 5, True)
+	run_discrete('random', 1, False, 'Hypervolume', 'pymoo', 5, True)
+	run_categorical('random', 1, False, 'Hypervolume', 'pymoo', 5, True)
+	run_mixed_disc_cont('random', 1, False, 'Hypervolume', 'pymoo', 5, True)
+	run_mixed_cat_disc('random', 1, False, 'Hypervolume', 'pymoo', 5, True)
+	run_mixed_cat_cont('random', 1, False, 'Hypervolume', 'pymoo', 5, True)
+	run_mixed_cat_disc_cont('random', 1, False, 'Hypervolume', 'pymoo', 5, True)
 	
+	pass
