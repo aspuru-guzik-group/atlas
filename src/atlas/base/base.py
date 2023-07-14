@@ -43,7 +43,6 @@ from atlas.known_constraints.known_constraints import (
 )
 
 
-
 class BasePlanner(CustomPlanner):
 	def __init__(
 		self,
@@ -496,8 +495,8 @@ class BasePlanner(CustomPlanner):
 		return (
 			torch.tensor(train_x_cla).float(),
 			torch.tensor(train_y_cla).squeeze().float(),
-			torch.tensor(train_x_reg, **self.tkwargs),
-			torch.tensor(train_y_reg, **self.tkwargs),
+			torch.tensor(train_x_reg),
+			torch.tensor(train_y_reg),
 		)
 
 	def reg_surrogate(

@@ -75,6 +75,8 @@ class Parameters():
 			pass
 
 
+	
+
 	@property
 	def num_params(self):
 		return len(self.param_space)
@@ -144,6 +146,17 @@ class Parameters():
 	def exp_cat_mask(self):
 		return [True if ix in self.exp_cat_dims else False for ix in range(self.expanded_raw.shape[1])]
 
+	def set_multi_fidelity_param_attrs(self, fidelity_params: int) -> None:
+		""" overwrite certain properties in case of multi-fidelity problem
+		"""
+		# new
+		self.fidelity_params_mask = [
+            True if ix==fidelity_params else False for ix in range(len(self.param_space))
+        ]
+		# overwrite
+		self.bounds[:, fidelity_params] = torch.tensor([1., 0.])
+		self._mins_x[fidelity_params] = 0.
+		self._maxs_x[fidelity_params] = 1.
 
 
 	def _get_expanded_indexed(self):

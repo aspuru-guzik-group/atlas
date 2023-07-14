@@ -231,13 +231,24 @@ class FeasibilityAwareGeneral(
         # set the p_feas postprocessing step
         self.set_p_feas_postprocess()
 
+        # deal with general parameter stuff
         self.X_sns_empty, _ = self.generate_X_sns()
         self.functional_dims = np.logical_not(self.params_obj.exp_general_mask)
-        
 
     def forward(self, X):
 
         X = X.double()
+
+        # print(self.X_sns_empty.shape)
+        # print(X.shape)
+        # quit()
+
+        #TODO: messy clean this up
+        if X.shape[-1] == self.X_sns_empty.shape[-1]:
+            X = X[:, :, self.functional_dims]
+
+
+
         best_f = self.best_f.to(X)
 
         # shape (# samples, # exp general dims, # batch size, # exp param dims)
@@ -245,8 +256,8 @@ class FeasibilityAwareGeneral(
 
         for x_ix in range(X.shape[0]):
             X_sn = torch.clone(self.X_sns_empty)
-            #X_sn[:, :, self.functional_dims] = X[x_ix, :] #X[x_ix, :, self.functional_dims]
-            X_sn[:, :, self.functional_dims] = X[x_ix, :, self.functional_dims]
+            #X_sn[:, :, self.functional_dims] = X[x_ix, :, self.functional_dims]
+            X_sn[:, :, self.functional_dims] = X[x_ix, :]
             X_sns[x_ix, :, :, :] = X_sn
 
         pred_mu_x, pred_sigma_x = [], []

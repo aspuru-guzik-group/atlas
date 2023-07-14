@@ -4,6 +4,7 @@ import os
 import pickle
 import sys
 import time
+import copy
 from copy import deepcopy
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
@@ -150,17 +151,35 @@ class MultiFidelityPlanner(BasePlanner):
         self.cost_model = AffineFidelityCostModel(fidelity_weights=self.target_fidelities, fixed_cost=self.fixed_cost)
         self.cost_aware_utility = InverseCostWeightedUtility(cost_model=self.cost_model)
 
-        # set current ask fidelity (default to target fidelity)
-        self.current_ask_fidelity = 1.
+        # set current ask fidelity (default to None)
+        self.current_ask_fidelity = None
+
 
 
     def _project(self, X: torch.Tensor):
         return project_to_target_fidelity(X=X, target_fidelities=self.target_fidelities)
         
 
-    def set_current_ask_fidelity(self, fidelity: float) -> None:
+    def set_ask_fidelity(self, fidelity: float) -> None:
+        # quickly validate the intended fidelity level
+        if not fidelity in self.fidelities:
+            Logger.log(
+                f'Fidelity level {fidelity} not in the available options : {self.fidelities}', 
+                'FATAL',
+            )
+        Logger.log(f'Setting ask fidelity level to {fidelity}', 'WARNING')
         setattr(self, 'current_ask_fidelity', fidelity)
 
+    def reset_ask_fidelity(self) -> None:
+        Logger.log(f'Resetting ask fidelity level', 'WARNING')
+        setattr(self, 'current_ask_fidelity', None)
+
+    def get_fixed_params(self) -> Dict[int, float]:
+        if not self.current_ask_fidelity:
+            return {}
+        else:
+            return [{self.fidelity_params: self.current_ask_fidelity}]
+        
  
     def build_train_regression_gp(
         self, train_x: torch.Tensor, train_y: torch.Tensor,
@@ -187,12 +206,39 @@ class MultiFidelityPlanner(BasePlanner):
             "INFO",
         )
         return model
+    
+    def _get_mfkg_acqf(self) -> qMultiFidelityKnowledgeGradient:
+        # build acquisition function
+        curr_val_acqf = FixedFeatureAcquisitionFunction(
+            acq_function=PosteriorMean(self.reg_model),
+            d=len(self.param_space),
+            columns=[self.fidelity_params],
+            values=[1], # TODO: is this right for all cases??
+        )
 
+        # optimize the fixed feature acquisition function
+        _, current_value = optimize_acqf(
+            acq_function=curr_val_acqf,
+            bounds=self.params_obj.bounds[:, np.logical_not(self.params_obj.fidelity_params_mask)].to(**self.tkwargs),
+            q=1, # batch_size always 1 here
+            num_restarts=5,
+            raw_samples=100,
+            options={"batch_limit": 10, "maxiter": 200},
+        )
+
+        mfkg_acqf = qMultiFidelityKnowledgeGradient(
+            model=self.reg_model,
+            num_fantasies=128, # change this to 128 for production
+            current_value=current_value,
+            cost_aware_utilty=self.cost_aware_utility,
+            project=self._project,
+        )
+        return mfkg_acqf.to(self.tkwargs['device'])
 
 
     def _ask(self) -> List[ParameterVector]:
-
         """query the planner for a batch of new parameter points to measure"""
+
         # if we have all nan values, just continue with initial design
         if np.logical_or(
             len(self._values) < self.num_init_design,
@@ -201,6 +247,9 @@ class MultiFidelityPlanner(BasePlanner):
             return_params = self.initial_design()
 
         else:
+            # convert bounds min max stuff for multi-fidelity problem
+            self.params_obj.set_multi_fidelity_param_attrs(self.fidelity_params)
+
             (
                 self.train_x_scaled_cla,
                 self.train_y_scaled_cla,
@@ -208,19 +257,11 @@ class MultiFidelityPlanner(BasePlanner):
                 self.train_y_scaled_reg,
             ) = self.build_train_data(return_scaled_input=True)
 
-            print(self.train_x_scaled_reg)
-
-
-            #  prepare multifidelity data
-            # _ = self.prepare_multifidelity_train_data(
-            #     self.train_x_reg, self.train_y_reg,
-            # )
-
             # TODO: handle unknown constraints
 
             # build and fit regression surrogate model
             self.reg_model = self.build_train_regression_gp(
-                self.train_x_scaled_reg, self.train_y_scaled_reg,
+                self.train_x_scaled_reg.to(**self.tkwargs), self.train_y_scaled_reg.to(**self.tkwargs),
             )
 
             # TODO: handle unknown constraints
@@ -229,87 +270,68 @@ class MultiFidelityPlanner(BasePlanner):
             self.cla_model, self.cla_likelihood = None, None
             self.cla_surr_min_, self.cla_surr_max_ = None, None
 
-            # build acquisition function
-            curr_val_acqf = FixedFeatureAcquisitionFunction(
-                acq_function=PosteriorMean(self.reg_model),
-                d=len(self.param_space),
-                columns=[self.fidelity_params],
-                values=[1], # TODO: is this right for all cases??
-            )
-
-            # optimize the fixed feature acquisition function
-            _, current_value = optimize_acqf(
-                acq_function=curr_val_acqf,
-                bounds=self.params_obj.bounds[:, :-1], # this will only work if last dim in fidelity
-                q=1, # batch_size always 1 here
-                num_restarts=5,
-                raw_samples=100,
-                options={"batch_limit": 10, "maxiter": 200},
-            )
-
-            self.mfkg_acqf = qMultiFidelityKnowledgeGradient(
-                model=self.reg_model,
-                num_fantasies=128, # change this to 128 for production
-                current_value=current_value,
-                cost_aware_utilty=self.cost_aware_utility,
-                project=self._project,
-            )
-
-            # optimize the knowledge gradient
-            fixed_features_list = [{self.fidelity_params:fidelity} for fidelity in self.fidelities]
-
-            res, _ = optimize_acqf_mixed(
-                acq_function=self.mfkg_acqf.to(self.tkwargs['device']),
-                bounds=self.params_obj.bounds.to(**self.tkwargs),
-                fixed_features_list=fixed_features_list,
-                q=self.batch_size,
-                num_restarts=5,
-                raw_samples=100,
-                options={'batch_limit':5, 'max_iter': 200},
-            )
-
-            # try pymoo acsqf optimization
-            # acquisition_optimizer = PymooGAOptimizer(
-            #     self.params_obj,
-            #         self.acquisition_type,
-            #         self.mfkg_acqf,#self.acqf,
-            #         self.known_constraints,
-            #         self.batch_size,
-            #         self.feas_strategy,
-            #         None,# self.fca_constraint
-            #         self._params,
-            #         {},#self.timings_dict,
-            #         use_reg_only=use_reg_only,
-            # )
-
-            # return_params = acquisition_optimizer.optimize()
+            # get mfkg acqusition function
+            mfkg_acqf = self._get_mfkg_acqf()
             
-            print('raw scaled res : ', res)
+            # get the fixed parameters according to current ask fidelity level
+            fixed_params = self.get_fixed_params()
 
-            # reverse normalize
-            res_unscaled_np = reverse_normalize(res.detach().numpy(), self.params_obj._mins_x, self.params_obj._maxs_x)
-            
-            # convert to parameter vector
-            return_params = []
-            for res in res_unscaled_np:
-                return_params.append(
-                   ParameterVector().from_dict({
-                       p.name: r for p, r in zip(self.param_space, res)
-                   }) 
+            if self.acquisition_optimizer_kind == 'gradient':
+                # optimize the knowledge gradient
+                fixed_features_list = [{self.fidelity_params:fidelity} for fidelity in self.fidelities]
+                res, _ = optimize_acqf_mixed(
+                    acq_function=mfkg_acqf,
+                    bounds=self.params_obj.bounds.to(**self.tkwargs),
+                    fixed_features_list=fixed_features_list,
+                    q=self.batch_size,
+                    num_restarts=5,
+                    raw_samples=100,
+                    options={'batch_limit':5, 'max_iter': 200},
                 )
+                res_unscaled_np = reverse_normalize(
+                res.detach().numpy(), 
+                self.params_obj._mins_x, 
+                self.params_obj._maxs_x,
+                )
+                # convert to parameter vector
+                return_params = []
+                for res in res_unscaled_np:
+                    return_params.append(
+                    ParameterVector().from_dict({
+                            p.name: r for p, r in zip(self.param_space, res)
+                        }) 
+                    )
+
+            elif self.acquisition_optimizer_kind == 'pymoo':
+                # TODO: fix genetic and pymoo optimizer for this problem
+                # try pymoo acqf optimization
+                acquisition_optimizer = PymooGAOptimizer(
+                    self.params_obj,
+                        self.acquisition_type,
+                        mfkg_acqf,#self.acqf,
+                        self.known_constraints,
+                        self.batch_size,
+                        self.feas_strategy,
+                        None,# self.fca_constraint
+                        self._params,
+                        {},#self.timings_dict,
+                        use_reg_only=use_reg_only,
+                        fixed_params=fixed_params,
+                        num_fantasies=128,
+                )
+
+                return_params = acquisition_optimizer.optimize()
+
+            else:
+                msg = 'MultiFidelityPlanner is only compatible with "gradient" and "pymoo" acquisition optimizers'
+                Logger.log(msg, 'FATAL')
 
 
             # get the cost value
             #cost = self.cost_model(res).sum()
-            
-            #return_params = res.detach()
 
 
             print(return_params)
-            #print(return_params.shape)
-
-            quit()
-            # convert to list of Olympus parameter vectors - include the fidelity param(s)
 
 
 

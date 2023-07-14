@@ -52,7 +52,7 @@ def run_continuous(init_design_strategy):
         num_init_design=4,
         batch_size=1,
         acquisition_type='ei',
-        acquisition_optimizer_kind='pymoo',
+        acquisition_optimizer_kind='gradient',
         # meta-learning stuff
         from_disk=False,
         hyperparams={

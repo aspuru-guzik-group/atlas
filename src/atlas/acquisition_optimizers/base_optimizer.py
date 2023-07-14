@@ -41,6 +41,7 @@ class AcquisitionOptimizer:
         fca_constraint: Callable,
         params: torch.Tensor,
         timings_dict: Dict,
+        fixed_params:Optional[List[Dict[int, float]]]=[],
         **kwargs: Any,
 
     ):
@@ -53,6 +54,8 @@ class AcquisitionOptimizer:
         self.fca_constraint = fca_constraint
         self._params = params
         self.timings_dict = timings_dict
+
+        self.fixed_params = fixed_params
 
 
     @abstractmethod

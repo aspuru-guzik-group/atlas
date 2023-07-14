@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
-
+import uuid 
 import numpy as np
 import torch
 from botorch.acquisition import AcquisitionFunction
@@ -47,6 +47,8 @@ class PymooProblemWrapper(Problem):
                  acqf: AcquisitionFunction,
                  batch_size: int,
                  known_constraints: Union[Callable, List[Callable]],
+                 fixed_param: Dict[int, float], 
+                 num_fantasies: int = 0,
                  **kwargs,
     ): 
         if not known_constraints.is_empty:
@@ -69,7 +71,24 @@ class PymooProblemWrapper(Problem):
         self.acqf = acqf
         self.batch_size = batch_size
         self.known_constraints = known_constraints
+        self.fixed_param = fixed_param
+        self.num_fantasies = num_fantasies
 
+        # TODO: this only supports one fixed param now, should be fine...
+        if self.fixed_param != {}:
+            self.fixed_param_ix = next(iter(self.fixed_param.keys()))
+            self.fixed_param_val = next(iter(self.fixed_param.values()))
+            self.fixed_param_name = self.param_space[self.fixed_param_ix].name
+            self.fixed_param_type = self.param_space[self.fixed_param_ix].type
+
+            if self.param_space[self.fixed_param_ix] in ['discrete', 'categorical']:
+                self.fixed_param_option_ix = self.param_space[self.fixed_param_ix].options.index(self.fixed_param_val)
+            else:
+                self.fixed_param_option_ix = None
+        else:
+            self.fixed_param_name = uuid.uuid4().hex
+
+        print(self.num_fantasies)
 
     def _pymoo_to_olympus(self, samples, forward_transform=False, return_param_vec=False, return_expanded=False):
         """ convert pymoo parameters to Olympus parameters
@@ -85,12 +104,23 @@ class PymooProblemWrapper(Problem):
             for elem, param in zip(sample, self.param_space):
                 if param.type == 'discrete':
                     # map back to olympus with integer index
-                    olymp_sample[param.name] = float(param.options[sample[elem]])
-               
+                    if param.name == self.fixed_param_name:
+                        val_ = self.fixed_param_val
+                    else:
+                        val_ = float(param.options[sample[elem]])
+                    olymp_sample[param.name] = val_
+            
                 elif param.type == 'continuous':
-                    olymp_sample[param.name] = float(sample[elem])
+                    if param.name == self.fixed_param_name:
+                        val_ = self.fixed_param_val
+                    else:
+                        val_ = float(sample[elem])
+                    olymp_sample[param.name] = val_
                 elif param.type == 'categorical':
-                    olymp_sample[param.name] = sample[elem]
+                    if param.name == self.fixed_param_name:
+                        val_ = str(self.fixed_param_val)
+                    else:
+                        olymp_sample[param.name] = sample[elem]
 
             olymp_samples.append(olymp_sample)
 
@@ -143,8 +173,6 @@ class PymooProblemWrapper(Problem):
         )).detach().numpy()[0][0]
 
         # TODO: finish this function
-
-
         return None
             
     def _X_to_list_dicts(self, X):
@@ -156,15 +184,30 @@ class PymooProblemWrapper(Problem):
             )))
 
         return X_list_dicts
+    
+    def _replace_fixed_param(self, X, to_replace):
+        X_fixed_param = []
+        for X_ in X:
+            X_[self.fixed_param_name] = to_replace
+            X_fixed_param.append(X_)
+        return X_fixed_param
+    
 
 
     def _evaluate(self, X, out, *args, **kwargs):
         """ Abstract objective and constraint evaluation method for pymoo
         Problem instance
         """
+
         # convert everything to list of dicts to stay consistent
         if not isinstance(X[0], dict):
             X = self._X_to_list_dicts(X)
+
+        if self.fixed_param != {}:
+            if self.fixed_param_type == 'discrete':
+                X = self._replace_fixed_param(X, self.fixed_param_option_ix)
+            else:
+                X = self._replace_fixed_param(X, self.fixed_param_val)
 
         # ----------------
         # acqf evaluation
@@ -175,9 +218,12 @@ class PymooProblemWrapper(Problem):
         )
 
         # inflate to batch size for acqf eval
-        X_torch = torch.FloatTensor(X_olymp).view(X_olymp.shape[0],1,X_olymp.shape[1]).detach()
-        X_torch = torch.tile(X_torch, dims=(1, self.batch_size, 1))
-        
+        X_torch = torch.tensor(
+                X_olymp, **{'dtype': torch.double, 'device': 'cpu'}).view(
+            X_olymp.shape[0],1,X_olymp.shape[1],
+            )
+        X_torch = torch.tile(X_torch, dims=(1, self.batch_size+self.num_fantasies, 1))
+
         with torch.no_grad():
             f = -self.acqf(X_torch) # always minimization in pymoo
 
@@ -188,7 +234,6 @@ class PymooProblemWrapper(Problem):
         # ----------------------------
         if not self.known_constraints.is_empty:
             g = self._known_constraints_wrapper(X)
-
             # TODO: also take care of FCA constraint here ...  
             #  
             out['G'] = g
@@ -237,8 +282,10 @@ class PymooGAOptimizer(AcquisitionOptimizer):
             repair:bool=False,
             verbose:bool=False,
             save_history:bool=False,
-            num_gen:int=5000,
+            num_gen:int=3000,#5000,
             eliminate_duplicates:bool=True,
+            fixed_params:Optional[List[Dict[int, float]]]=[],
+            num_fantasies: int = 0,
             **kwargs: Any,
     ):
         """
@@ -270,6 +317,10 @@ class PymooGAOptimizer(AcquisitionOptimizer):
         self.num_gen = num_gen
         self.eliminate_duplicates = eliminate_duplicates
 
+        self.fixed_params = fixed_params
+        self.num_fantasies = num_fantasies
+        print(self.num_fantasies)
+
         self.kind = 'pymoo'
 
         # check that the batch_size is samller than pop_size
@@ -279,25 +330,6 @@ class PymooGAOptimizer(AcquisitionOptimizer):
         with torch.no_grad():
             # set pymoo parameter space
             self.pymoo_space, self.xl, self.xu = self._set_pymoo_param_space()
-
-
-            # set pymoo problem
-            self.pymoo_problem = PymooProblemWrapper(
-                params_obj=self.params_obj,
-                pymoo_space=self.pymoo_space,
-                bounds=(self.xl, self.xu),
-                acqf=self.acqf,
-                batch_size=self.batch_size,
-                known_constraints=self.known_constraints,
-            )
-
-            # instantiate algorithm
-            self.algorithm = MixedVariableGA(
-                pop_size = self.pop_size, 
-                #sampling=gen_initial_population,
-                #eliminate_duplicates=self.eliminate_duplicates,
-            )
-
 
 
     def _set_pymoo_param_space(self):
@@ -348,33 +380,91 @@ class PymooGAOptimizer(AcquisitionOptimizer):
             else:
                 # avoid duplicated sample
                 pass
-
             if len(batch_samples) == self.batch_size:
                 break
         
         return batch_samples
 
-
     
     def _optimize(self) -> List[ParameterVector]:
         """ Perform (constrained) acqf optimization with pymoo minimize
         """
-
-        Logger.log('Optimizing acquisition function with pymoo GA...', 'INFO' )
-        # perform acqf optimization
-       
-        res = minimize(
-            self.pymoo_problem,
-            self.algorithm,
-            termination=('n_evals', self.num_gen),
-            verbose=self.verbose,
-            save_history=self.save_history,
-            copy_algorithm=False,
+        Logger.log(
+            f'Optimizing acquisition function with pymoo GA for {len(self.fixed_params)} fixed parameters...',
+            'INFO',
         )
-        Logger.log(f'Completed in {round(res.exec_time, 3)} sec', 'INFO')
+        # perform acqf optimization
+        all_res = []
+        if len(self.fixed_params) > 0:
+            for fixed_param_ix, fixed_param in enumerate(self.fixed_params):
+
+                # set pymoo problem
+                self.pymoo_problem = PymooProblemWrapper(
+                    params_obj=self.params_obj,
+                    pymoo_space=self.pymoo_space,
+                    bounds=(self.xl, self.xu),
+                    acqf=self.acqf,
+                    batch_size=self.batch_size,
+                    known_constraints=self.known_constraints,
+                    fixed_param=fixed_param,
+                    num_fantasies=self.num_fantasies,
+                )
+
+                # instantiate algorithm
+                self.algorithm = MixedVariableGA(
+                    pop_size = self.pop_size, 
+                    #sampling=gen_initial_population,
+                    #eliminate_duplicates=self.eliminate_duplicates,
+                )
+            
+                res = minimize(
+                    self.pymoo_problem,
+                    self.algorithm,
+                    termination=('n_evals', self.num_gen),
+                    verbose=self.verbose,
+                    save_history=self.save_history,
+                    copy_algorithm=False,
+                )
+                all_res.append(res)
+            
+        else:
+             # set pymoo problem
+            self.pymoo_problem = PymooProblemWrapper(
+                params_obj=self.params_obj,
+                pymoo_space=self.pymoo_space,
+                bounds=(self.xl, self.xu),
+                acqf=self.acqf,
+                batch_size=self.batch_size,
+                known_constraints=self.known_constraints,
+                fixed_param={},
+                num_fantasies=self.num_fantasies,
+            )
+
+            # instantiate algorithm
+            self.algorithm = MixedVariableGA(
+                pop_size = self.pop_size, 
+                #sampling=gen_initial_population,
+                #eliminate_duplicates=self.eliminate_duplicates,
+            )
+        
+            res = minimize(
+                self.pymoo_problem,
+                self.algorithm,
+                termination=('n_evals', self.num_gen),
+                verbose=self.verbose,
+                save_history=self.save_history,
+                copy_algorithm=False,
+            )
+            all_res.append(res)
+
+
+            total_exec_time = sum([res.exec_time for res in all_res])
+            Logger.log(f'Completed in {round(total_exec_time, 3)} sec', 'INFO')
 
         # select batch of samples
-        return_params = self._batch_sample_selector(res.pop)
+        # NOTE: this will only work for a single fixed parameter now but that 
+        # should be fine.... might need to change later
+        return_params = self._batch_sample_selector(all_res[0].pop)
 
         return return_params
     

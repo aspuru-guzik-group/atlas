@@ -100,10 +100,14 @@ class GradientOptimizer(AcquisitionOptimizer):
 			# check to see if all functional parameters are continuous
 			if all([self.param_space[ix].type=='continuous' for ix in func_dims]):
 				results = self._optimize_mixed_general()
+			elif all([self.param_space[ix].type=='categorical' for ix in func_dims]):
+				results, best_idx = self._optimize_fully_categorical()
 
 			else:
-				msg = 'This is not yet implemented. Try again later!'
-				Logger.log(msg, 'FATAL')
+				# TODO: this is broken for now...
+				results, _ = self._optimize_acqf_mixed()
+				# msg = 'This is not yet implemented. Try again later!'
+				# Logger.log(msg, 'FATAL')
 
 		else:   
 
@@ -396,6 +400,7 @@ class GradientOptimizer(AcquisitionOptimizer):
 			choices=self.choices_feat.float(),
 			unique=True,
 		)
+	
 		return results, best_idx
 
 	def _optimize_acqf_discrete(

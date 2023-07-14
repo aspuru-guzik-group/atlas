@@ -18,6 +18,7 @@ from atlas.utils.synthetic_data import trig_factory
 
 
 def run_continuous(init_design_strategy):
+
     def surface(x):
         return np.sin(8 * x)
 
@@ -44,6 +45,7 @@ def run_continuous(init_design_strategy):
     param_space = ParameterSpace()
     # add continuous parameter
     param_0 = ParameterContinuous(name="param_0", low=0.0, high=1.0)
+    #param_0 = ParameterDiscrete(name='param0', options=[0.0, 0.25, 0.5, 0.75, 1.0])
     param_space.add(param_0)
 
     planner = RGPEPlanner(
@@ -52,7 +54,7 @@ def run_continuous(init_design_strategy):
         num_init_design=5,
         batch_size=1,
         acquisition_type='ei',
-        acquisition_optimizer_kind='pymoo',
+        acquisition_optimizer_kind='gradient',
         # meta-learning stuff
         train_tasks=train_tasks,
         valid_tasks=valid_tasks,
