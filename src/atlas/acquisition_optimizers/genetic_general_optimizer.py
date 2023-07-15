@@ -14,7 +14,7 @@ from rich.progress import track
 from atlas.params.params import Parameters
 
 from atlas import Logger
-from atlas.acquisition_functions.acqfs import create_available_options
+from atlas.acquisition_functions.acqf_utils import get_batch_initial_conditions, create_available_options
 from atlas.acquisition_optimizers.base_optimizer import (
 	AcquisitionOptimizer,
 )

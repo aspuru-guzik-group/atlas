@@ -29,12 +29,10 @@ from olympus.scalarizers import Scalarizer
 
 from atlas import Logger
 from atlas.networks.dkt.dkt import DKT
-from atlas.acquisition_functions.acqfs import (
+from atlas.acquisition_functions.__OLD_acqfs import (
     FeasibilityAwareEI,
     FeasibilityAwareGeneral,
     FeasibilityAwareQEI,
-    create_available_options,
-    get_batch_initial_conditions,
 )
 from atlas.acquisition_optimizers import (
     GeneticOptimizer,

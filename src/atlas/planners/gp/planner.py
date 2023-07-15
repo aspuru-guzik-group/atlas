@@ -1,22 +1,12 @@
 #!/usr/bin/env python
 
-import os
-import pickle
-import sys
 import time
-from copy import deepcopy
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import gpytorch
 import numpy as np
 import torch
-from botorch.acquisition import (
-    ExpectedImprovement,
-    UpperConfidenceBound,
-    qExpectedImprovement,
-    qNoisyExpectedImprovement,
-    qUpperConfidenceBound,
-)
+
 from botorch.fit import fit_gpytorch_mll
 from botorch.models import MixedSingleTaskGP, SingleTaskGP
 
@@ -25,18 +15,8 @@ from olympus import ParameterVector
 from olympus.campaigns import ParameterSpace
 
 from atlas import Logger
-from atlas.acquisition_functions.acqfs import (
-    FeasibilityAwareEI,
-    FeasibilityAwareGeneral,
-    FeasibilityAwareLCB,
-    FeasibilityAwareQEI,
-    FeasibilityAwareUCB,
-    FeasibilityAwareVarainceBased,
-    LowerConfidenceBound,
-    #VarianceBased,
-    create_available_options,
-)
-from atlas.acquisition_functions.new_acqfs import LCB, UCB, VarianceBased, EI, General, get_acqf_instance
+
+from atlas.acquisition_functions.acqfs import get_acqf_instance
 
 from atlas.acquisition_optimizers import (
     GeneticOptimizer,
@@ -44,23 +24,11 @@ from atlas.acquisition_optimizers import (
     PymooGAOptimizer
 )
 from atlas.base.base import BasePlanner
-from atlas.gps.gps import (
-    CategoricalSingleTaskGP,
-    ClassificationGPMatern,
-)
-from atlas.params.params import Parameters
+from atlas.gps.gps import CategoricalSingleTaskGP
 
-from atlas.utils.planner_utils import (
-    cat_param_to_feat,
-    forward_normalize,
-    forward_standardize,
-    get_cat_dims,
-    get_fixed_features_list,
-    infer_problem_type,
-    propose_randomly,
-    reverse_normalize,
-    reverse_standardize,
-)
+from atlas.utils.planner_utils import get_cat_dims
+
+
 
 class BoTorchPlanner(BasePlanner):
     """Wrapper for GP-based Bayesiam optimization with BoTorch

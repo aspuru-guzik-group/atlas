@@ -1,27 +1,12 @@
 #!/usr/bin/env python
 
-import os
-import pickle
-import sys
 import time
-import copy
-from copy import deepcopy
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import gpytorch
 import numpy as np
 import torch
-from botorch.acquisition import (
-    ExpectedImprovement,
-    UpperConfidenceBound,
-    qExpectedImprovement,
-    qNoisyExpectedImprovement,
-    qUpperConfidenceBound,
-)
 from botorch.fit import fit_gpytorch_mll
-from botorch.models import MixedSingleTaskGP, SingleTaskGP
-
-from botorch.models.transforms.outcome import Standardize
 
 
 from gpytorch.mlls import ExactMarginalLogLikelihood
@@ -45,39 +30,15 @@ from olympus import ParameterVector
 from olympus.campaigns import ParameterSpace
 
 from atlas import Logger
-from atlas.acquisition_functions.acqfs import (
-    FeasibilityAwareEI,
-    FeasibilityAwareGeneral,
-    FeasibilityAwareLCB,
-    FeasibilityAwareQEI,
-    FeasibilityAwareUCB,
-    FeasibilityAwareVarainceBased,
-    LowerConfidenceBound,
-    VarianceBased,
-    create_available_options,
-)
+
 from atlas.acquisition_optimizers import (
     GeneticOptimizer,
     GradientOptimizer,
     PymooGAOptimizer
 )
 from atlas.base.base import BasePlanner
-from atlas.gps.gps import (
-    CategoricalSingleTaskGP,
-    ClassificationGPMatern,
-)
-from atlas.params.params import Parameters
-from atlas.utils.planner_utils import (
-    cat_param_to_feat,
-    forward_normalize,
-    forward_standardize,
-    get_cat_dims,
-    get_fixed_features_list,
-    infer_problem_type,
-    propose_randomly,
-    reverse_normalize,
-    reverse_standardize,
-)
+
+from atlas.utils.planner_utils import reverse_normalize
 
 
 

@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
-import copy
-import time
 import multiprocessing
 from multiprocessing import Process, Manager
 
@@ -12,27 +10,17 @@ import torch
 from botorch.acquisition import AcquisitionFunction
 from botorch.optim import (
 	optimize_acqf,
-	optimize_acqf_discrete,
 	optimize_acqf_mixed,
 )
 from olympus import ParameterVector
-from olympus.campaigns import ParameterSpace
 
 from atlas import Logger
-from atlas.acquisition_functions.acqfs import (
-	create_available_options,
-)
+from atlas.acquisition_functions.acqf_utils import get_batch_initial_conditions, create_available_options
 from atlas.params.params import Parameters
 from atlas.utils.planner_utils import (
-	cat_param_to_feat,
-	forward_normalize,
-	forward_standardize,
-	get_cat_dims,
 	get_fixed_features_list,
 	infer_problem_type,
-	propose_randomly,
 	reverse_normalize,
-	reverse_standardize,
 )
 from atlas.acquisition_optimizers.base_optimizer import AcquisitionOptimizer
 

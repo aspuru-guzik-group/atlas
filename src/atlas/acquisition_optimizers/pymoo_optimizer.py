@@ -22,19 +22,14 @@ from pymoo.config import Config
 Config.show_compile_hint = False
 
 from olympus import ParameterVector
-from olympus.campaigns import ParameterSpace
-from rich.progress import track
+
 
 from atlas import Logger
-from atlas.acquisition_functions.acqfs import create_available_options
+from atlas.acquisition_functions.acqf_utils import get_batch_initial_conditions, create_available_options
 from atlas.acquisition_optimizers.base_optimizer import AcquisitionOptimizer
 from atlas.params.params import Parameters
-from atlas.utils.planner_utils import (cat_param_to_feat, forward_normalize,
-                                    forward_standardize, get_cat_dims,
-                                    get_fixed_features_list,
-                                    infer_problem_type, param_vector_to_dict,
-                                    propose_randomly, reverse_normalize,
-                                    reverse_standardize)
+from atlas.utils.planner_utils import infer_problem_type, propose_randomly
+
 
 class PymooProblemWrapper(Problem):
     """ Wraps pymoo problem object with abstract method _evaluate which 
@@ -88,7 +83,6 @@ class PymooProblemWrapper(Problem):
         else:
             self.fixed_param_name = uuid.uuid4().hex
 
-        print(self.num_fantasies)
 
     def _pymoo_to_olympus(self, samples, forward_transform=False, return_param_vec=False, return_expanded=False):
         """ convert pymoo parameters to Olympus parameters
@@ -319,7 +313,6 @@ class PymooGAOptimizer(AcquisitionOptimizer):
 
         self.fixed_params = fixed_params
         self.num_fantasies = num_fantasies
-        print(self.num_fantasies)
 
         self.kind = 'pymoo'
 

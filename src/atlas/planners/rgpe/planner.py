@@ -3,20 +3,17 @@
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import os
 import pickle
-import sys
-import time
+
 
 # remove warnings about adding jitter
 import warnings
 
 import gpytorch
 import numpy as np
-import olympus
 import torch
 from botorch.acquisition import (
     ExpectedImprovement,
     qExpectedImprovement,
-    qNoisyExpectedImprovement,
 )
 from botorch.fit import fit_gpytorch_mll
 from botorch.models import MixedSingleTaskGP, SingleTaskGP
@@ -34,35 +31,25 @@ from olympus.scalarizers import Scalarizer
 from torch.nn import ModuleList
 
 from atlas import Logger
-from atlas.acquisition_functions.acqfs import (
+from atlas.acquisition_functions.__OLD_acqfs import (
     FeasibilityAwareEI,
     FeasibilityAwareGeneral,
     FeasibilityAwareQEI,
-    create_available_options,
-    get_batch_initial_conditions,
 )
 from atlas.acquisition_optimizers import (
     GeneticOptimizer,
     GradientOptimizer,
     PymooGAOptimizer
 )
-from atlas.params.params import Parameters
 from atlas.unknown_constraints.unknown_constraints import UnknownConstraints
 
 from atlas.base.base import BasePlanner
 
 from atlas.utils.planner_utils import (
     Scaler,
-    cat_param_to_feat,
     flip_source_tasks,
     forward_normalize,
-    forward_standardize,
-    get_cat_dims,
-    get_fixed_features_list,
-    infer_problem_type,
     propose_randomly,
-    reverse_normalize,
-    reverse_standardize,
 )
 
 warnings.filterwarnings("ignore", "^.*jitter.*", category=RuntimeWarning)
