@@ -17,17 +17,6 @@ from atlas.acquisition_functions.acqf_utils import get_batch_initial_conditions
 
 
 from atlas.params.params import Parameters
-from atlas.utils.planner_utils import (
-    cat_param_to_feat,
-    forward_normalize,
-    forward_standardize,
-    get_cat_dims,
-    get_fixed_features_list,
-    infer_problem_type,
-    propose_randomly,
-    reverse_normalize,
-    reverse_standardize,
-)
 
 
 class AcquisitionOptimizer:

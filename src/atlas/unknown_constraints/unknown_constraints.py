@@ -22,7 +22,6 @@ class UnknownConstraints:
         self.feas_param = feas_param
 
 
-
     def handle_naive_feas_strategies(
         self,
         train_x_scaled_reg: torch.Tensor, 

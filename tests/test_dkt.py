@@ -426,8 +426,8 @@ def run_discrete(init_design_strategy):
 
 
 if __name__ == "__main__":
-    # run_continuous('lhs')
-    run_discrete('random')
+    run_continuous('lhs')
+    #run_discrete('random')
     #test_continuous_hypervolume()
 
     pass

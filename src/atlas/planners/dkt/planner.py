@@ -1,66 +1,41 @@
 #!/usr/bin/env python
 
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
-import os
 import pickle
-import sys
 import time
 
 import gpytorch
 import numpy as np
-import olympus
 import torch
 from botorch.acquisition import (
     ExpectedImprovement,
     qExpectedImprovement,
-    qNoisyExpectedImprovement,
 )
 from botorch.models.gpytorch import GPyTorchModel
-from botorch.optim import (
-    optimize_acqf,
-    optimize_acqf_discrete,
-    optimize_acqf_mixed,
-)
-from gpytorch.distributions import MultivariateNormal
+
 from gpytorch.models import GP
 from olympus import ParameterVector, ParameterSpace
-from olympus.planners import AbstractPlanner, CustomPlanner, Planner
-from olympus.scalarizers import Scalarizer
+
 
 from atlas import Logger
 from atlas.networks.dkt.dkt import DKT
 from atlas.acquisition_functions.__OLD_acqfs import (
     FeasibilityAwareEI,
-    FeasibilityAwareGeneral,
     FeasibilityAwareQEI,
 )
+from atlas.acquisition_functions.acqfs import get_acqf_instance
 from atlas.acquisition_optimizers import (
     GeneticOptimizer,
     GradientOptimizer,
     PymooGAOptimizer
 )
 from atlas.base.base import BasePlanner
-from atlas.gps.gps import (
-    CategoricalSingleTaskGP,
-    ClassificationGPMatern,
-)
-from atlas.params.params import Parameters
-from atlas.unknown_constraints.unknown_constraints import UnknownConstraints
-
-from atlas.base.base import BasePlanner
 
 from atlas.utils.planner_utils import (
     Scaler,
-    cat_param_to_feat,
     flip_source_tasks,
     forward_normalize,
-    forward_standardize,
-    get_cat_dims,
-    get_fixed_features_list,
-    infer_problem_type,
-    propose_randomly,
-    reverse_normalize,
-    reverse_standardize,
+    propose_randomly
 )
 
 class DKTModel(GP, GPyTorchModel):
@@ -312,56 +287,26 @@ class DKTPlanner(BasePlanner):
                 torch.sum(self.train_y_scaled_cla)
                 / self.train_x_scaled_cla.size(0)
             ).item()
-            # get the approximate max and min of the acquisition function without the feasibility contribution
-            acqf_min_max = self.get_aqcf_min_max(self.reg_model, f_best_scaled)
+            
+            # get compile the basic feas-aware acquisition function arguments
+            acqf_args = dict(
+                params_obj=self.params_obj,
+                problem_type=self.problem_type,
+                feas_strategy=self.feas_strategy,
+                feas_param=self.feas_param,
+                infeas_ratio=infeas_ratio,
+                use_reg_only=use_reg_only,
+                f_best_scaled=f_best_scaled,
+                batch_size=self.batch_size,
+                use_min_filter=self.use_min_filter,
+            )
+            self.acqf = get_acqf_instance(
+                acquisition_type=self.acquisition_type, 
+                reg_model=self.reg_model,
+                cla_model=self.cla_model,
+                acqf_args=acqf_args,
+            )
 
-            if self.acquisition_type == "ei":
-                if (
-                    self.batch_size > 1
-                    and self.batched_strategy == "sequential"
-                ):
-                    Logger.log(
-                        'Cannot use "sequential" batched strategy with EI acquisition function',
-                        "FATAL",
-                    )
-                self.acqf = FeasibilityAwareEI(
-                    self.reg_model,
-                    self.cla_model,
-                    self.cla_likelihood,
-                    self.param_space,
-                    f_best_scaled,
-                    self.feas_strategy,
-                    self.feas_param,
-                    infeas_ratio,
-                    acqf_min_max,
-                    use_min_filter=self.use_min_filter,
-                    use_reg_only=use_reg_only,
-                )
-
-            elif self.acquisition_type == "qei":
-                if not self.batch_size > 1:
-                    Logger.log(
-                        "QEI acquisition function can only be used if batch size > 1",
-                        "FATAL",
-                    )
-
-                self.acqf = FeasibilityAwareQEI(
-                    self.reg_model,
-                    self.cla_model,
-                    self.cla_likelihood,
-                    self.param_space,
-                    f_best_scaled,
-                    self.feas_strategy,
-                    self.feas_param,
-                    infeas_ratio,
-                    acqf_min_max,
-                    use_min_filter=self.use_min_filter,
-                    use_reg_only=use_reg_only,
-                )
-            else:
-                Logger.log(
-                    'DKT planner requires using either EI or QEI acquisiton function', 'FATAL'
-                )
 
             # set acquisition optimizer
             if self.acquisition_optimizer_kind == "gradient":
