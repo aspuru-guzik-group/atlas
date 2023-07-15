@@ -19,32 +19,41 @@ from atlas.utils.planner_utils import (
 )
 
 
-class Acqusition(Object, metaclass=ABCMeta):
-    """ Base class for Atlas acqusition function """ 
-    def __init__(self, reg_model, **acqf_args):
-        self.reg_model = reg_model
+# class Acqusition(Object, metaclass=ABCMeta):
+#     """ Base class for Atlas acqusition function """ 
+#     def __init__(self, reg_model, **acqf_args):
+#         self.reg_model = reg_model
 
-    # @property
-    # @abstract_attribute
-    # def dummy(self):
-    #     pass
+#     # @property
+#     # @abstract_attribute
+#     # def dummy(self):
+#     #     pass
 
-    @abstractmethod
-    def evaluate(self, X: torch.Tensor) -> torch.Tensor:
-        """ evaluate the acquisition function
-        """
-        pass
+#     @abstractmethod
+#     def evaluate(self, X: torch.Tensor) -> torch.Tensor:
+#         """ evaluate the acquisition function
+#         """
+#         pass
 
-    def __call__(self, X: torch.Tensor):
-        return self.evaluate(X)
+#     def __call__(self, X: torch.Tensor):
+#         return self.evaluate(X)
 
 
 class FeasibilityAwareAcquisition(Object, metaclass=ABCMeta):
     """ Base class for feasibility aware Atlas acquisition function
     for use with unknown constraints
     """
-    def __init__(self, reg_model, cla_model, **acqf_args: Dict) -> None: 
+    def __init__(self, reg_model, cla_model=None, fix_min_max=False, **acqf_args: Dict) -> None: 
         Object.__init__(self, reg_model, cla_model, **acqf_args)
+        self.reg_model = reg_model
+        self.cla_model = cla_model
+        
+        # estimate min max of acquisition function
+        if not fix_min_max:
+            self.acqf_min_max = self._estimate_acqf_min_max()
+        else:
+            self.acqf_min_max = 0., 1.
+
 
     # @property
     # @abstract_attribute
@@ -60,6 +69,9 @@ class FeasibilityAwareAcquisition(Object, metaclass=ABCMeta):
     def __call__(self, X: torch.Tensor):
         acqf_val = self.evaluate(X)
         return self.compute_combined_acqf(acqf_val, X)
+        
+    def _evaluate_raw(self, X: torch.Tensor):
+        return self.evaluate(X)
 
 
     def compute_feas_post(self, X: torch.Tensor):
@@ -113,8 +125,48 @@ class FeasibilityAwareAcquisition(Object, metaclass=ABCMeta):
 
 
     # helper methods
+
     # def get_mean_sigma(posterior):
     #     return None
+
+    def _estimate_acqf_min_max(self, num_samples:int=3000) -> Tuple[int, int]:
+        """computes the min and max value of the acquisition function without
+        the feasibility contribution. These values will be used to approximately
+        normalize the acquisition function
+        """
+
+        samples, _ = propose_randomly(
+            num_samples, self.params_obj.param_space, self.params_obj.has_descriptors,
+        )
+        if (
+            self.problem_type == "fully_categorical"
+            and not self.has_descriptors
+        ):
+            # we dont scale the parameters if we have a fully one-hot-encoded representation
+            pass
+        else:
+            # scale the parameters
+            samples = forward_normalize(
+                samples, self.params_obj._mins_x, self.params_obj._maxs_x
+            )
+
+        acqf_val = self._evaluate_raw(
+            torch.tensor(samples)
+            .view(samples.shape[0], 1, samples.shape[-1])
+            .double()
+        )
+
+        min_ = torch.amin(acqf_val).item()
+        max_ = torch.amax(acqf_val).item()
+
+        if np.abs(max_ - min_) < 1e-6:
+            max_ = 1.0
+            min_ = 0.0
+
+        return min_, max_
+
+
+
     
 
 
@@ -124,22 +176,208 @@ class FeasibilityAwareAcquisition(Object, metaclass=ABCMeta):
 # ACQUISITION FUNCTION INSTANCES
 #--------------------------------
 
+class VarianceBased(FeasibilityAwareAcquisition):
+    """ Feasibility-aware variance-based utility function 
+    """
+    def __init__(self, reg_model, cla_model, **acqf_args):
+        super().__init__(reg_model, cla_model, **acqf_args)
+        self.reg_model = reg_model
+
+    def evaluate(self, X: torch.Tensor):
+        posterior = self.reg_model.posterior(X=X)
+        mean = posterior.mean.squeeze(-2).squeeze(-1)
+        acqf_val = posterior.variance.clamp_min(1e-12).sqrt().view(mean.shape)
+        return acqf_val
+
 
 class LCB(FeasibilityAwareAcquisition):
     """ Feasibility-aware lower confidence bound acquisition function 
     """
     def __init__(self, reg_model, cla_model, **acqf_args):
         super().__init__(reg_model, cla_model, **acqf_args)
+        self.reg_model = reg_model
 
     def evaluate(self, X: torch.Tensor):
-        posterior = self.reg_model.posterior(
-            X=X, posterior_transform=self.posterior_transform
-        )
+        posterior = self.reg_model.posterior(X=X)
         mean = posterior.mean.squeeze(-2).squeeze(-1)
         sigma = posterior.variance.clamp_min(1e-12).sqrt().view(mean.shape)
-        acqf_val = (mean if self.maximize else -mean) - self.beta.sqrt() * sigma
+        acqf_val = mean - self.beta.sqrt()*sigma
+        return acqf_val
+
+
+class UCB(FeasibilityAwareAcquisition):
+    """ Feasibility-aware upper confidence bound acquisition function 
+    """
+    def __init__(self, reg_model, cla_model, **acqf_args):
+        super().__init__(reg_model, cla_model, **acqf_args)
+        self.reg_model = reg_model
+
+    def evaluate(self, X: torch.Tensor):
+        posterior = self.reg_model.posterior(X=X)
+        mean = posterior.mean.squeeze(-2).squeeze(-1)
+        sigma = posterior.variance.clamp_min(1e-12).sqrt().view(mean.shape)
+        acqf_val = mean + self.beta.sqrt()*sigma
+        return acqf_val
+
+class PI(FeasibilityAwareAcquisition):
+    def __init__(self, reg_model, cla_model, **acqf_args):
+        super().__init__(reg_model, cla_model, **acqf_args)
+        self.reg_model = reg_model
+
+    def evaluate(self, X: torch.Tensor) -> torch.Tensor:
+        posterior = self.reg_model.posterior(X=X)
+        mean = posterior.mean.squeeze(-2).squeeze(-1)
+        sigma = posterior.variance.clamp_min(1e-12).sqrt().view(mean.shape)
+        u = - ( (mean - self.f_best_scaled.expand_as(mean)) / sigma )
+
+        # TODO: complete this method
+        return None
+
+
+class EI(FeasibilityAwareAcquisition):
+    def __init__(self, reg_model, cla_model, **acqf_args):
+        super().__init__(reg_model, cla_model, **acqf_args)
+        self.reg_model = reg_model
+
+    def evaluate(self, X: torch.Tensor):
+        posterior = self.reg_model.posterior(X=X)
+        mean = posterior.mean.squeeze(-2).squeeze(-1)
+        sigma = posterior.variance.clamp_min(1e-12).sqrt().view(mean.shape)
+        u = - ( (mean - self.f_best_scaled.expand_as(mean)) / sigma )
+        normal = torch.distributions.Normal(
+            torch.zeros_like(u), torch.ones_like(u)
+        )
+        ucdf = normal.cdf(u)
+        updf = torch.exp(normal.log_prob(u))
+        acqf_val = sigma * (updf + u * ucdf)
+
         return acqf_val
 
 
 
+class General(FeasibilityAwareAcquisition):
+    """ Acqusition funciton for general parameters
+    """
+    def __init__(self, reg_model, cla_model, f_best_scaled, **acqf_args):
+        super().__init__(reg_model, cla_model, fix_min_max=True, **acqf_args)
+        # self.base_acqf = EI(reg_model, cla_model **acqf_args) # base acqf
+        self.reg_model = reg_model
+        self.f_best_scaled = f_best_scaled
+
+        # deal with general parameter stuff
+        self.X_sns_empty, _ = self.generate_X_sns()
+        self.functional_dims = np.logical_not(self.params_obj.exp_general_mask)
+
+        
+
+    def evaluate(self, X: torch.Tensor) -> torch.Tensor:
+        X = X.double()
+        #TODO: messy clean this up
+        if X.shape[-1] == self.X_sns_empty.shape[-1]:
+            X = X[:, :, self.functional_dims]
+        self.f_best_scaled = self.f_best_scaled.to(X)
+        # shape (# samples, # exp general dims, # batch size, # exp param dims)
+        X_sns = torch.empty((X.shape[0],) + self.X_sns_empty.shape).double()
+
+        for x_ix in range(X.shape[0]):
+            X_sn = torch.clone(self.X_sns_empty)
+            #X_sn[:, :, self.functional_dims] = X[x_ix, :, self.functional_dims]
+            X_sn[:, :, self.functional_dims] = X[x_ix, :]
+            X_sns[x_ix, :, :, :] = X_sn
+
+        pred_mu_x, pred_sigma_x = [], []
+
+        for X_sn in X_sns:
+            posterior = self.reg_model.posterior(X_sn.double())
+            mu = posterior.mean
+            view_shape = mu.shape[:-2] if mu.shape[-2] == 1 else mu.shape[:-1]
+            mu = mu.view(view_shape)
+            sigma = posterior.variance.clamp_min(1e-9).sqrt().view(view_shape)
+            pred_mu_x.append(mu)
+            pred_sigma_x.append(sigma)
+
+        pred_mu_x = torch.stack(pred_mu_x)
+        pred_sigma_x = torch.stack(pred_sigma_x)
+        mu_x = torch.mean(pred_mu_x, 0)
+        sigma_x = torch.mean(pred_sigma_x, 0)
+
+        u = - (mu_x - self.f_best_scaled.expand_as(mu_x)) / sigma_x
+        normal = torch.distributions.Normal(
+            torch.zeros_like(u), torch.ones_like(u)
+        )
+        ucdf = normal.cdf(u)
+        updf = torch.exp(normal.log_prob(u))
+        acqf_val = sigma * (updf + u * ucdf)
+
+        return acqf_val
+
+
+    def generate_X_sns(self):
+        # generate Cartesian product space of the general parameter options
+        param_options = []
+        for ix in self.params_obj.general_dims:
+            param_options.append(self.params_obj.param_space[ix].options)
+
+        cart_product = list(itertools.product(*param_options))
+        cart_product = [list(elem) for elem in cart_product]
+
+        X_sns_empty = torch.empty(
+            size=(len(cart_product), self.params_obj.expanded_dims)
+        ).double()
+        general_expanded = []
+        general_raw = []
+        for elem in cart_product:
+            # convert to ohe and add to currently available options
+            ohe, raw = [], []
+            for val, obj in zip(elem, self.params_obj.param_space):
+                if obj.type == "categorical":
+                    ohe.append(
+                        cat_param_to_feat(
+                            obj, val, self.params_obj.has_descriptors
+                        )
+                    )
+                    raw.append(val)
+                else:
+                    ohe.append([val])
+            general_expanded.append(np.concatenate(ohe))
+            general_raw.append(raw)
+
+        general_expanded = torch.tensor(np.array(general_expanded))
+
+        X_sns_empty[:, self.params_obj.exp_general_mask] = general_expanded
+        X_sns_empty = forward_normalize(
+            X_sns_empty,
+            self.params_obj._mins_x,
+            self.params_obj._maxs_x,
+        )
+        # TODO: careful of the batch size, will need to change this
+        X_sns_empty = torch.unsqueeze(X_sns_empty, 1)
+
+        return X_sns_empty, general_raw
+
+
+
+def get_acqf_instance(acquisition_type, reg_model, cla_model, acqf_args:Dict[str,Any]):
+    """ Convenience function to get acquisition function instance
+    """
+    if acquisition_type in ['ei','pi']:
+        module = __import__(f'atlas.acquisition_functions.new_acqfs', fromlist=[acquisition_type.upper()])
+        _class = getattr(module, acquisition_type.upper())
+        return _class(reg_model=reg_model,cla_model=cla_model,**acqf_args)
+    elif acquisition_type == 'general':
+        return General(reg_model=reg_model,cla_model=cla_model,**acqf_args)
+    elif acquisition_type == 'variance':
+        return VarianceBased(reg_model=reg_model,cla_model=cla_model,**acqf_args)
+    elif acquisition_type in ['lcb', 'ucb']:
+        acqf_args['beta'] = torch.tensor([0.2]).repeat(acqf_args['batch_size']) # default value of beta
+        module = __import__(f'atlas.acquisition_functions.new_acqfs', fromlist=[acquisition_type.upper()])
+        _class = getattr(module, acquisition_type.upper())
+        return _class(reg_model=reg_model,cla_model=cla_model,**acqf_args)
+    else:
+        msg = f"Acquisition function type {acquisition_type} not understood!"
+        Logger.log(msg, "FATAL")
+        
+        
+
+        
 

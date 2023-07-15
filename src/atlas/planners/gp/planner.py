@@ -33,9 +33,11 @@ from atlas.acquisition_functions.acqfs import (
     FeasibilityAwareUCB,
     FeasibilityAwareVarainceBased,
     LowerConfidenceBound,
-    VarianceBased,
+    #VarianceBased,
     create_available_options,
 )
+from atlas.acquisition_functions.new_acqfs import LCB, UCB, VarianceBased, EI, General, get_acqf_instance
+
 from atlas.acquisition_optimizers import (
     GeneticOptimizer,
     GradientOptimizer,
@@ -254,122 +256,27 @@ class BoTorchPlanner(BasePlanner):
                 torch.sum(self.train_y_scaled_cla)
                 / self.train_x_scaled_cla.size(0)
             ).item()
-            # get the approximate max and min of the acquisition function without the feasibility contribution
-            acqf_min_max = self.get_aqcf_min_max(self.reg_model, f_best_scaled)
+     
+            # get compile the basic feas-aware acquisition function arguments
+            acqf_args = dict(
+                params_obj=self.params_obj,
+                problem_type=self.problem_type,
+                feas_strategy=self.feas_strategy,
+                feas_param=self.feas_param,
+                infeas_ratio=infeas_ratio,
+                use_reg_only=use_reg_only,
+                f_best_scaled=f_best_scaled,
+                batch_size=self.batch_size,
+                use_min_filter=self.use_min_filter,
+            )
+            self.acqf = get_acqf_instance(
+                acquisition_type=self.acquisition_type, 
+                reg_model=self.reg_model,
+                cla_model=self.cla_model,
+                acqf_args=acqf_args,
+            )
 
-            if self.acquisition_type == "ei":
-                if (
-                    self.batch_size > 1
-                    and self.batched_strategy == "sequential"
-                ):
-                    Logger.log(
-                        'Cannot use "sequential" batched strategy with EI acquisition function',
-                        "FATAL",
-                    )
-                self.acqf = FeasibilityAwareEI(
-                    self.reg_model,
-                    self.cla_model,
-                    self.cla_likelihood,
-                    self.param_space,
-                    f_best_scaled,
-                    self.feas_strategy,
-                    self.feas_param,
-                    infeas_ratio,
-                    acqf_min_max,
-                    use_min_filter=self.use_min_filter,
-                    use_reg_only=use_reg_only,
-                )
-
-            elif self.acquisition_type == "qei":
-                if not self.batch_size > 1:
-                    Logger.log(
-                        "QEI acquisition function can only be used if batch size > 1",
-                        "FATAL",
-                    )
-
-                self.acqf = FeasibilityAwareQEI(
-                    self.reg_model,
-                    self.cla_model,
-                    self.cla_likelihood,
-                    self.param_space,
-                    f_best_scaled,
-                    self.feas_strategy,
-                    self.feas_param,
-                    infeas_ratio,
-                    acqf_min_max,
-                    use_min_filter=self.use_min_filter,
-                    use_reg_only=use_reg_only,
-                )
-
-            elif self.acquisition_type == "ucb":
-                self.acqf = FeasibilityAwareUCB(
-                    self.reg_model,
-                    self.cla_model,
-                    self.cla_likelihood,
-                    self.param_space,
-                    f_best_scaled,
-                    self.feas_strategy,
-                    self.feas_param,
-                    infeas_ratio,
-                    acqf_min_max,
-                    use_reg_only=use_reg_only,
-                    # beta=torch.tensor([0.2]).repeat(self.batch_size),
-                    beta=torch.tensor([1.0]).repeat(self.batch_size),
-                    use_min_filter=self.use_min_filter,
-                )
-
-            elif self.acquisition_type == "lcb":
-                self.acqf = FeasibilityAwareLCB(
-                    self.reg_model,
-                    self.cla_model,
-                    self.cla_likelihood,
-                    self.param_space,
-                    f_best_scaled,
-                    self.feas_strategy,
-                    self.feas_param,
-                    infeas_ratio,
-                    acqf_min_max,
-                    use_reg_only=use_reg_only,
-                    # beta=torch.tensor([0.2]).repeat(self.batch_size),
-                    beta=torch.tensor([1.0]).repeat(self.batch_size),
-                    use_min_filter=self.use_min_filter,
-                )
-
-            elif self.acquisition_type == "variance":
-                self.acqf = FeasibilityAwareVarainceBased(
-                    self.reg_model,
-                    self.cla_model,
-                    self.cla_likelihood,
-                    self.param_space,
-                    f_best_scaled,
-                    self.feas_strategy,
-                    self.feas_param,
-                    infeas_ratio,
-                    acqf_min_max,
-                    use_min_filter=self.use_min_filter,
-                    use_reg_only=use_reg_only,
-                )
-
-            elif self.acquisition_type == "general":
-                self.acqf = FeasibilityAwareGeneral(
-                    self.reg_model,
-                    self.cla_model,
-                    self.cla_likelihood,
-                    self.params_obj,
-                    # self.general_parameters,
-                    self.param_space,
-                    f_best_scaled,
-                    self.feas_strategy,
-                    self.feas_param,
-                    infeas_ratio,
-                    acqf_min_max,
-                    use_min_filter=self.use_min_filter,
-                    use_reg_only=use_reg_only,
-                )
-
-            else:
-                msg = f"Acquisition function type {self.acquisition_type} not understood!"
-                Logger.log(msg, "FATAL")
+    
 
             if self.acquisition_optimizer_kind == "gradient":
                 acquisition_optimizer = GradientOptimizer(
@@ -416,83 +323,111 @@ class BoTorchPlanner(BasePlanner):
             return_params = acquisition_optimizer.optimize()
 
         return return_params
-
-    def get_aqcf_min_max(
-        self,
-        reg_model: gpytorch.models.ExactGP,
-        f_best_scaled: torch.Tensor,
-        num_samples: int = 3000,
-    ) -> Tuple[int, int]:
-        """computes the min and max value of the acquisition function without
-        the feasibility contribution. These values will be used to approximately
-        normalize the acquisition function
-        """
-        if self.acquisition_type == "ei":
-            acqf = ExpectedImprovement(
-                reg_model, f_best_scaled, objective=None, maximize=False
-            )
-
-        if self.acquisition_type == "qei":
-            acqf = qExpectedImprovement(
-                reg_model, f_best_scaled, objective=None, maximize=False
-            )
-
-        elif self.acquisition_type == "ucb":
-            acqf = UpperConfidenceBound(
-                reg_model,
-                # beta=torch.tensor([0.2]).repeat(self.batch_size),
-                beta=torch.tensor([1.0]).repeat(self.batch_size),
-                objective=None,
-                maximize=False,
-            )
-
-        elif self.acquisition_type == "lcb":
-            # acqf = LowerConfidenceBound(
-            #     reg_model,
-            #     # beta=torch.tensor([0.2]).repeat(self.batch_size),
-            #     beta=torch.tensor([1.0]).repeat(self.batch_size),
-            #     objective=None,
-            #     maximize=False,
-            # )
-            pass
     
-        elif self.acquisition_type == "variance":
-            acqf = VarianceBased(reg_model)
 
-        elif self.acquisition_type == "general":
-            # do not scale the acqf in this case
-            # TODO is this OK?
-            return 0.0, 1.0
 
-        samples, _ = propose_randomly(
-            num_samples,
-            self.param_space,
-            self.has_descriptors,
-        )
 
-        if (
-            self.problem_type == "fully_categorical"
-            and not self.has_descriptors
-        ):
-            # we dont scale the parameters if we have a fully one-hot-encoded representation
-            pass
-        else:
-            # scale the parameters
-            samples = forward_normalize(
-                samples, self.params_obj._mins_x, self.params_obj._maxs_x
-            )
 
-        acqf_vals = acqf(
-            torch.tensor(samples)
-            .view(samples.shape[0], 1, samples.shape[-1])
-            .double()
-        )
+         # if self.acquisition_type == "ei":
+            #     if (
+            #         self.batch_size > 1
+            #         and self.batched_strategy == "sequential"
+            #     ):
+            #         Logger.log(
+            #             'Cannot use "sequential" batched strategy with EI acquisition function',
+            #             "FATAL",
+            #         )
+            #     acqf_args = dict(
+            #         params_obj=self.params_obj,
+            #         problem_type=self.problem_type,
+            #         feas_strategy=self.feas_strategy,
+            #         feas_param=self.feas_param,
+            #         infeas_ratio=infeas_ratio,
+            #         use_reg_only=use_reg_only,
+            #         f_best_scaled=f_best_scaled,
+            #         use_min_filter=self.use_min_filter,
+    
+            #     )
+            #     self.acqf = EI(self.reg_model, self.cla_model, **acqf_args)
 
-        min_ = torch.amin(acqf_vals).item()
-        max_ = torch.amax(acqf_vals).item()
+            # elif self.acquisition_type == "qei":
+            #     if not self.batch_size > 1:
+            #         Logger.log(
+            #             "QEI acquisition function can only be used if batch size > 1",
+            #             "FATAL",
+            #         )
 
-        if np.abs(max_ - min_) < 1e-6:
-            max_ = 1.0
-            min_ = 0.0
+            #     self.acqf = FeasibilityAwareQEI(
+            #         self.reg_model,
+            #         self.cla_model,
+            #         self.cla_likelihood,
+            #         self.param_space,
+            #         f_best_scaled,
+            #         self.feas_strategy,
+            #         self.feas_param,
+            #         infeas_ratio,
+            #         acqf_min_max,
+            #         use_min_filter=self.use_min_filter,
+            #         use_reg_only=use_reg_only,
+            #     )
 
-        return min_, max_
+            # elif self.acquisition_type == "ucb":
+            #     acqf_args = dict(
+            #         params_obj=self.params_obj,
+            #         problem_type=self.problem_type,
+            #         feas_strategy=self.feas_strategy,
+            #         feas_param=self.feas_param,
+            #         infeas_ratio=infeas_ratio,
+            #         use_reg_only=use_reg_only,
+            #         beta=torch.tensor([0.2]).repeat(self.batch_size),
+            #         use_min_filter=self.use_min_filter,
+    
+            #     )
+            #     self.acqf = UCB(self.reg_model, self.cla_model, **acqf_args)
+
+            # elif self.acquisition_type == "lcb":
+            #     acqf_args = dict(
+            #         params_obj=self.params_obj,
+            #         problem_type=self.problem_type,
+            #         feas_strategy=self.feas_strategy,
+            #         feas_param=self.feas_param,
+            #         infeas_ratio=infeas_ratio,
+            #         use_reg_only=use_reg_only,
+            #         beta=torch.tensor([0.2]).repeat(self.batch_size),
+            #         use_min_filter=self.use_min_filter,
+    
+            #     )
+            #     self.acqf = LCB(self.reg_model, self.cla_model, **acqf_args)
+
+
+            # elif self.acquisition_type == "variance":
+            #     acqf_args = dict(
+            #         params_obj=self.params_obj,
+            #         problem_type=self.problem_type,
+            #         feas_strategy=self.feas_strategy,
+            #         feas_param=self.feas_param,
+            #         infeas_ratio=infeas_ratio,
+            #         use_reg_only=use_reg_only,
+            #         use_min_filter=self.use_min_filter,
+    
+            #     )
+            #     self.acqf = VarianceBased(self.reg_model, self.cla_model, **acqf_args)
+
+
+            # elif self.acquisition_type == "general":
+            #     acqf_args = dict(
+            #         params_obj=self.params_obj,
+            #         problem_type=self.problem_type,
+            #         feas_strategy=self.feas_strategy,
+            #         feas_param=self.feas_param,
+            #         infeas_ratio=infeas_ratio,
+            #         use_reg_only=use_reg_only,
+            #         f_best_scaled=f_best_scaled,
+            #         use_min_filter=self.use_min_filter,
+    
+            #     )
+            #     self.acqf = General(self.reg_model, self.cla_model, **acqf_args)
+
+            # else:
+            #     msg = f"Acquisition function type {self.acquisition_type} not understood!"
+            #     Logger.log(msg, "FATAL")
