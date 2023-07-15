@@ -447,13 +447,14 @@ class BoTorchPlanner(BasePlanner):
             )
 
         elif self.acquisition_type == "lcb":
-            acqf = LowerConfidenceBound(
-                reg_model,
-                # beta=torch.tensor([0.2]).repeat(self.batch_size),
-                beta=torch.tensor([1.0]).repeat(self.batch_size),
-                objective=None,
-                maximize=False,
-            )
+            # acqf = LowerConfidenceBound(
+            #     reg_model,
+            #     # beta=torch.tensor([0.2]).repeat(self.batch_size),
+            #     beta=torch.tensor([1.0]).repeat(self.batch_size),
+            #     objective=None,
+            #     maximize=False,
+            # )
+            pass
     
         elif self.acquisition_type == "variance":
             acqf = VarianceBased(reg_model)

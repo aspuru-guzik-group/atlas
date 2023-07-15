@@ -142,9 +142,7 @@ class LowerConfidenceBound(AnalyticAcquisitionFunction):
         return acqf
 
 
-class FeasibilityAwareVarainceBased(
-    VarianceBased, FeasibilityAwareAcquisition
-):
+class FeasibilityAwareVarainceBased(VarianceBased, FeasibilityAwareAcquisition):
     """Feasibility aware variance-based sampling (active learning)"""
 
     def __init__(
@@ -187,9 +185,7 @@ class FeasibilityAwareVarainceBased(
         return self.compute_combined_acqf(acqf, X)
 
 
-class FeasibilityAwareGeneral(
-    AcquisitionFunction, FeasibilityAwareAcquisition
-):
+class FeasibilityAwareGeneral(AcquisitionFunction, FeasibilityAwareAcquisition):
     """Abstract feasibilty aware general purpose optimization acquisition function."""
 
     def __init__(
