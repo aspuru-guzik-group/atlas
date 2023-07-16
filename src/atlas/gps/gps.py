@@ -9,12 +9,13 @@ import torch
 from botorch.models.gpytorch import GPyTorchModel
 from gpytorch.distributions import MultivariateNormal
 from gpytorch.kernels import MaternKernel, RBFKernel, ScaleKernel
-from gpytorch.likelihoods import Likelihood, GaussianLikelihood
+from gpytorch.likelihoods import Likelihood, GaussianLikelihood, LikelihoodList
 from botorch.models.kernels.downsampling import DownsamplingKernel
 from botorch.models.kernels.exponential_decay import ExponentialDecayKernel
 from botorch.utils.datasets import SupervisedDataset
-from gpytorch.models import ApproximateGP, ExactGP
+from gpytorch.models import ApproximateGP, ExactGP, GP
 from gpytorch.priors import GammaPrior
+from gpytorch.lazy import PsdSumLazyTensor
 from gpytorch.constraints import GreaterThan
 from gpytorch.variational import (
     CholeskyVariationalDistribution,
@@ -22,7 +23,6 @@ from gpytorch.variational import (
     VariationalStrategy,
 )
 from botorch.models import SingleTaskGP
-# from gpytorch.kernels.fingerprint_kernels.tanimoto_kernel import TanimotoKernel
 
 from gpytorch.priors import NormalPrior
 
@@ -127,6 +127,87 @@ class CategoricalSingleTaskGP(ExactGP, GPyTorchModel):
 
 #         # create the covariance module and subset batch dict
 
+
+class DKTGP(GP, GPyTorchModel):
+
+    # meta-data for botorch
+    _num_outputs = 1
+
+    def __init__(self, model, context_x, context_y):
+        super().__init__()
+        self.model = model
+        self.context_x = context_x.float()
+        self.context_y = context_y.float()
+
+    def forward(self, x):
+        """
+        x shape  (# proposals, q_batch_size, # params)
+        mean shape (# proposals, # params)
+        covar shape (# proposals, q_batch_size, # params)
+        """
+        x = x.float()
+        _, __, likelihood = self.model.forward(
+            self.context_x, self.context_y, x
+        )
+        mean = likelihood.mean
+        covar = likelihood.lazy_covariance_matrix
+
+        return gpytorch.distributions.MultivariateNormal(mean, covar)
+
+
+
+class RGPE(GP, GPyTorchModel):
+    """Rank-weighted GP ensemble. This class inherits from GPyTorchModel which
+    provides an interface for GPyTorch models in botorch
+    Args:
+            models (List[SingleTaskGP]): list of GP models
+            weights (torch.Tensor): weights
+    """
+
+    # meta-data for botorch
+    _num_outputs = 1
+
+    def __init__(self, models, weights):
+        super().__init__()
+        self.models = ModuleList(models)
+        for m in models:
+            if not hasattr(m, "likelihood"):
+                raise ValueError(
+                    "RGPE currently only supports models that have a likelihood (e.g. ExactGPs)"
+                )
+        self.likelihood = LikelihoodList(*[m.likelihood for m in models])
+        self.weights = weights
+        # self.to(weights)
+
+    def forward(self, x):
+        x = x.float()
+        weighted_means = []
+        weighted_covars = []
+        # filter model with zero weights
+        # weights on covariance matrices are weight**2
+        non_zero_weight_indices = (self.weights**2 > 0).nonzero()
+        non_zero_weights = self.weights[non_zero_weight_indices]
+        # re-normalize
+        non_zero_weights /= non_zero_weights.sum()
+
+        for non_zero_weight_idx in range(non_zero_weight_indices.shape[0]):
+            raw_idx = non_zero_weight_indices[non_zero_weight_idx].item()
+            model = self.models[raw_idx]
+            posterior = model.posterior(x)
+            # unstandardize predictions
+            # posterior_mean = posterior.mean.squeeze(-1)*model.Y_std + model.Y_mean
+            # posterior_cov = posterior.mvn.lazy_covariance_matrix * model.Y_std.pow(2)
+            posterior_mean = posterior.mean.squeeze(-1)
+            posterior_cov = posterior.mvn.lazy_covariance_matrix
+            # apply weight
+            weight = non_zero_weights[non_zero_weight_idx]
+            weighted_means.append(weight * posterior_mean)
+            weighted_covars.append(posterior_cov * weight**2)
+        # set mean and covariance to be the rank-weighted sum the means and covariances of the
+        # base models and target model
+        mean_x = torch.stack(weighted_means).sum(dim=0)
+        covar_x = PsdSumLazyTensor(*weighted_covars)
+        return MultivariateNormal(mean_x, covar_x)
 
 
 class TanimotoGP(ExactGP, GPyTorchModel):

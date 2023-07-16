@@ -19,10 +19,7 @@ from olympus import ParameterVector, ParameterSpace
 
 from atlas import Logger
 from atlas.networks.dkt.dkt import DKT
-from atlas.acquisition_functions.__OLD_acqfs import (
-    FeasibilityAwareEI,
-    FeasibilityAwareQEI,
-)
+from atlas.gps.gps import DKTGP
 from atlas.acquisition_functions.acqfs import get_acqf_instance
 from atlas.acquisition_optimizers import (
     GeneticOptimizer,
@@ -37,32 +34,6 @@ from atlas.utils.planner_utils import (
     forward_normalize,
     propose_randomly
 )
-
-class DKTModel(GP, GPyTorchModel):
-
-    # meta-data for botorch
-    _num_outputs = 1
-
-    def __init__(self, model, context_x, context_y):
-        super().__init__()
-        self.model = model
-        self.context_x = context_x.float()
-        self.context_y = context_y.float()
-
-    def forward(self, x):
-        """
-        x shape  (# proposals, q_batch_size, # params)
-        mean shape (# proposals, # params)
-        covar shape (# proposals, q_batch_size, # params)
-        """
-        x = x.float()
-        _, __, likelihood = self.model.forward(
-            self.context_x, self.context_y, x
-        )
-        mean = likelihood.mean
-        covar = likelihood.lazy_covariance_matrix
-
-        return gpytorch.distributions.MultivariateNormal(mean, covar)
 
 
 class DKTPlanner(BasePlanner):
@@ -241,7 +212,7 @@ class DKTPlanner(BasePlanner):
             )
 
             # builds the regression model
-            self.reg_model = DKTModel(
+            self.reg_model = DKTGP(
                 self.model, self.train_x_scaled_reg, self.train_y_scaled_reg
             )
 

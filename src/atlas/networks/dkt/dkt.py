@@ -36,6 +36,7 @@ class Feature(nn.Module):
         return out
 
 
+# TODO: this is redundant definition I think
 class ExactGPModel(gpytorch.models.ExactGP):
     """Exact GP model"""
 

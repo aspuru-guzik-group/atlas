@@ -10,10 +10,7 @@ import warnings
 import gpytorch
 import numpy as np
 import torch
-from botorch.acquisition import (
-    ExpectedImprovement,
-    qExpectedImprovement,
-)
+
 from botorch.fit import fit_gpytorch_mll
 from botorch.models import  SingleTaskGP
 from botorch.models.gpytorch import GPyTorchModel
@@ -27,7 +24,8 @@ from gpytorch.models import GP
 from olympus import ParameterVector, ParameterSpace
 from torch.nn import ModuleList
 
-from atlas import Logger
+from atlas import Logger, tkwargs
+from atlas.gps.gps import RGPE
 from atlas.acquisition_functions.acqfs import get_acqf_instance
 from atlas.acquisition_optimizers import (
     GeneticOptimizer,
@@ -46,59 +44,6 @@ from atlas.utils.planner_utils import (
 
 warnings.filterwarnings("ignore", "^.*jitter.*", category=RuntimeWarning)
 
-
-class RGPE(GP, GPyTorchModel):
-    """Rank-weighted GP ensemble. This class inherits from GPyTorchModel which
-    provides an interface for GPyTorch models in botorch
-    Args:
-            models (List[SingleTaskGP]): list of GP models
-            weights (torch.Tensor): weights
-    """
-
-    # meta-data for botorch
-    _num_outputs = 1
-
-    def __init__(self, models, weights):
-        super().__init__()
-        self.models = ModuleList(models)
-        for m in models:
-            if not hasattr(m, "likelihood"):
-                raise ValueError(
-                    "RGPE currently only supports models that have a likelihood (e.g. ExactGPs)"
-                )
-        self.likelihood = LikelihoodList(*[m.likelihood for m in models])
-        self.weights = weights
-        # self.to(weights)
-
-    def forward(self, x):
-        x = x.float()
-        weighted_means = []
-        weighted_covars = []
-        # filter model with zero weights
-        # weights on covariance matrices are weight**2
-        non_zero_weight_indices = (self.weights**2 > 0).nonzero()
-        non_zero_weights = self.weights[non_zero_weight_indices]
-        # re-normalize
-        non_zero_weights /= non_zero_weights.sum()
-
-        for non_zero_weight_idx in range(non_zero_weight_indices.shape[0]):
-            raw_idx = non_zero_weight_indices[non_zero_weight_idx].item()
-            model = self.models[raw_idx]
-            posterior = model.posterior(x)
-            # unstandardize predictions
-            # posterior_mean = posterior.mean.squeeze(-1)*model.Y_std + model.Y_mean
-            # posterior_cov = posterior.mvn.lazy_covariance_matrix * model.Y_std.pow(2)
-            posterior_mean = posterior.mean.squeeze(-1)
-            posterior_cov = posterior.mvn.lazy_covariance_matrix
-            # apply weight
-            weight = non_zero_weights[non_zero_weight_idx]
-            weighted_means.append(weight * posterior_mean)
-            weighted_covars.append(posterior_cov * weight**2)
-        # set mean and covariance to be the rank-weighted sum the means and covariances of the
-        # base models and target model
-        mean_x = torch.stack(weighted_means).sum(dim=0)
-        covar_x = PsdSumLazyTensor(*weighted_covars)
-        return MultivariateNormal(mean_x, covar_x)
 
 
 class RGPEPlanner(BasePlanner):
@@ -533,38 +478,3 @@ class RGPEPlanner(BasePlanner):
             return_params = acquisition_optimizer.optimize()
 
         return return_params
-
-    def get_aqcf_min_max(self, reg_model, f_best_scaled, num_samples=2000):
-        """computes the min and max value of the acquisition function without
-        the feasibility contribution. These values will be used to approximately
-        normalize the acquisition function
-        """
-        if self.batch_size == 1:
-            acqf = ExpectedImprovement(
-                reg_model, f_best_scaled, objective=None, maximize=False
-            )
-        elif self.batch_size > 1:
-            acqf = qExpectedImprovement(
-                reg_model, f_best_scaled, objective=None, maximize=False
-            )
-        samples, _ = propose_randomly(num_samples, self.param_space,  has_descriptors=self.has_descriptors)
-        if (
-            not self.problem_type == "fully_categorical"
-            and not self.has_descriptors
-        ):
-            # we dont scale the parameters if we have a one-hot-encoded representation
-            samples = forward_normalize(samples, self.params_obj._mins_x, self.params_obj._maxs_x)
-
-        acqf_vals = acqf(
-            torch.tensor(samples)
-            .view(samples.shape[0], 1, samples.shape[-1])
-            .double()
-        )
-        min_ = torch.amin(acqf_vals).item()
-        max_ = torch.amax(acqf_vals).item()
-
-        if np.abs(max_ - min_) < 1e-6:
-            max_ = 1.0
-            min_ = 0.0
-
-        return min_, max_
