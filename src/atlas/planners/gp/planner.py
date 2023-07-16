@@ -14,7 +14,7 @@ from gpytorch.mlls import ExactMarginalLogLikelihood
 from olympus import ParameterVector
 from olympus.campaigns import ParameterSpace
 
-from atlas import Logger
+from atlas import Logger, tkwargs
 
 from atlas.acquisition_functions.acqfs import get_acqf_instance
 
@@ -24,7 +24,7 @@ from atlas.acquisition_optimizers import (
     PymooGAOptimizer
 )
 from atlas.base.base import BasePlanner
-from atlas.gps.gps import CategoricalSingleTaskGP
+from atlas.gps.gps import CategoricalSingleTaskGP, TanimotoGP
 
 from atlas.utils.planner_utils import get_cat_dims
 
@@ -76,6 +76,7 @@ class BoTorchPlanner(BasePlanner):
         permutation_params: Optional[List[int]] = None,
         batch_constrained_params: Optional[List[int]] = None,
         general_parameters: Optional[List[int]] = None,
+        molecular_params: Optional[List[int]] = None,
         is_moo: bool = False,
         value_space: Optional[ParameterSpace] = None,
         scalarizer_kind: Optional[str] = "Hypervolume",
@@ -107,27 +108,34 @@ class BoTorchPlanner(BasePlanner):
             "fully_discrete",
             "mixed_disc_cont",
         ]:
-            model = SingleTaskGP(train_x, train_y)
+            model = SingleTaskGP(train_x, train_y).to(tkwargs['device'])
         elif self.problem_type == "fully_categorical":
             if self.has_descriptors:
-                # we have some descriptors, use the Matern kernel
-                model = SingleTaskGP(train_x, train_y)
+                # we have some descriptors, use the Matern kernel or Tanimoto if we have all molecular dims
+                if self.molecular_params == [0]:
+                    # use TanimotoGP
+                    # NOTE: here we assume we are given Morgan FPs as descriptors, might want to validate
+                    # NOTE: this is only implemented for single molecular dimension
+                    model = TanimotoGP(train_x, train_y).to(tkwargs['device'])
+                else:
+                    # no molecular parameters, use Matern GP
+                    model = SingleTaskGP(train_x, train_y).to(tkwargs['device'])
             else:
                 # if we have no descriptors, use a Categorical kernel
                 # based on the HammingDistance
-                model = CategoricalSingleTaskGP(train_x, train_y)
+                model = CategoricalSingleTaskGP(train_x, train_y).to(tkwargs['device'])
         elif "mixed_cat_" in self.problem_type:
             if self.has_descriptors:
                 # we have some descriptors, use the Matern kernel
-                model = SingleTaskGP(train_x, train_y)
+                model = SingleTaskGP(train_x, train_y).to(tkwargs['device'])
             else:
                 cat_dims = get_cat_dims(self.param_space)
-                model = MixedSingleTaskGP(train_x, train_y, cat_dims=cat_dims)
+                model = MixedSingleTaskGP(train_x, train_y, cat_dims=cat_dims).to(tkwargs['device'])
 
         else:
             raise NotImplementedError
 
-        mll = ExactMarginalLogLikelihood(model.likelihood, model)
+        mll = ExactMarginalLogLikelihood(model.likelihood, model).to(tkwargs['device'])
         # fit the GP
         start_time = time.time()
         with gpytorch.settings.cholesky_jitter(self.max_jitter):
@@ -224,6 +232,8 @@ class BoTorchPlanner(BasePlanner):
                 torch.sum(self.train_y_scaled_cla)
                 / self.train_x_scaled_cla.size(0)
             ).item()
+
+        
      
             # get compile the basic feas-aware acquisition function arguments
             acqf_args = dict(

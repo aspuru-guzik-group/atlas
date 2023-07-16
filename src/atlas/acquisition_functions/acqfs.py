@@ -9,7 +9,7 @@ import gpytorch
 import numpy as np
 import torch
 
-from atlas import Logger
+from atlas import Logger, tkwargs
 from atlas.objects.abstract_object import Object, ABCMeta
 from atlas.utils.planner_utils import (
     cat_param_to_feat,
@@ -139,7 +139,7 @@ class FeasibilityAwareAcquisition(Object, metaclass=ABCMeta):
         )
         if (
             self.problem_type == "fully_categorical"
-            and not self.has_descriptors
+            and not self.params_obj.has_descriptors
         ):
             # we dont scale the parameters if we have a fully one-hot-encoded representation
             pass
@@ -150,9 +150,8 @@ class FeasibilityAwareAcquisition(Object, metaclass=ABCMeta):
             )
 
         acqf_val = self._evaluate_raw(
-            torch.tensor(samples)
+            torch.tensor(samples, **tkwargs)
             .view(samples.shape[0], 1, samples.shape[-1])
-            .double()
         )
 
         min_ = torch.amin(acqf_val).item()
@@ -368,7 +367,7 @@ def get_acqf_instance(acquisition_type, reg_model, cla_model, acqf_args:Dict[str
     elif acquisition_type == 'variance':
         return VarianceBased(reg_model=reg_model,cla_model=cla_model,**acqf_args)
     elif acquisition_type in ['lcb', 'ucb']:
-        acqf_args['beta'] = torch.tensor([0.2]).repeat(acqf_args['batch_size']) # default value of beta
+        acqf_args['beta'] = torch.tensor([0.2], **tkwargs).repeat(acqf_args['batch_size']) # default value of beta
         module = __import__(f'atlas.acquisition_functions.acqfs', fromlist=[acquisition_type.upper()])
         _class = getattr(module, acquisition_type.upper())
         return _class(reg_model=reg_model,cla_model=cla_model,**acqf_args)

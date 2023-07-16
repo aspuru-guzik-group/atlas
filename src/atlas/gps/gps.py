@@ -12,15 +12,21 @@ from gpytorch.kernels import MaternKernel, RBFKernel, ScaleKernel
 from gpytorch.likelihoods import Likelihood, GaussianLikelihood
 from botorch.models.kernels.downsampling import DownsamplingKernel
 from botorch.models.kernels.exponential_decay import ExponentialDecayKernel
+from botorch.utils.datasets import SupervisedDataset
 from gpytorch.models import ApproximateGP, ExactGP
+from gpytorch.priors import GammaPrior
+from gpytorch.constraints import GreaterThan
 from gpytorch.variational import (
     CholeskyVariationalDistribution,
     UnwhitenedVariationalStrategy,
     VariationalStrategy,
 )
+from botorch.models import SingleTaskGP
 # from gpytorch.kernels.fingerprint_kernels.tanimoto_kernel import TanimotoKernel
 
 from gpytorch.priors import NormalPrior
+
+from atlas.gps.kernels import TanimotoKernel
 
 
 class ClassificationGPMatern(ApproximateGP):
@@ -123,25 +129,155 @@ class CategoricalSingleTaskGP(ExactGP, GPyTorchModel):
 
 
 
-# class TanimotoGP(ExactGP):
+class TanimotoGP(ExactGP, GPyTorchModel):
 
-#     _num_outputs = 1
+    _num_outputs = 1
 
-#     def __init__(self, train_x: torch.Tensor, train_y: torch.Tensor):
-#         """ Single task GP for molecular fingerprint inputs
-#         Args:
-#                 train_x (torch.tensor): 2D tensor with training inputs
-#                 train_y (torch.tensor): 2D tensor with training targets
-#         """
-#         super().__init__(train_x, train_y.squeeze(-1), GaussianLikelihood)
-#         self.mean_module = gpytorch.means.ConstantMean()
-#         self.covar_module = ScaleKernel(base_kernel=TanimotoKernel())
-#         self.to(train_x)
+    def __init__(self, train_x: torch.Tensor, train_y: torch.Tensor):
+        """ Single task GP for molecular fingerprint inputs
+        Args:
+                train_x (torch.tensor): 2D tensor with training inputs
+                train_y (torch.tensor): 2D tensor with training targets
+        """
+        super().__init__(train_x, train_y.squeeze(-1), GaussianLikelihood())
+        self.mean_module = gpytorch.means.ConstantMean()
+        self.covar_module = ScaleKernel(base_kernel=TanimotoKernel())
+        self.to(train_x)
 
-#     def forward(self, x):
-#         mean_x = self.mean_module(x)
-#         covar_x = self.covar_module(x)
-#         return MultivariateNormal(mean_x, covar_x)
+    def forward(self, x):
+        mean_x = self.mean_module(x)
+        covar_x = self.covar_module(x)
+        return MultivariateNormal(mean_x, covar_x)
 
 
 
+
+class MixedTanimotoSingleTaskGP(SingleTaskGP):
+    """ Supports mixed molecular-continuous/discrete parameter spaces
+    where the molecular parameter options are represented using 
+    Morgan fingerprints
+
+    Similar kernel to MixedSingleTaskGP from BoTorch, but instead of 
+    using CategoricalKernel based on Hamming distance it uses TanimotoKernel
+    producing a regular kernel of the form
+
+    K((x1, c1), (x2, c2)) =
+            K_cont_1(x1, x2) + K_cat_1(c1, c2) +
+            K_cont_2(x1, x2) * K_cat_2(c1, c2)
+
+
+    inspired by:
+    https://botorch.org/api/_modules/botorch/models/gp_regression_mixed.html#MixedSingleTaskGP
+    """
+
+    _num_outputs = 1
+
+    def __init__(
+        self, 
+        train_x: torch.Tensor, 
+        train_y: torch.Tensor,
+        molecular_dims: List[int],  
+    ):
+        if len(molecular_dims) == 0:
+            msg = 'You must define at least one molecular dimension to use the MixedTanimotoSingleTaskGP'
+            Logger.log(msg, 'FATAL')
+
+        _, aug_batch_shape = self.get_batch_dimensions(train_X=train_X, train_Y=train_Y)
+
+        def cont_kernel_factory(
+            batch_shape: torch.Size,
+            ard_num_dims: int,
+            active_dims: List[int],
+        ) -> MaternKernel:
+            return MaternKernel(
+                nu=2.5,
+                batch_shape=batch_shape,
+                ard_num_dims=ard_num_dims,
+                active_dims=active_dims,
+                lengthscale_constraint=GreaterThan(1e-04),
+            )
+
+        # generate likelihood
+        min_noise = 1e-5 if train_X.dtype == torch.float else 1e-6
+        likelihood = GaussianLikelihood(
+            batch_shape=aug_batch_shape,
+            noise_constraint=GreaterThan(
+                min_noise, transform=None, initial_value=1e-3
+            ),
+            noise_prior=GammaPrior(0.9, 10.0),
+        )
+
+        d = train_X.shape[-1]
+        cat_dims = normalize_indices(indices=cat_dims, d=d)
+        ord_dims = sorted(set(range(d)) - set(cat_dims))
+        if len(ord_dims) == 0:
+            covar_module = ScaleKernel(
+                CategoricalKernel(
+                    batch_shape=aug_batch_shape,
+                    ard_num_dims=len(cat_dims),
+                    lengthscale_constraint=GreaterThan(1e-06),
+                )
+            )
+        else:
+            sum_kernel = ScaleKernel(
+                cont_kernel_factory(
+                    batch_shape=aug_batch_shape,
+                    ard_num_dims=len(ord_dims),
+                    active_dims=ord_dims,
+                )
+                + ScaleKernel(
+                    CategoricalKernel(
+                        batch_shape=aug_batch_shape,
+                        ard_num_dims=len(cat_dims),
+                        active_dims=cat_dims,
+                        lengthscale_constraint=GreaterThan(1e-06),
+                    )
+                )
+            )
+            prod_kernel = ScaleKernel(
+                cont_kernel_factory(
+                    batch_shape=aug_batch_shape,
+                    ard_num_dims=len(ord_dims),
+                    active_dims=ord_dims,
+                )
+                * CategoricalKernel(
+                    batch_shape=aug_batch_shape,
+                    ard_num_dims=len(cat_dims),
+                    active_dims=cat_dims,
+                    lengthscale_constraint=GreaterThan(1e-06),
+                )
+            )
+            covar_module = sum_kernel + prod_kernel
+        super().__init__(
+            train_X=train_X,
+            train_Y=train_Y,
+            likelihood=likelihood,
+            covar_module=covar_module,
+            outcome_transform=None,
+            input_transform=None,
+        )
+
+
+    @classmethod
+    def construct_inputs(
+        cls,
+        training_data: SupervisedDataset,
+        categorical_features: List[int],
+        likelihood: Optional[Likelihood] = None,
+        **kwargs: Any,
+    ) -> Dict[str, Any]:
+        r"""Construct `Model` keyword arguments from a dict of `BotorchDataset`.
+
+        Args:
+            training_data: A `SupervisedDataset` containing the training data.
+            categorical_features: Column indices of categorical features.
+            likelihood: Optional likelihood used to constuct the model.
+        """
+        return {
+            **super().construct_inputs(training_data=training_data, **kwargs),
+            "cat_dims": categorical_features,
+            "likelihood": likelihood,
+        }
+
+
+        

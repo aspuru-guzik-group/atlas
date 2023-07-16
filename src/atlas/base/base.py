@@ -21,7 +21,7 @@ from olympus.planners import AbstractPlanner, CustomPlanner
 from olympus.scalarizers import Scalarizer
 from rich.progress import track
 
-from atlas import Logger
+from atlas import Logger, tkwargs
 
 from atlas.gps.gps import (
 	ClassificationGPMatern,
@@ -41,6 +41,7 @@ from atlas.known_constraints.known_constraints import (
     KnownConstraints,
 	PendingExperimentConstraint,
 )
+
 
 
 class BasePlanner(CustomPlanner):
@@ -67,6 +68,7 @@ class BasePlanner(CustomPlanner):
         permutation_params: Optional[List[int]] = None,
 		batch_constrained_params: Optional[List[int]] = None,
 		general_parameters: Optional[List[int]] = None,
+		molecular_params: Optional[List[int]] = None,
 		is_moo: bool = False,
 		value_space: Optional[ParameterSpace] = None,
 		scalarizer_kind: Optional[str] = "Hypervolume",
@@ -113,6 +115,7 @@ class BasePlanner(CustomPlanner):
 			self.user_known_constraints = known_constraints
 
 		self.general_parameters = general_parameters
+		self.molecular_params = molecular_params
 		self.is_moo = is_moo
 		self.value_space = value_space
 		self.scalarizer_kind = scalarizer_kind
@@ -493,10 +496,10 @@ class BasePlanner(CustomPlanner):
 
 		# convert to torch tensors and return
 		return (
-			torch.tensor(train_x_cla).float(),
-			torch.tensor(train_y_cla).squeeze().float(),
-			torch.tensor(train_x_reg),
-			torch.tensor(train_y_reg),
+			torch.tensor(train_x_cla, **tkwargs),
+			torch.tensor(train_y_cla, **tkwargs).squeeze(),
+			torch.tensor(train_x_reg, **tkwargs),
+			torch.tensor(train_y_reg, **tkwargs),
 		)
 
 	def reg_surrogate(
@@ -534,7 +537,7 @@ class BasePlanner(CustomPlanner):
 					sample_x.append(float(element))
 			X_proc.append(sample_x)
 
-		X_proc = torch.tensor(np.array(X_proc)).double()
+		X_proc = torch.tensor(np.array(X_proc), **tkwargs)
 
 		if (
 			self.problem_type == "fully_categorical"
@@ -593,7 +596,7 @@ class BasePlanner(CustomPlanner):
 					sample_x.append(float(element))
 			X_proc.append(sample_x)
 
-		X_proc = torch.tensor(np.array(X_proc)).double()
+		X_proc = torch.tensor(np.array(X_proc, **tkwargs))
 
 		if (
 			self.problem_type == "fully_categorical"
@@ -647,7 +650,7 @@ class BasePlanner(CustomPlanner):
 					sample_x.append(float(element))
 			X_proc.append(sample_x)
 
-		X_proc = torch.tensor(np.array(X_proc)).double()
+		X_proc = torch.tensor(np.array(X_proc), **tkwargs)
 
 		if (
 			self.problem_type == "fully_categorical"
@@ -853,7 +856,7 @@ class BasePlanner(CustomPlanner):
 				samples, self.params_obj._mins_x, self.params_obj._maxs_x
 			)
 
-		X = torch.tensor(samples)
+		X = torch.tensor(samples, **tkwargs)
 
 		likelihood = self.cla_likelihood(self.cla_model(X.float()))
 		mean = 1.-likelihood.mean.detach() # convert p_infeas to p_feas

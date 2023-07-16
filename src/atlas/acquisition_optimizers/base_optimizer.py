@@ -11,7 +11,7 @@ import torch
 from botorch.acquisition import AcquisitionFunction
 from olympus.campaigns import ParameterSpace
 
-from atlas import Logger
+from atlas import Logger, tkwargs
 from atlas.acquisition_functions.acqfs import VarianceBased
 from atlas.acquisition_functions.acqf_utils import get_batch_initial_conditions
 

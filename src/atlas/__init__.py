@@ -2,6 +2,8 @@
 
 import os
 from glob import glob
+import torch
+
 
 atlas_home = os.path.dirname(os.path.abspath(__file__))
 atlas_scratch = os.path.join(
@@ -18,3 +20,9 @@ __datasets__ = os.environ.get("ATLAS_DATASETS") or atlas_datasets
 from .utils.logger import MessageLogger
 
 Logger = MessageLogger()
+
+tkwargs = {
+    "dtype": torch.double,
+    #"device": torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+    'device': 'cpu',
+}
