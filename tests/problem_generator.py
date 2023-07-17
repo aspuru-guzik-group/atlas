@@ -97,7 +97,6 @@ class ProblemGenerator():
             return surface_callable, surface_callable.param_space
 
 
-
          elif self.problem_type == 'mixed_cat_cont':
             surface_choice_cat = str(np.random.choice(self.allowed_cat_surfaces, size=None))
             surface_choice_cont = str(np.random.choice(self.allowed_cont_surfaces, size=None))
