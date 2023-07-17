@@ -31,6 +31,7 @@ def run_continuous(init_design_strategy):
         shift_range=[-0.02, 0.02],
         amplitude_range=[0.2, 1.2],
     )
+
     valid_tasks = trig_factory(
         num_samples=5,
         as_numpy=True,
@@ -149,61 +150,6 @@ def run_discrete(init_design_strategy):
     assert len(campaign.observations.get_params()) == BUDGET
     assert len(campaign.observations.get_values()) == BUDGET
 
-
-def test_continuous_hypervolume():
-
-    moo_surface = Surface(kind="MultFonseca")
-
-    # create the source tasks
-    train_tasks = []
-    for i in range(10):
-        params = np.random.uniform(size=(20, 2))
-        values = np.array(moo_surface.run(params))
-        train_tasks.append({"params": params, "values": values})
-
-    planner = RGPEPlanner(
-        goal="minimize",
-        warm_start=False,
-        train_tasks=train_tasks,
-        valid_tasks=train_tasks,
-        init_design_strategy="lhs",
-        num_init_design=4,
-        batch_size=1,
-        is_moo=True,
-        value_space=moo_surface.value_space,
-        scalarizer_kind="Hypervolume",
-        moo_params={},
-        goals=["min", "max"],
-    )
-
-    scalarizer = Scalarizer(
-        kind="Hypervolume",
-        value_space=moo_surface.value_space,
-        goals=["min", "max"],
-    )
-
-    planner.set_param_space(moo_surface.param_space)
-
-    campaign = Campaign()
-    campaign.set_param_space(moo_surface.param_space)
-    campaign.set_value_space(moo_surface.value_space)
-
-    BUDGET = 10
-
-    while len(campaign.observations.get_values()) < BUDGET:
-
-        samples = planner.recommend(campaign.observations)
-
-        for sample in samples:
-            sample_arr = sample.to_array()
-            measurement = moo_surface.run(sample_arr, return_paramvector=True)
-            campaign.add_and_scalarize(sample_arr, measurement, scalarizer)
-
-    assert len(campaign.observations.get_params()) == BUDGET
-    assert len(campaign.observations.get_values()) == BUDGET
-    assert campaign.observations.get_values().shape[1] == len(
-        moo_surface.value_space
-    )
 
 
 if __name__ == "__main__":

@@ -209,11 +209,11 @@ def olymp_factory_cat(
 ):
     """Generate "noisy" Olympus categorical surfaces"""
     # define original surface
-    if surface_kind == "Dejong":
+    if surface_kind == "CatDejong":
         surface = CatDejong(param_dim=param_dim, num_opts=num_opts)
-    elif surface_kind == "Ackley":
+    elif surface_kind == "CatAckley":
         surface = CatAckley(param_dim=param_dim, num_opts=num_opts)
-    elif surface_kind == "Michalewicz":
+    elif surface_kind == "CatMichalewicz":
         surface = CatMichalewicz(param_dim=param_dim, num_opts=num_opts)
     else:
         raise NotImplementedError
@@ -499,15 +499,70 @@ def metaBO_factory(
     return tasks
 
 
+def olymp_cat_source_task_gen(num_train_tasks, num_valid_tasks, use_descriptors=False):
+
+    train_tasks = []
+    for task in range(num_train_tasks):
+        surf_name = str(np.random.choice(['CatDejong', 'CatMichalewicz', 'CatAckley'],size=None))
+        params_, values, _, __ = olymp_factory_cat(
+            param_dim=2,
+            surface_kind=surf_name,
+            num_opts=21,
+            noise_level=0.2,
+            descriptors=use_descriptors,  # whether or not to use descriptors
+        )
+        train_tasks.append({'params': params_, 'values': values})
+
+    valid_tasks = []
+    for task in range(num_valid_tasks):
+        surf_name = str(np.random.choice(['CatDejong', 'CatMichalewicz', 'CatAckley'], size=None))
+        params_, values, _, __ = olymp_factory_cat(
+            param_dim=2,
+            surface_kind=surf_name,
+            num_opts=21,
+            noise_level=0.2,
+            descriptors=use_descriptors,  # whether or not to use descriptors
+        )
+        valid_tasks.append({'params': params_, 'values': values})
+
+    return train_tasks, valid_tasks
+    
+
+
+
+
+
+
 if __name__ == "__main__":
     # tasks = gp_factory(param_dim=2, kernel='rbf', plot=False)
     # print(len(tasks))
-    print(OLYMP_SURFACES)
-    tasks, corr_stats = olymp_factory(
-        param_dim=2, surface_kind="Everest", num_train=500, num_samples=20
+    # print(OLYMP_SURFACES)
+    # tasks, corr_stats = olymp_factory(
+    #     param_dim=2, surface_kind="Everest", num_train=500, num_samples=20
+    # )
+
+    # print(len(tasks))
+    # print(tasks[0]["params"].shape)
+    # print(tasks[0]["values"].shape)
+    # print(corr_stats)
+
+
+    # params_, values, domain, Z = olymp_factory_cat(
+    #     param_dim=2,
+    #     surface_kind='CatDejong',
+    #     num_opts=21,
+    #     noise_level=0.1,
+    #     descriptors=False,  # whether or not to use descriptors
+    # )
+
+    # print(params_.shape)
+    # print(values.shape)
+
+    train_tasks, valid_tasks = olymp_cat_source_task_gen(
+        num_train_tasks=20,
+        num_valid_tasks=5,
+        use_descriptors=False,
     )
 
-    print(len(tasks))
-    print(tasks[0]["params"].shape)
-    print(tasks[0]["values"].shape)
-    print(corr_stats)
+    print(len(train_tasks))
+    print(len(valid_tasks))
