@@ -5,7 +5,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import numpy as np
 import botorch
 import gpytorch
-import torch
+import torch 
+from torch.nn import ModuleList
 from botorch.models.gpytorch import GPyTorchModel
 from gpytorch.distributions import MultivariateNormal
 from gpytorch.kernels import MaternKernel, RBFKernel, ScaleKernel
