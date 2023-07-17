@@ -6,6 +6,7 @@ import olympus
 import seaborn as sns
 import sobol_seq
 import torch
+import GPy
 from olympus.surfaces import Surface
 from olympus.surfaces.surface_cat_ackley import CatAckley
 from olympus.surfaces.surface_cat_camel import CatCamel
@@ -91,12 +92,14 @@ def gp_factory(
     cov = k.K(feat, feat)
     # generate the samples from the prior
     Z = np.random.multivariate_normal(mu, cov, num_samples)
-
     for z in Z:
+        # print(Z.shape)
+        # print(z.shape)
         tasks.append(
             {
                 "params": torch.from_numpy(feat),
-                "values": torch.from_numpy(z.reshape(-1, param_dim)),
+                #"values": torch.from_numpy(z.reshape(-1, param_dim)),
+                "values": torch.from_numpy(z.reshape(-1, 1)),
             }
         )
 
@@ -111,15 +114,15 @@ def gp_factory(
     return tasks
 
 
-# def gp_kernel(kind='rbf'):
-#     if kind == 'rbf':
-#         kernel_fn = GPy.kern.RBF
-#     elif kind == 'matern32':
-#         kernel_fn = GPy.kern.Matern32
-#     else:
-#         raise NotImplementedError
+def gp_kernel(kind='rbf'):
+    if kind == 'rbf':
+        kernel_fn = GPy.kern.RBF
+    elif kind == 'matern32':
+        kernel_fn = GPy.kern.Matern32
+    else:
+        raise NotImplementedError
 
-#     return kernel_fn
+    return kernel_fn
 
 
 # def olymp_factory(
@@ -558,11 +561,49 @@ if __name__ == "__main__":
     # print(params_.shape)
     # print(values.shape)
 
-    train_tasks, valid_tasks = olymp_cat_source_task_gen(
+    train_tasks_cat, valid_tasks_cat = olymp_cat_source_task_gen(
         num_train_tasks=20,
         num_valid_tasks=5,
         use_descriptors=False,
     )
 
-    print(len(train_tasks))
-    print(len(valid_tasks))
+    # print(len(train_tasks))
+    # print(len(valid_tasks))
+
+    train_tasks_cont = gp_factory(
+        param_dim=2,
+        kernel="rbf",
+        noise_var_range=[0.01, 1.0],
+        length_scale_range=[0.05, 0.1],
+        num_samples=20,
+        resolution=441,
+        plot=False,
+    )
+    valid_tasks_cont = gp_factory(
+        param_dim=2,
+        kernel="rbf",
+        noise_var_range=[0.01, 1.0],
+        length_scale_range=[0.05, 0.1],
+        num_samples=5,
+        resolution=441,
+        plot=False,
+    )
+    
+    train_tasks = []
+
+    for task_cat, task_cont in zip(train_tasks_cat, train_tasks_cont):
+        params = torch.cat((torch.tensor(task_cat['params']), task_cont['params']), dim=1)
+        values = torch.sum(torch.cat((torch.tensor(task_cat['values']), task_cont['values']), dim=1), dim=1)
+        
+        train_tasks.append({'params':params, 'values': values.view(values.shape[0],1)})
+
+    valid_tasks = []
+
+    for task_cat, task_cont in zip(valid_tasks_cat, valid_tasks_cont):
+        params = torch.cat((torch.tensor(task_cat['params']), task_cont['params']), dim=1)
+        values = torch.sum(torch.cat((torch.tensor(task_cat['values']), task_cont['values']), dim=1), dim=1)
+        
+        valid_tasks.append({'params':params, 'values': values.view(values.shape[0],1)})
+
+    print(valid_tasks[0]['params'].shape)
+    print(valid_tasks[0]['values'].shape)

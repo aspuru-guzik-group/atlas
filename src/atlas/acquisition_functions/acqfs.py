@@ -124,7 +124,6 @@ class FeasibilityAwareAcquisition(Object, metaclass=ABCMeta):
 
 
     # helper methods
-
     def compute_mean_sigma(self, posterior) -> Tuple[torch.Tensor]:
         """ Takes in posterior of fitted model and returns 
         the mean and covariance """
