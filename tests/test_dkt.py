@@ -15,6 +15,8 @@ from olympus.surfaces import Surface
 
 from atlas.planners.dkt.planner import DKTPlanner
 from atlas.utils.synthetic_data import trig_factory
+from problem_generator import ProblemGenerator
+from atlas.utils.synthetic_data import olymp_cat_source_task_gen
 
 
 def run_continuous(init_design_strategy):
@@ -164,6 +166,63 @@ def run_discrete(init_design_strategy):
     assert len(campaign.observations.get_params()) == BUDGET
     assert len(campaign.observations.get_values()) == BUDGET
 
+
+def run_categorical(init_design_strategy):
+    def surface(x):
+        return np.sin(8 * x)
+
+    train_tasks, valid_tasks = olymp_cat_source_task_gen(
+		num_train_tasks=20,
+		num_valid_tasks=5,
+		use_descriptors=False,
+	)
+
+    problem_gen = ProblemGenerator(problem_type='categorical')
+    surface_callable, param_space = problem_gen.generate_instance()
+
+    planner = DKTPlanner(
+        goal="minimize",
+        init_design_strategy=init_design_strategy,
+        num_init_design=4,
+        batch_size=1,
+        acquisition_type='ei',
+        acquisition_optimizer_kind='pymoo',
+        # meta-learning stuff
+        from_disk=False,
+        hyperparams={
+            "model": {
+                "epochs": 6000,
+            }
+        },
+        warm_start=False, 
+        model_path='./tmp_models',
+        train_tasks=train_tasks,
+        valid_tasks=valid_tasks,
+    )
+
+    planner.set_param_space(param_space)
+
+    # make the campaign
+    campaign = Campaign()
+    campaign.set_param_space(param_space)
+
+    BUDGET = 12
+
+    while len(campaign.observations.get_values()) < BUDGET:
+
+        samples = planner.recommend(campaign.observations)
+        for sample in samples:
+            sample_arr = sample.to_array()
+            measurement = surface_callable.run(sample_arr)
+            campaign.add_observation(sample_arr, measurement)
+
+            print('SAMPLE : ', sample)
+            print('MEASUREMENT : ', measurement)
+
+    os.system("rm -r ./tmp_models/")
+
+    assert len(campaign.observations.get_params()) == BUDGET
+    assert len(campaign.observations.get_values()) == BUDGET
 
 #
 # def test_continuous_hypervolume():
@@ -426,8 +485,9 @@ def run_discrete(init_design_strategy):
 
 
 if __name__ == "__main__":
-    run_continuous('lhs')
+    # run_continuous('lhs')
     #run_discrete('random')
+    run_categorical('random')
     #test_continuous_hypervolume()
 
     pass
