@@ -125,8 +125,14 @@ class FeasibilityAwareAcquisition(Object, metaclass=ABCMeta):
 
     # helper methods
 
-    # def get_mean_sigma(posterior):
-    #     return None
+    def compute_mean_sigma(posterior) -> Tuple[torch.Tensor]:
+        """ Takes in posterior of fitted model and returns 
+        the mean and covariance """
+
+        mean = posterior.mean.squeeze(-2).squeeze(-1)
+        sigma = posterior.variance.clamp_min(1e-12).sqrt().view(mean.shape)
+
+        return mean, sigma
 
     def _estimate_acqf_min_max(self, num_samples:int=3000) -> Tuple[int, int]:
         """computes the min and max value of the acquisition function without
@@ -162,12 +168,33 @@ class FeasibilityAwareAcquisition(Object, metaclass=ABCMeta):
             min_ = 0.0
 
         return min_, max_
-
-
-
     
 
 
+class MonteCarloAcquisition(FeasibilityAwareAcquisition):
+
+    def __init__(self, reg_model, cla_model=None, **acqf_args: Dict[str,Any]) -> None: 
+        super().__init__(reg_model, cla_model, **acqf_args)
+        self.reg_model = reg_model
+        self.cla_model = cla_model
+    
+    def evaluate(self, X: torch.Tensor) -> torch.Tensor:
+        return super(MonteCarloAcquisition, self).evaluate(X)
+    
+    @abstractmethod
+    def _sample(self, X: torch.Tensor) -> torch.Tensor:
+        pass
+
+    def set_pending_params(X: torch.tensor) -> None:
+        return None
+    
+    
+    
+    # METHODS
+    #  _sample: evlauate the
+    # set_pending_params: set the parameter sets that have been committed to 
+    #   but not yet evaluated
+    # 
 
 
 #--------------------------------
@@ -183,9 +210,8 @@ class VarianceBased(FeasibilityAwareAcquisition):
 
     def evaluate(self, X: torch.Tensor):
         posterior = self.reg_model.posterior(X=X)
-        mean = posterior.mean.squeeze(-2).squeeze(-1)
-        acqf_val = posterior.variance.clamp_min(1e-12).sqrt().view(mean.shape)
-        return acqf_val
+        mean, sigma = self.compute_mean_sigma(posterior)
+        return sigma
 
 
 class LCB(FeasibilityAwareAcquisition):
@@ -197,8 +223,7 @@ class LCB(FeasibilityAwareAcquisition):
 
     def evaluate(self, X: torch.Tensor):
         posterior = self.reg_model.posterior(X=X)
-        mean = posterior.mean.squeeze(-2).squeeze(-1)
-        sigma = posterior.variance.clamp_min(1e-12).sqrt().view(mean.shape)
+        mean, sigma = self.compute_mean_sigma(posterior)
         acqf_val = mean - self.beta.sqrt()*sigma
         return acqf_val
 
@@ -212,8 +237,7 @@ class UCB(FeasibilityAwareAcquisition):
 
     def evaluate(self, X: torch.Tensor):
         posterior = self.reg_model.posterior(X=X)
-        mean = posterior.mean.squeeze(-2).squeeze(-1)
-        sigma = posterior.variance.clamp_min(1e-12).sqrt().view(mean.shape)
+        mean, sigma = self.compute_mean_sigma(posterior)
         acqf_val = mean + self.beta.sqrt()*sigma
         return acqf_val
 
@@ -224,8 +248,7 @@ class PI(FeasibilityAwareAcquisition):
 
     def evaluate(self, X: torch.Tensor) -> torch.Tensor:
         posterior = self.reg_model.posterior(X=X)
-        mean = posterior.mean.squeeze(-2).squeeze(-1)
-        sigma = posterior.variance.clamp_min(1e-12).sqrt().view(mean.shape)
+        mean, sigma = self.compute_mean_sigma(posterior)
         u = - ( (mean - self.f_best_scaled.expand_as(mean)) / sigma )
 
         # TODO: complete this method
@@ -239,8 +262,7 @@ class EI(FeasibilityAwareAcquisition):
 
     def evaluate(self, X: torch.Tensor):
         posterior = self.reg_model.posterior(X=X)
-        mean = posterior.mean.squeeze(-2).squeeze(-1)
-        sigma = posterior.variance.clamp_min(1e-12).sqrt().view(mean.shape)
+        mean, sigma = self.compute_mean_sigma(posterior)
         u = - ( (mean - self.f_best_scaled.expand_as(mean)) / sigma )
         normal = torch.distributions.Normal(
             torch.zeros_like(u), torch.ones_like(u)
@@ -250,7 +272,6 @@ class EI(FeasibilityAwareAcquisition):
         acqf_val = sigma * (updf + u * ucdf)
 
         return acqf_val
-
 
 
 class General(FeasibilityAwareAcquisition):
@@ -352,7 +373,7 @@ class General(FeasibilityAwareAcquisition):
         X_sns_empty = torch.unsqueeze(X_sns_empty, 1)
 
         return X_sns_empty, general_raw
-
+    
 
 
 def get_acqf_instance(acquisition_type, reg_model, cla_model, acqf_args:Dict[str,Any]):
