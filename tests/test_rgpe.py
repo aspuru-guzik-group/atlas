@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os
+import torch
 import numpy as np
 import pytest
 from olympus.campaigns import Campaign, ParameterSpace
@@ -15,7 +16,10 @@ from olympus.surfaces import Surface
 from atlas.planners.rgpe.planner import RGPEPlanner
 from atlas.utils.synthetic_data import trig_factory
 from atlas.utils.synthetic_data import olymp_cat_source_task_gen
+from atlas.utils.synthetic_data import gp_factory
+from atlas.utils.synthetic_data import mixed_source_code
 from problem_generator import ProblemGenerator, KnownConstraintsGenerator, HybridSurface
+
 
 
 def run_continuous(init_design_strategy):
@@ -201,16 +205,144 @@ def run_categorical(init_design_strategy):
 	assert len(campaign.observations.get_values()) == BUDGET
 
 
+def run_mixed_disc_cont(init_design_strategy):
+
+	train_tasks, valid_tasks = mixed_source_code(problem_type='mixed_disc_cont')
+	problem_gen = ProblemGenerator(problem_type='mixed_disc_cont')
+	surface_callable, param_space = problem_gen.generate_instance()
+	
+
+	planner = RGPEPlanner(
+		goal="minimize",
+		init_design_strategy=init_design_strategy,
+		num_init_design=5,
+		batch_size=1,
+		acquisition_type='ei',
+		acquisition_optimizer_kind='pymoo',
+		# meta-learning stuff
+		train_tasks=train_tasks,
+		valid_tasks=valid_tasks,
+		cache_weights=False, 
+		hyperparams={},
+	)
+
+	planner.set_param_space(param_space)
+
+	# make the campaign
+	campaign = Campaign()
+	campaign.set_param_space(param_space)
+
+	BUDGET = 12
+
+	while len(campaign.observations.get_values()) < BUDGET:
+
+		samples = planner.recommend(campaign.observations)
+		for sample in samples:
+			sample_arr = sample.to_array()
+			measurement = surface_callable.run(sample_arr)
+			campaign.add_observation(sample_arr, measurement)
+
+			print('SAMPLE : ', sample)
+			print('MEASUREMENT : ', measurement)
+
+	assert len(campaign.observations.get_params()) == BUDGET
+	assert len(campaign.observations.get_values()) == BUDGET
+
+
+def run_mixed_cat_disc(init_design_strategy):
+
+	train_tasks, valid_tasks = mixed_source_code(problem_type='mixed_cat_disc')			
+	problem_gen = ProblemGenerator(problem_type='mixed_cat_disc')
+	surface_callable, param_space = problem_gen.generate_instance()
+	
+
+	planner = RGPEPlanner(
+		goal="minimize",
+		init_design_strategy=init_design_strategy,
+		num_init_design=5,
+		batch_size=1,
+		acquisition_type='ei',
+		acquisition_optimizer_kind='pymoo',
+		# meta-learning stuff
+		train_tasks=train_tasks,
+		valid_tasks=valid_tasks,
+		cache_weights=False, 
+		hyperparams={},
+	)
+
+	planner.set_param_space(param_space)
+
+	# make the campaign
+	campaign = Campaign()
+	campaign.set_param_space(param_space)
+
+	BUDGET = 12
+
+	while len(campaign.observations.get_values()) < BUDGET:
+
+		samples = planner.recommend(campaign.observations)
+		for sample in samples:
+			sample_arr = sample.to_array()
+			measurement = surface_callable.run(sample_arr)
+			campaign.add_observation(sample_arr, measurement)
+
+			print('SAMPLE : ', sample)
+			print('MEASUREMENT : ', measurement)
+
+	assert len(campaign.observations.get_params()) == BUDGET
+	assert len(campaign.observations.get_values()) == BUDGET
+
+
 def run_mixed_cat_cont(init_design_strategy):
 
-	train_tasks, valid_tasks = olymp_cat_source_task_gen(
-		num_train_tasks=20,
-		num_valid_tasks=5,
-		use_descriptors=False,
-	)
-	
+	train_tasks, valid_tasks = mixed_source_code(problem_type='mixed_cat_cont')
 	problem_gen = ProblemGenerator(problem_type='mixed_cat_cont')
 	surface_callable, param_space = problem_gen.generate_instance()
+	
+
+	planner = RGPEPlanner(
+		goal="minimize",
+		init_design_strategy=init_design_strategy,
+		num_init_design=5,
+		batch_size=1,
+		acquisition_type='ei',
+		acquisition_optimizer_kind='pymoo',
+		# meta-learning stuff
+		train_tasks=train_tasks,
+		valid_tasks=valid_tasks,
+		cache_weights=False, 
+		hyperparams={},
+	)
+
+	planner.set_param_space(param_space)
+
+	# make the campaign
+	campaign = Campaign()
+	campaign.set_param_space(param_space)
+
+	BUDGET = 12
+
+	while len(campaign.observations.get_values()) < BUDGET:
+
+		samples = planner.recommend(campaign.observations)
+		for sample in samples:
+			sample_arr = sample.to_array()
+			measurement = surface_callable.run(sample_arr)
+			campaign.add_observation(sample_arr, measurement)
+
+			print('SAMPLE : ', sample)
+			print('MEASUREMENT : ', measurement)
+
+	assert len(campaign.observations.get_params()) == BUDGET
+	assert len(campaign.observations.get_values()) == BUDGET
+
+
+def run_mixed_cat_disc_cont(init_design_strategy):
+
+	train_tasks, valid_tasks = mixed_source_code(problem_type='mixed_cat_disc_cont')
+	problem_gen = ProblemGenerator(problem_type='mixed_cat_disc_cont')
+	surface_callable, param_space = problem_gen.generate_instance()
+	
 
 	planner = RGPEPlanner(
 		goal="minimize",
@@ -252,6 +384,11 @@ def run_mixed_cat_cont(init_design_strategy):
 
 if __name__ == "__main__":
 	# run_continuous('lhs')
-	run_categorical('random')
 	# run_discrete('random')
-	#test_continuous_hypervolume()
+	# run_categorical('random')
+	# run_mixed_disc_cont('random')
+	# run_mixed_cat_disc('random') 
+	# run_mixed_cat_cont('random')
+	# run_mixed_cat_disc_cont('random')
+	# test_continuous_hypervolume()
+	pass
