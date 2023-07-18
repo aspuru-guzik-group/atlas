@@ -225,6 +225,7 @@ class BasePlanner(CustomPlanner):
 			self.golem_dists = get_golem_dists(
 				self.golem_config, self.param_space
 			)
+		
 			if not self.golem_dists == None:
 				self.golem = Golem(
 					forest_type="dt",

@@ -8,6 +8,8 @@ import itertools
 import gpytorch
 import numpy as np
 import torch
+from botorch.acquisition.acquisition import MCSamplerMixin
+from botorch.acquisition.objective import IdentityMCObjective
 
 from atlas import Logger, tkwargs
 from atlas.objects.abstract_object import Object, ABCMeta
@@ -174,26 +176,68 @@ class MonteCarloAcquisition(FeasibilityAwareAcquisition):
 
     def __init__(self, reg_model, cla_model=None, **acqf_args: Dict[str,Any]) -> None: 
         super().__init__(reg_model, cla_model, **acqf_args)
+        MCSamplerMixin().__init__(self, sampler=None) # instantiated by get_sampler()
         self.reg_model = reg_model
         self.cla_model = cla_model
+        self.objective = IdentityMCObjective() # default
     
+
     def evaluate(self, X: torch.Tensor) -> torch.Tensor:
         return super(MonteCarloAcquisition, self).evaluate(X)
     
     @abstractmethod
     def _sample(self, X: torch.Tensor) -> torch.Tensor:
+        """ ...
+        """
         pass
 
+    def get_samples_obj(self, X: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """ ...
+        """
+        # this effectively does the conditioning on pending points?? 
+        posterior = self.model.posterior(X=X)
+        samples = self.get_posterior_samples(posterior)
+        obj = self.objective(samples=samples, X=X)
+
+        return samples, obj
+
+
     def set_pending_params(X: torch.tensor) -> None:
+        """ ... 
+        """
         return None
     
     
     
     # METHODS
-    #  _sample: evlauate the
+    #  _sample: evaluate the monte carlo acquisition at the points X
+    #   takes in `batch_shape x q x d` tensor 
+    #   batch_shape = 
+    #   q = 
+    #   d = param dimension
+    #   returns the reduced acquisition values, a tensor of batch_shape, 
+    #   where batch_shape is the broadcasted batch shape of model and 
+    #   input `X`
+
     # set_pending_params: set the parameter sets that have been committed to 
     #   but not yet evaluated
-    # 
+
+    # reduce_samples (sample_reduction_protocol): reduces the samples along some axis with
+    #   one of three operations (I think this is either mean, min or max...), in Atlas 
+    #   just choose one and stick with in --> needs to have sample_reduction and q_reduction 
+    #   arguments, which are the dimensions to be reduced along in each case...
+    
+    # add_pending_params (concatenate_pending_points - decorator): concatenates on the 
+    #   pending_params to the the set X? Why do we need this exactly?? 
+
+    # get_samples_objs: computes posterior samples and objective(acqusiition function?)
+    #   values at input locations X takes in `batch_shape x q x d` tensor
+    #   returns a two tuple - first is tensor of posterior samples with shape
+    #   `sample_shape x batch_shape x q x m`, and obj are MC objective values with shape
+    #   `sample_shape x batch_shape x q`
+
+    # get_posterior_samples: this is a method of BoTorch's MCSamplerMixin class - use this
+    #   off the shelf probably
 
 
 #--------------------------------
