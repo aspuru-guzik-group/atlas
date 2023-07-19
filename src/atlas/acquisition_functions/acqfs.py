@@ -284,6 +284,7 @@ class UCB(FeasibilityAwareAcquisition):
         acqf_val = mean + self.beta.sqrt()*sigma
         return acqf_val
 
+
 class PI(FeasibilityAwareAcquisition):
     def __init__(self, reg_model, cla_model, **acqf_args):
         super().__init__(reg_model, cla_model, **acqf_args)
@@ -416,7 +417,6 @@ class General(FeasibilityAwareAcquisition):
         X_sns_empty = torch.unsqueeze(X_sns_empty, 1)
 
         return X_sns_empty, general_raw
-    
 
 
 def get_acqf_instance(acquisition_type, reg_model, cla_model, acqf_args:Dict[str,Any]):
