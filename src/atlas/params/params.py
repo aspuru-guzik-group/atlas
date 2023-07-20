@@ -17,6 +17,7 @@ from atlas import Logger
 from atlas.utils.planner_utils import (
 	cat_param_to_feat,
 	forward_normalize,
+	infer_problem_type
 )
 
 
@@ -33,6 +34,7 @@ class Parameters():
 
 		self.param_space = olympus_param_space
 		self.has_descriptors = has_descriptors
+		self.problem_type = infer_problem_type(self.param_space)
 		# Olympus observations
 		self.olympus = observations.get_params()
 		observations._construct_param_vectors()

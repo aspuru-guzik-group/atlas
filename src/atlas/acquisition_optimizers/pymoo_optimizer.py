@@ -44,6 +44,7 @@ class PymooProblemWrapper(Problem):
                  known_constraints: Union[Callable, List[Callable]],
                  fixed_param: Dict[int, float], 
                  num_fantasies: int = 0,
+                 
                  **kwargs,
     ): 
         if not known_constraints.is_empty:
@@ -216,7 +217,9 @@ class PymooProblemWrapper(Problem):
                 X_olymp, **{'dtype': torch.double, 'device': 'cpu'}).view(
             X_olymp.shape[0],1,X_olymp.shape[1],
             )
-        X_torch = torch.tile(X_torch, dims=(1, self.batch_size+self.num_fantasies, 1))
+        # always use batch_size=1 for pymoo optimizer
+        # num fantasies is only for multi-fidelity optimization
+        X_torch = torch.tile(X_torch, dims=(1, 1+self.num_fantasies, 1))
 
         with torch.no_grad():
             f = -self.acqf(X_torch) # always minimization in pymoo
@@ -280,6 +283,7 @@ class PymooGAOptimizer(AcquisitionOptimizer):
             eliminate_duplicates:bool=True,
             fixed_params:Optional[List[Dict[int, float]]]=[],
             num_fantasies: int = 0,
+            acqf_args=None,
             **kwargs: Any,
     ):
         """

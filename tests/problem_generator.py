@@ -11,7 +11,8 @@ from olympus.objects import (
     ParameterVector,
 )
 
-
+NUM_CAT_OPTS = 5
+NUM_DISC_OPTS = 5
 
 class ProblemGenerator():
 
@@ -92,7 +93,7 @@ class ProblemGenerator():
          elif self.problem_type == 'categorical':
             surface_names = ['CatDejong', 'CatAckley', 'CatMichalewicz']
             surface_choice = str(np.random.choice(self.allowed_cat_surfaces, size=None))
-            surface_callable = Surface(kind=surface_choice, num_opts=21)
+            surface_callable = Surface(kind=surface_choice, num_opts=NUM_CAT_OPTS)
             surface_callable = self.add_descriptors(surface_callable)
             return surface_callable, surface_callable.param_space
 
@@ -100,11 +101,12 @@ class ProblemGenerator():
          elif self.problem_type == 'mixed_cat_cont':
             surface_choice_cat = str(np.random.choice(self.allowed_cat_surfaces, size=None))
             surface_choice_cont = str(np.random.choice(self.allowed_cont_surfaces, size=None))
-            surface_callable_cat = Surface(kind=surface_choice_cat, num_opts=21)
+            surface_callable_cat = Surface(kind=surface_choice_cat, num_opts=NUM_CAT_OPTS)
             surface_callable_cont  = Surface(kind=surface_choice_cont)
             surface_callable_cat = self.add_descriptors(surface_callable_cat)
             hybrid_surface_callable = HybridSurface(
                 surfaces=[surface_callable_cat, surface_callable_cont],
+                surface_types=['cat', 'cont'],
                 is_moo=self.is_moo,
             )
 
@@ -119,6 +121,7 @@ class ProblemGenerator():
 
           hybrid_surface_callable = HybridSurface(
             surfaces=[surface_callable_disc, surface_callable_cont],
+            surface_types=['disc', 'cont'],
             is_moo=self.is_moo,
           )
 
@@ -128,11 +131,12 @@ class ProblemGenerator():
          elif self.problem_type == 'mixed_cat_disc':
           surface_choice_cat = str(np.random.choice(self.allowed_cat_surfaces, size=None))
           surface_choice_disc = str(np.random.choice(self.allowed_cont_surfaces, size=None))
-          surface_callable_cat = Surface(kind=surface_choice_cat, num_opts=21)
+          surface_callable_cat = Surface(kind=surface_choice_cat, num_opts=NUM_CAT_OPTS)
           surface_callable_disc  = Surface(kind=surface_choice_disc)
           surface_callable_cat = self.add_descriptors(surface_callable_cat)
           hybrid_surface_callable = HybridSurface(
             surfaces=[surface_callable_cat, surface_callable_disc],
+            surface_types=['cat', 'disc'],
             is_moo=self.is_moo,
           )
 
@@ -142,13 +146,14 @@ class ProblemGenerator():
           surface_choice_cat = str(np.random.choice(self.allowed_cat_surfaces, size=None))
           surface_choice_disc = str(np.random.choice(self.allowed_cont_surfaces, size=None))
           surface_choice_cont = str(np.random.choice(self.allowed_cont_surfaces, size=None))
-          surface_callable_cat = Surface(kind=surface_choice_cat, num_opts=21)
+          surface_callable_cat = Surface(kind=surface_choice_cat, num_opts=NUM_CAT_OPTS)
           surface_callable_disc  = Surface(kind=surface_choice_disc)
           surface_callable_cont  = Surface(kind=surface_choice_cont)
           surface_callable_cat = self.add_descriptors(surface_callable_cat)
           
           hybrid_surface_callable = HybridSurface(
             surfaces=[surface_callable_cat, surface_callable_disc, surface_callable_cont],
+            surface_types=['cat', 'disc', 'cont'],
             is_moo=self.is_moo,
           )
 
@@ -206,20 +211,13 @@ class KnownConstraintsGenerator():
         x0 = params[0]
         x1 = params[1]
         
-        conditions = (
-            (x0 == ['x2', 'x6', 'x9', 'x13', 'x17']),
-            (x1 == ['x3', 'x6', 'x10', 'x15', 'x19']),
-            (x0 == 'x5' and x1 in ['x7']),
-            (x0 == 'x4' and x1 in ['x12', 'x13', 'x17']),
-            (x0 == 'x11' and x1 in ['x8', 'x12', 'x13', 'x17']),
-            (x0 == 'x15' and x1 in ['x12', 'x13', 'x17']),
-            (x0 == 'x19' and x1 in ['x8', 'x12', 'x13', 'x21']),
-            (x0 == 'x20' and x1 in ['x8', 'x13', 'x17', 'x21']),
-            (x1 == 'x2' and x0 in ['x3', 'x4']),
-            (x1 == 'x1' and x0 in ['x18', 'x19'])
-        )
-        #print(params, conditions)
-        return not any(conditions)
+        np.random.seed(100703)
+        arr = np.random.randint(NUM_CAT_OPTS, size=(10,2))
+        for x in arr:
+            if [x0, x1] == [f'x{x[0]}', f'x{x[1]}']:
+                return False
+
+        return True
     
 
     @staticmethod
@@ -251,17 +249,15 @@ class KnownConstraintsGenerator():
         x2 = float(params[2]) # discrete
         x3 = float(params[3]) # discrete
 
-        np.random.seed(100700)
-        arr = np.random.randint(21, size=(208,2))
+        np.random.seed(100703)
+        arr = np.random.randint(NUM_CAT_OPTS, size=(10,2))
         for x in arr:
-            if [x0, x1] == [f'x{x[0]}', f'x{1}']:
+            if [x0, x1] == [f'x{x[0]}', f'x{x[1]}']:
                 return False
 
         if np.abs(x2-x3)<0.1:
             return False
         
-        if 0.5 < x2 < 0.15:
-            return False
         
         return True
 
@@ -273,17 +269,12 @@ class KnownConstraintsGenerator():
         x2 = float(params[2]) # continuous
         x3 = float(params[3]) # continuous
 
-        np.random.seed(100700)
-        arr = np.random.randint(21, size=(208,2))
+        np.random.seed(100702)
+        arr = np.random.randint(NUM_CAT_OPTS, size=(10,2))
         for x in arr:
-            if [x0, x1] == [f'x{x[0]}', f'x{1}']:
+            if [x0, x1] == [f'x{x[0]}', f'x{x[1]}']:
                 return False
         
-        if np.abs(x2-x3)<0.1:
-            return False
-        
-        if 0.15 < x2 < 0.5:
-            return False
         
         return True
 
@@ -297,39 +288,47 @@ class KnownConstraintsGenerator():
         x4 = float(params[4]) # continuous
         x5 = float(params[5]) # continuous
        
-        np.random.seed(100700)
-        arr = np.random.randint(21, size=(208,2))
+        np.random.seed(100704)
+        arr = np.random.randint(NUM_CAT_OPTS, size=(10,2))
         for x in arr:
-            if [x0, x1] == [f'x{x[0]}', f'x{1}']:
+            if [x0, x1] == [f'x{x[0]}', f'x{x[1]}']:
                 return False
         
         if np.abs(x2-x3)<0.1:
             return False
         
-        if 0.15 < x2 < 0.5:
+        if 0. < x2 < 0.2:
             return False
         
         if np.abs(x4-x5)<0.1:
             return False
         
-        if 0.15 < x4 < 0.5:
-            return False
         
         return True
     
 
 
 class HybridSurface:
-    def __init__(self, surfaces, is_moo=False):
+    def __init__(self, surfaces, surface_types, is_moo=False):
         self.surfaces = surfaces 
+        self.surface_types = surface_types
         self.is_moo = is_moo
         
         self.param_space = ParameterSpace()
         counter = 0 
-        for surface in self.surfaces:
+        for surface, surface_type in zip(self.surfaces, self.surface_types):
             for param in surface.param_space:
                 param.name = f'param_{counter}'
-                self.param_space.add(param)
+                if surface_type == 'disc':
+                    # switch to a discrete parameter (only cont, cat surf in Olympus)
+                    self.param_space.add(ParameterDiscrete(
+                        name=param.name, 
+                        low=0.,
+                        high=1.,
+                        options=list(np.linspace(0., 1., NUM_DISC_OPTS)),
+                    ))
+                else:
+                    self.param_space.add(param)
 
                 counter+=1
         

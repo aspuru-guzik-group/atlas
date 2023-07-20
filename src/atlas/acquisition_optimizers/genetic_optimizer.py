@@ -35,6 +35,7 @@ class GeneticOptimizer(AcquisitionOptimizer):
         params: torch.Tensor,
         timings_dict: Dict,
         use_reg_only:bool=False,
+        acqf_args=None,
         **kwargs: Any,
     ):
         """

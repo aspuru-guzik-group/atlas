@@ -1,10 +1,17 @@
 #!/usr/bin/env python
 
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import itertools
 from copy import deepcopy
+from functools import wraps
 
 import numpy as np
 import torch
+
+from botorch.acquisition.acquisition import MCSamplerMixin
+from botorch.acquisition.objective import IdentityMCObjective
+from botorch.utils.transforms import _verify_output_shape
+
 
 from atlas import Logger
 from atlas.utils.planner_utils import (
@@ -12,6 +19,113 @@ from atlas.utils.planner_utils import (
     forward_normalize,
     propose_randomly,
 )
+
+
+def concatenate_pending_params(
+        method: Callable[[Any, torch.Tensor], Any],
+    ) ->  Callable[[Any, torch.Tensor], Any]:
+    """ Decorator to add pending parameters to MC acqf argument
+    Works if the MonteCarloAcquisition instance has attribute `pending_params`
+    that is not None 
+    """
+    @wraps(method)
+    def decorated(mc_acqf: Any, X: torch.Tensor, **kwargs: Any) -> Any:
+        if mc_acqf.pending_params is not None:
+            X = torch.cat([X, match_batch_shape(mc_acqf.pending_params, X)], dim=-2)
+        return method(mc_acqf, X, **kwargs)
+
+    return decorated
+
+def t_batch_mode_transform(
+    expected_q: Optional[int] = None,
+    assert_output_shape: bool = True,
+) -> Callable[
+    [Callable[[Any, Any], Any]],
+    Callable[[Any, Any], Any],
+]:
+    r"""Factory for decorators enabling consistent t-batch behavior.
+
+    This method creates decorators for instance methods to transform an input tensor
+    `X` to t-batch mode (i.e. with at least 3 dimensions). This assumes the tensor
+    has a q-batch dimension. The decorator also checks the q-batch size if `expected_q`
+    is provided, and the output shape if `assert_output_shape` is `True`.
+
+    Args:
+        expected_q: The expected q-batch size of `X`. If specified, this will raise an
+            AssertionError if `X`'s q-batch size does not equal expected_q.
+        assert_output_shape: If `True`, this will raise an AssertionError if the
+            output shape does not match either the t-batch shape of `X`,
+            or the `acqf.model.batch_shape` for acquisition functions using
+            batched models.
+
+    Returns:
+        The decorated instance method.
+
+    Example:
+        >>> class ExampleClass:
+        >>>     @t_batch_mode_transform(expected_q=1)
+        >>>     def single_q_method(self, X):
+        >>>         ...
+        >>>
+        >>>     @t_batch_mode_transform()
+        >>>     def arbitrary_q_method(self, X):
+        >>>         ...
+
+    Code taken and modified from: 
+        https://github.com/pytorch/botorch/blob/main/botorch/utils/transforms.py#L298
+
+    """
+
+    def decorator(
+        method: Callable[[Any, Any], Any],
+    ) -> Callable[[Any, Any], Any]:
+        @wraps(method)
+        def decorated(
+            acqf: Any, X: Any, *args: Any, **kwargs: Any
+        ) -> Any:
+
+            # Allow using acquisition functions for other inputs (e.g. lists of strings)
+            if not isinstance(X, torch.Tensor):
+                return method(acqf, X, *args, **kwargs)
+
+            if X.dim() < 2:
+                raise ValueError(
+                    f"{type(acqf).__name__} requires X to have at least 2 dimensions,"
+                    f" but received X with only {X.dim()} dimensions."
+                )
+            elif expected_q is not None and X.shape[-2] != expected_q:
+                raise AssertionError(
+                    f"Expected X to be `batch_shape x q={expected_q} x d`, but"
+                    f" got X with shape {X.shape}."
+                )
+            # add t-batch dim
+            X = X if X.dim() > 2 else X.unsqueeze(0)
+            output = method(acqf, X, *args, **kwargs)
+            if hasattr(acqf, "reg_model"): # and is_fully_bayesian(acqf.reg_model): -> NOTE: Not relevant in Atlas
+                output = output.mean(dim=-1)
+            if assert_output_shape and not _verify_output_shape(
+                acqf=acqf,
+                X=X,
+                output=output,
+            ):
+                raise AssertionError(
+                    "Expected the output shape to match either the t-batch shape of "
+                    "X, or the `model.batch_shape` in the case of acquisition "
+                    "functions using batch models; but got output with shape "
+                    f"{output.shape} for X with shape {X.shape}."
+                )
+            return output
+
+        return decorated
+
+    return decorator
+
+
+def match_batch_shape(X: torch.Tensor, Y: torch.Tensor) -> torch.Tensor:
+    """ Expand shape of tensor `X` to match that of `Y`
+    """
+    return X.expand(X.shape[: -(Y.dim())] + Y.shape[:-2] + X.shape[-2:])
+
 
 
 

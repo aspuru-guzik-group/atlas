@@ -12,7 +12,7 @@ from botorch.acquisition import AcquisitionFunction
 from olympus.campaigns import ParameterSpace
 
 from atlas import Logger, tkwargs
-from atlas.acquisition_functions.acqfs import VarianceBased
+from atlas.acquisition_functions.acqfs import VarianceBased, get_acqf_instance
 from atlas.acquisition_functions.acqf_utils import get_batch_initial_conditions
 
 
@@ -31,6 +31,7 @@ class AcquisitionOptimizer:
         fca_constraint: Callable,
         params: torch.Tensor,
         timings_dict: Dict,
+        acqf_args,
         fixed_params:Optional[List[Dict[int, float]]]=[],
         **kwargs: Any,
 
@@ -44,6 +45,7 @@ class AcquisitionOptimizer:
         self.fca_constraint = fca_constraint
         self._params = params
         self.timings_dict = timings_dict
+        self.acqf_args = acqf_args
 
         self.fixed_params = fixed_params
 
@@ -81,7 +83,22 @@ class AcquisitionOptimizer:
                 X_sn[:, :, functional_dims] = X_star[x_ix, :, functional_dims]
                 X_sns[x_ix,:,:,:] = X_sn
 
-            acqf_sn = VarianceBased(reg_model=self.acqf.reg_model)
+            # acqf_sn = get_acqf_instance(
+            #     acquisition_type='variance', 
+            #     reg_model=self.acqf.reg_model,
+            #     cla_model=self.acqf.cla_modesl,
+            #     acqf_args=self.acqf_args,
+            # )
+
+
+            acqf_sn = VarianceBased(
+                reg_model=self.acqf.reg_model,
+                cla_model=self.acqf.cla_model,
+                # dont estimate max min of acqf unknown constraints
+                # have already been taken care of
+                fix_min_max=True,   
+                **self.acqf_args  
+            )
 
             # generates list of stdevs, one set for each batch
             for ix, X_sn in enumerate(X_sns):

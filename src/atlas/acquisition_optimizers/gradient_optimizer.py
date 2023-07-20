@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
-import multiprocessing
-from multiprocessing import Process, Manager
+import rich
 
-import botorch
 import numpy as np
 import torch
+import botorch
 from botorch.acquisition import AcquisitionFunction
 from botorch.optim import (
 	optimize_acqf,
@@ -14,7 +13,7 @@ from botorch.optim import (
 )
 from olympus import ParameterVector
 
-from atlas import Logger
+from atlas import Logger, tkwargs
 from atlas.acquisition_functions.acqf_utils import get_batch_initial_conditions, create_available_options
 from atlas.params.params import Parameters
 from atlas.utils.planner_utils import (
@@ -23,8 +22,8 @@ from atlas.utils.planner_utils import (
 	reverse_normalize,
 )
 from atlas.acquisition_optimizers.base_optimizer import AcquisitionOptimizer
+from atlas.acquisition_functions.acqfs import FeasibilityAwareAcquisition
 
-from atlas.optimizers.adam import AdamOptimizer
 
 
 
@@ -42,6 +41,7 @@ class GradientOptimizer(AcquisitionOptimizer):
 		batched_strategy: str,
 		timings_dict: Dict,
 		use_reg_only=False,
+		acqf_args=None,
 		**kwargs: Any,
 	):
 		local_args = {
@@ -69,12 +69,6 @@ class GradientOptimizer(AcquisitionOptimizer):
 		self.choices_feat, self.choices_cat = None, None
 
 		self.kind = 'gradient'
-
-		# adam config
-		self.convergence_dx = 1e-7
-		self.max_iter = 10
-
-		self.num_cpus = multiprocessing.cpu_count()
 
 
 	def _optimize(self):
@@ -106,7 +100,15 @@ class GradientOptimizer(AcquisitionOptimizer):
 				"mixed_disc_cont",
 				"mixed_cat_disc_cont",
 			]:
-				results, best_idx = self._optimize_mixed()
+				results, best_idx = self._optimize_mixed(
+					acqf=self.acqf,
+					bounds=self.bounds,
+					num_restarts=30,
+					batch_size=self.batch_size,
+					raw_samples=800,
+					inequality_constraints=None,
+					equality_constraints=None,
+				)
 			elif self.problem_type in [
 				"fully_categorical",
 				"fully_discrete",
@@ -116,62 +118,16 @@ class GradientOptimizer(AcquisitionOptimizer):
 
 		return self.postprocess_results(results, best_idx)
 
-	def _within_bounds(self, sample):
-		return None
-
-	def _project_sample_to_bounds(self, sample):
-		return None
-
-	def _optimize_fully_continuous_thread(self, samples, cont_optimizer, sample_list, acqf_list):
-
-		for sample in samples:
-			sample = sample[0, :]
-			# reset Adam optimizer for each sample
-			cont_optimizer.reset()
-
-			prev_optimized = torch.clone(sample)
-			optimized = torch.clone(sample)
-
-			for iter_ix in range(self.max_iter):
-				optimized = cont_optimizer.compute_update(optimized)
-
-				# evaluate whether the optimized sample violates the known constraints
-				kc_vals = [kc(optimized.detach().numpy()) for kc in self.known_constraints]
-				
-				if not all(kc_vals):
-					# return previous sample
-					optimized = torch.clone(prev_optimized)
-					break
-				
-				# check for convergence 
-				if torch.any(torch.norm(prev_optimized - optimized)) < self.convergence_dx:
-					break
-				else:
-					prev_optimized = torch.clone(optimized)
-			acqf_val = self.acqf(optimized.view(1, optimized.shape[0]))
-			sample_list.append(optimized)
-			acqf_list.append(acqf_val)
-
-		return sample, acqf_val
 
 	def _optimize_fully_continuous(self):
-
-
-		cont_optimizer = AdamOptimizer(
-			acqf=self.acqf, 
-			select_params=[True for _ in range(len(self.param_space))]
-		)
-
+		""" SLSQP optimzer strategy for fully-continuous parameter spaces
+		"""
 
 		(
 			nonlinear_inequality_constraints,
 			batch_initial_conditions,
 			_
 		) = self.gen_initial_conditions()
-		# TODO: this will not work for batches
-		# batch_initial_conditions = batch_initial_conditions.squeeze(1) # (num_samples, num_params)
-
-		# start_time = time.time()
 
 		results, _ = optimize_acqf(
 			acq_function=self.acqf,
@@ -182,119 +138,20 @@ class GradientOptimizer(AcquisitionOptimizer):
 			nonlinear_inequality_constraints=nonlinear_inequality_constraints,
 			batch_initial_conditions=batch_initial_conditions,
 		)
-		# optimized_samples = torch.empty((batch_initial_conditions.shape[0], len(self.param_space)))
-		# acqf_vals = torch.empty((batch_initial_conditions.shape[0], 1))
-
-		#------------
-		# SEQUENTIAL
-		#------------
-		# for sample_ix, sample in enumerate(batch_initial_conditions):
-		# 	sample = sample[0, :]
-		# 	# reset Adam optimizer for each sample
-		# 	cont_optimizer.reset()
-
-		# 	prev_optimized = torch.clone(sample)
-		# 	optimized = torch.clone(sample)
-
-		# 	for iter_ix in range(max_iter):
-		# 		optimized = cont_optimizer.compute_update(optimized)
-
-		# 		# evaluate whether the optimized sample violates the known constraints
-		# 		kc_vals = [kc(optimized.detach().numpy()) for kc in self.known_constraints]
-				
-		# 		if not all(kc_vals):
-		# 			# return previous sample
-		# 			optimized = torch.clone(prev_optimized)
-		# 			break
-				
-		# 		# check for convergence 
-		# 		if torch.any(torch.norm(prev_optimized - optimized)) < convergence_dx:
-		# 			break
-		# 		else:
-		# 			prev_optimized = torch.clone(optimized)
-
-		# 	#print(self.acqf(optimized.view(1, optimized.shape[0])).shape)
-		# 	acqf_vals[sample_ix, :] = self.acqf(optimized.view(1, optimized.shape[0]))
-		# 	#quit()
-				
-		# 	optimized_samples[sample_ix, :] = optimized
-
-		# best_ix = torch.argmin(acqf_vals)
-		# best_sample = optimized_samples[best_ix]
-
-		# results = best_sample.view(1, best_sample.shape[0])
-
-		# elapsed_time = time.time() - start_time
-		# Logger.log(f'Acqf opt completed in {round(elapsed_time,3)} sec', 'INFO')
-
-		# print(results.shape)
-
-
-		#-----
-		# MP
-		#-----
-		# sample_list = Manager().list()
-		# acqf_list = Manager().list()
-
-		# num_samples_batch = (batch_initial_conditions.shape[0]/torch.tensor([self.num_cpus])).to(torch.int32)
-		# num_mp_batches = (batch_initial_conditions.shape[0]/num_samples_batch).to(torch.int32)
-		# samples_ix = 0
-		# processes = []
-		# for mp_batch in range(num_mp_batches):
-		# 	process = Process(
-		# 		target = self._optimize_fully_continuous_thread,
-		# 		args=(
-		# 			batch_initial_conditions[samples_ix:samples_ix+num_samples_batch, :],
-		# 			cont_optimizer,
-		# 			sample_list, 
-		# 			acqf_list,
-		# 		)
-		# 	)
-		# 	processes.append(process)
-		# 	process.start()
-
-		# for process in processes:
-		# 	process.join()
-
-		# #optimized_samples = torch.Tensor(num_samples_batch*num_mp_batches, len(self.param_space))
-		# #acqf_vals = torch.Tensor(num_samples_batch*num_mp_batches, 1 )
-		# print(sample_list)
-		# optimized_samples = torch.cat(tuple(sample_list))
-		# acqf_vals = torch.cat(tuple(acqf_list))
-
-
-		# best_ix = torch.argmin(acqf_vals)
-		# best_sample = optimized_samples[best_ix]
-
-		# results = best_sample.view(1, best_sample.shape[0])
-
-		# elapsed_time = time.time() - start_time
-		# Logger.log(f'Acqf opt completed in {round(elapsed_time,3)} sec', 'INFO')
-
-		# print(results.shape)
 
 		return results
 
-	def _optimize_mixed(self):
 
-		fixed_features_list = get_fixed_features_list(
-			self.param_space,
-			self.has_descriptors,
-		)
-		# TODO: add in fca constraint callable here...
+	def _optimize_fully_categorical(self):
+		""" Special case of _optimize_cartesian_product where we first need to 
+		generate the expended choices
+		"""
 		if self.feas_strategy == "fca" and not self.use_reg_only:
 			# if we have feasibilty constrained acquisition, prepare only
 			# the feasible options as availble choices
 			fca_constraint_callable = self.fca_constraint
 		else:
 			fca_constraint_callable = None
-
-		# generate initial samples
-		(
-			nonlinear_inequality_constraints,
-			batch_initial_conditions,
-			_
-		) = self.gen_initial_conditions(num_restarts=30)
 
 		self.choices_feat, self.choices_cat = create_available_options(
 			self.param_space,
@@ -307,23 +164,104 @@ class GradientOptimizer(AcquisitionOptimizer):
 			maxs_x=self._maxs_x,
 		)
 
-		results, best_idx = self._optimize_acqf_mixed(
-			acq_function=self.acqf,
-			bounds=self.bounds,
-			num_restarts=30,
-			q=self.batch_size,
-			fixed_features_list=fixed_features_list,
-			cart_prod_choices=self.choices_feat.float(),
-			raw_samples=800,
-			batch_initial_conditions=batch_initial_conditions,
+		results, best_idx = self._optimize_cartesian_product(
+			acqf=self.acqf,
+			batch_size=self.batch_size,
+			max_batch_size=512,
+			choices=self.choices_feat.float(),
+			unique=True,
 		)
-
+	
 		return results, best_idx
 
 
+	def _optimize_cartesian_product(
+		self,
+		acqf:FeasibilityAwareAcquisition,
+		batch_size:int,
+		max_batch_size:int, 
+		choices:torch.Tensor, # (`num_choices` x `param_dim`)
+		unique:bool=True,
+		):
+		""" Optimize acquisition function for Cartesian product
+		parameter spaces, i.e. fully-categorical, fully-discrete, 
+		and mixed categorical-discrete problems
+
+		For batch_size > 1, this strategy uses sequential conditioning based
+		on the kridging believer strategy. This effectively fixes the 
+		posterior mean for the entire sequentual batch selection 
+		procedure and updates the variance when pending recommendations
+		are selected. 
+
+		Args: 
+			acqf (FeasibilityAwareAcquisition): acqusition function instance
+		
+		Returns:
+			Tuple containing (`batch_size` x `param_dim`) tensor of candidates and
+			the corresponding acqf values
+		"""
+		
+		original_choices_batched = torch.clone(choices)    
+		choices_batched = choices.unsqueeze(-2)
+
+		if batch_size > 1:
+			# batch selection by sequential conditioning
+			candidate_list, acqf_val_list = [], []
+			init_pending_params = acqf.set_pending_params(pending_params=None)
+			
+			for batch_idx in range(batch_size):
+				with torch.no_grad():
+					acqf_vals = [acqf(X_) for X_ in choices_batched.split(max_batch_size)]
+					acqf_vals  = torch.cat(acqf_vals)
+
+				best_idx = torch.argmax(acqf_vals)
+				candidate_list.append(choices_batched[best_idx])
+				acqf_val_list.append(acqf_vals[best_idx])
+
+				# set pending parameters
+				candidates = torch.cat(candidate_list, dim=-2)
+				acqf.set_pending_params(
+					torch.cat([init_pending_params, candidates], dim=-2)
+					if init_pending_params is not None
+					else candidates
+				)		
+				# remove most recent selected candidate from available options
+				if unique:
+					choices_batched = torch.cat(
+                    	[choices_batched[:best_idx], choices_batched[best_idx + 1 :]]
+                	)
+			
+			# reset acqf to initial state
+			_ = acqf.set_pending_params(pending_params=None)
+			# need to return the original indices of the selected candidates
+			best_idxs = []
+			for candidate in candidate_list:  # each candidate is shape (1, num_features)
+				bools = [
+					torch.all(
+						candidate[0] == original_choices_batched[i, :]
+					)
+					for i in range(original_choices_batched.shape[0])
+				]
+				assert bools.count(True) == 1
+				best_idxs.append(np.where(bools)[0][0])
+			return candidates, best_idxs
+
+		# otherwise we have batch_size=1, just take argmax over all available options			
+		with torch.no_grad():
+			acq_vals = torch.cat(
+				[
+					acqf(X_)
+					for X_ in choices_batched.split(max_batch_size)
+				]
+			)
+		best_idx = [torch.argmax(acq_vals).detach()]
+
+		return [choices[best_idx]], best_idx
+
 	def _optimize_mixed_general(self):
-		""" function to optimize general acquisition function if we have all 
-		continuous non-general/functional parameters
+		""" Special case where we have discrete/categorical general params
+		and fully-continuous functional/non-general problem. Breaks up the 
+		problem and uses SLSQP to optimize the continuous functional params
 		"""
 		functional_mask = np.logical_not(self.params_obj.exp_general_mask)
 		
@@ -355,20 +293,52 @@ class GradientOptimizer(AcquisitionOptimizer):
 			X_sns[ix, self.params_obj.exp_general_mask] = torch.tensor(batch_initial_conditions[0, 0, self.params_obj.exp_general_mask])
 
 		return X_sns
-		
 
-	def _optimize_fully_categorical(self):
-		# need to implement the choices input, which is a
-		# (num_choices * d) torch.Tensor of the possible choices
-		# need to generate fully cartesian product space of possible
-		# choices
+
+	def _optimize_mixed(
+		self,
+		acqf,
+		bounds,
+		num_restarts,
+		batch_size,
+		raw_samples=None,
+		inequality_constraints=None,
+		equality_constraints=None,
+		**kwargs,
+	):
+		""" Optimize acquisition functions that contain at least one continuous
+		parameter and at least one categorical/discrete parameter, i.e. the
+		`mixed_cat_cont`, `mixed_disc_cont`, and `mixed_cat_disc_cont` problem types.
+
+		If `batch_size` > 1, this strategy uses seqential batch selection with
+		conditioning on pending parameters
+
+
+		This method is inspired by `_optimize_acqf_mixed` from:
+		https://github.com/pytorch/botorch/blob/main/botorch/optim/optimize.py
+
+		Args:
+			
+
+		"""
+		fixed_features_list = get_fixed_features_list(
+			self.param_space,
+			self.has_descriptors,
+		)
+		# TODO: add in fca constraint callable here...
 		if self.feas_strategy == "fca" and not self.use_reg_only:
 			# if we have feasibilty constrained acquisition, prepare only
 			# the feasible options as availble choices
 			fca_constraint_callable = self.fca_constraint
 		else:
 			fca_constraint_callable = None
-		
+
+		# generate initial samples
+		(
+			nonlinear_inequality_constraints,
+			batch_initial_conditions,
+			_
+		) = self.gen_initial_conditions(num_restarts=30)
 
 		self.choices_feat, self.choices_cat = create_available_options(
 			self.param_space,
@@ -381,208 +351,68 @@ class GradientOptimizer(AcquisitionOptimizer):
 			maxs_x=self._maxs_x,
 		)
 
-		results, best_idx = self._optimize_acqf_discrete(
-			acq_function=self.acqf,
-			q=self.batch_size,
-			max_batch_size=1000,
-			choices=self.choices_feat.float(),
-			unique=True,
-		)
-	
-		return results, best_idx
-
-	def _optimize_acqf_discrete(
-		self,
-		acq_function,
-		q,
-		max_batch_size,
-		choices,
-		unique,
-	):
-		# this function assumes 'unique' argument is always set to True
-		# strategy can be set to 'greedy' or 'sequential'
-		original_choices_batched = torch.clone(choices)        
-		choices_batched = choices.unsqueeze(-2)
-
-		if q > 1:
-			if self.batched_strategy == "sequential":
-				candidate_list, acq_value_list = [], []
-				base_X_pending = acq_function.X_pending
-				for _ in range(q):
-					with torch.no_grad():
-						acq_values = torch.cat(
-							[
-								acq_function(X_)
-								for X_ in choices_batched.split(max_batch_size)
-							]
-						)
-					#best_idx = torch.argmax(acq_values)
-					best_idxs_ =  torch.argsort(acq_values, descending=True)
-					# print('num best idxs : ', len(best_idxs_))
-					# print('num to sample : ', int(len(best_idxs_)*0.015))
-					best_idx = best_idxs_[torch.randint(low=0, high=int(len(best_idxs_)*0.015), size=(1,))]
-					candidate_list.append(choices_batched[best_idx])
-					acq_value_list.append(acq_values[best_idx])
-					# set pending points
-					candidates = torch.cat(candidate_list, dim=-2)
-					acq_function.set_X_pending(
-						torch.cat([base_X_pending, candidates], dim=-2)
-						if base_X_pending is not None
-						else candidates
-					)
-					# need to remove choice from choice set if enforcing uniqueness
-					if unique:
-						choices_batched = torch.cat(
-							[
-								choices_batched[:best_idx],
-								choices_batched[best_idx + 1 :],
-							]
-						)
-				# Reset acq_func to previous X_pending state
-				acq_function.set_X_pending(base_X_pending)
-				# need to get and return the original indices of the selected candidates
-				best_idxs = []
-				for (
-					candidate
-				) in (
-					candidate_list
-				):  # each candidate is shape (1, num_features)
-					bools = [
-						torch.all(
-							candidate[0] == original_choices_batched[i, :]
-						)
-						for i in range(original_choices_batched.shape[0])
-					]
-					assert bools.count(True) == 1
-					best_idxs.append(np.where(bools)[0][0])
-
-				return candidate_list, best_idxs
-
-			elif self.batched_strategy == "greedy":
-				with torch.no_grad():
-					acq_values = torch.cat(
-						[
-							acq_function(X_)
-							for X_ in choices_batched.split(max_batch_size)
-						]
-					)
-				best_idxs = list(
-					torch.argsort(acq_values, descending=True).detach().numpy()
-				)[:q]
-
-				return [choices[best_idx] for best_idx in best_idxs], best_idxs
-
-		# otherwise we have q=1, just take the argmax acqusition value
-		with torch.no_grad():
-			acq_values = torch.cat(
-				[
-					acq_function(X_)
-					for X_ in choices_batched.split(max_batch_size)
-				]
-			)
-		best_idx = [torch.argmax(acq_values).detach()]
-
-		return [choices[best_idx]], best_idx
-
-	def _optimize_acqf_mixed(
-		self,
-		acq_function,
-		bounds,
-		num_restarts,
-		q,
-		fixed_features_list,
-		cart_prod_choices,
-		raw_samples=None,
-		options=None,
-		inequality_constraints=None,
-		equality_constraints=None,
-		post_processing_func=None,
-		batch_initial_conditions=None,
-		**kwargs,
-	):
-		# function inspired by botorch code
-		if not fixed_features_list:
-			raise ValueError("fixed_features_list must be non-empty.")
-
-		if isinstance(
-			acq_function,
-			botorch.acquisition.acquisition.OneShotAcquisitionFunction,
-		):
-			if not hasattr(acq_function, "evaluate") and q > 1:
-				raise ValueError(
-					"`OneShotAcquisitionFunction`s that do not implement `evaluate` "
-					"are currently not supported when `q > 1`. This is needed to "
-					"compute the joint acquisition value."
-				)
-
-		# batch size of 1
-		if q == 1:
-			ff_candidate_list, ff_acq_value_list = [], []
+		if batch_size == 1: 
+			ff_candidate_list, ff_acqf_val_list = [], []
 			# iterate through all the fixed featutes and optimize the continuous
 			# part of the parameter space
 			# fixed features and cart_prod choices have the same ordering
 			for fixed_features in fixed_features_list:
 				candidate, acq_value = optimize_acqf(
-					acq_function=acq_function,
+					acq_function=acqf,
 					bounds=bounds,
-					q=q,
-					num_restarts=num_restarts,
-					raw_samples=raw_samples,
-					options=options or {},
+					q=batch_size,
+					num_restarts=30,
+					raw_samples=800,
+					options={},
 					inequality_constraints=inequality_constraints,
 					equality_constraints=equality_constraints,
 					fixed_features=fixed_features,
-					post_processing_func=post_processing_func,
 					batch_initial_conditions=batch_initial_conditions,
 					return_best_only=True,
 				)
 				ff_candidate_list.append(candidate)
-				ff_acq_value_list.append(acq_value)
+				ff_acqf_val_list.append(acq_value)
 
-			ff_acq_values = torch.stack(ff_acq_value_list)
-			best_idx = torch.argmax(ff_acq_values)
+			ff_acqf_val = torch.stack(ff_acqf_val_list)
+			best_idx = torch.argmax(ff_acqf_val)
 
 			return ff_candidate_list[best_idx], [best_idx.detach()]
 
-		# For batch optimization with q > 1 we do not want to enumerate all n_combos^n
-		# possible combinations of discrete choices. Instead, we use sequential greedy
-		# optimization.
-		base_X_pending = acq_function.X_pending
-		candidates = torch.tensor([], device=bounds.device, dtype=bounds.dtype)
+		# batch_size > 1, batch selection via sequential conditioning
+		init_pending_params = acqf.pending_params
+		candidates = torch.tensor([], **tkwargs)
 
-		for _ in range(q):
-			candidate, acq_value = optimize_acqf_mixed(
-				acq_function=acq_function,
+		for batch_ix in range(self.batch_size):
+
+			candidate, acqf_val = self._optimize_mixed( # recursive call to this method
+				acqf=acqf,
 				bounds=bounds,
-				q=1,
-				num_restarts=num_restarts,
-				raw_samples=raw_samples,
-				fixed_features_list=fixed_features_list,
-				options=options or {},
-				inequality_constraints=inequality_constraints,
-				equality_constraints=equality_constraints,
-				post_processing_func=post_processing_func,
-				batch_initial_conditions=batch_initial_conditions,
+				num_restarts=30,
+				batch_size=1,
+				raw_samples=800,
+				inequality_constraints=None,
+				equality_constraints=None,
 			)
+			
+
 			candidates = torch.cat([candidates, candidate], dim=-2)
-			acq_function.set_X_pending(
-				torch.cat([base_X_pending, candidates], dim=-2)
-				if base_X_pending is not None
+
+			acqf.set_pending_params(
+				torch.cat([init_pending_params, candidates], dim=-2)
+				if init_pending_params is not None
 				else candidates
 			)
+			 
 
-		acq_function.set_X_pending(base_X_pending)
+		acqf.set_pending_params(pending_params=None)
+		
+		acqf_vals = acqf(candidates)
 
-		# compute joint acquisition value
-		if isinstance(
-			acq_function,
-			botorch.acquisition.acquisition.OneShotAcquisitionFunction,
-		):
-			acq_value = acq_function.evaluate(X=candidates, bounds=bounds)
-		else:
-			acq_value = acq_function(candidates)
+		return candidates, acq_vals
 
-		return candidates, acq_value
+		
+
+
 
 	def postprocess_results(self, results, best_idx=None):
 		# expects list as results
@@ -669,6 +499,7 @@ class GradientOptimizer(AcquisitionOptimizer):
 
 		return return_params
 
+	# TODO: to be deleted?? 
 	def dummy_constraint(self, X):
 		""" dummy constraint that always returns value >= 0., i.e.
 		evaluates any parameter space point as feasible

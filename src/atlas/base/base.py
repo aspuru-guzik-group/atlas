@@ -42,6 +42,7 @@ from atlas.known_constraints.known_constraints import (
 	PendingExperimentConstraint,
 )
 
+torch.set_default_dtype(torch.double)
 
 
 class BasePlanner(CustomPlanner):
@@ -259,8 +260,8 @@ class BasePlanner(CustomPlanner):
 			and train the model
 			"""
 		
-			model = ClassificationGPMatern(train_x, train_y)
-			likelihood = gpytorch.likelihoods.BernoulliLikelihood()
+			model = ClassificationGPMatern(train_x, train_y).to(tkwargs['device'])
+			likelihood = gpytorch.likelihoods.BernoulliLikelihood().to(tkwargs['device'])
 
 			model, likelihood = self.train_vgp(model, likelihood, train_x, train_y)
 
@@ -282,7 +283,7 @@ class BasePlanner(CustomPlanner):
 		likelihood.train()
 		optimizer = torch.optim.Adam(model.parameters(), lr=self.vgp_lr)
 
-		mll = gpytorch.mlls.VariationalELBO(likelihood, model, train_y.numel())
+		mll = gpytorch.mlls.VariationalELBO(likelihood, model, train_y.numel()).to(tkwargs['device'])
 
 		# cross-validation parameters
 		num_folds = 3
@@ -313,7 +314,7 @@ class BasePlanner(CustomPlanner):
 			folds = []
 
 			fold_size = math.ceil(train_y_infl.shape[0]/num_folds)
-			indices = torch.randperm(train_y_infl.shape[0])#torch.arange(train_y_infl.shape[0])
+			indices = torch.randperm(train_y_infl.shape[0], dtype=torch.long)#torch.arange(train_y_infl.shape[0])
 
 			# cross validation procedure
 			for fold_ix in range(num_folds):
@@ -611,7 +612,7 @@ class BasePlanner(CustomPlanner):
 				X_proc, self.params_obj._mins_x, self.params_obj._maxs_x
 			)
 
-		likelihood = self.cla_likelihood(self.cla_model(X_proc.float()))
+		likelihood = self.cla_likelihood(self.cla_model(X_proc))
 		mean = likelihood.mean.detach()
 		mean = mean.view(mean.shape[0], 1)
 		# mean = 1.-mean.view(mean.shape[0],1) # switch from p_feas to p_infeas
@@ -741,7 +742,7 @@ class BasePlanner(CustomPlanner):
 		# p_feas should be 1 - P(infeasible|X) which is returned by the classifier
 		with gpytorch.settings.cholesky_jitter(1e-1):
 			p_infeas = (
-				self.cla_likelihood(self.cla_model(X.float()))
+				self.cla_likelihood(self.cla_model(X))
 				.mean.unsqueeze(-1)
 				.double()
 			)
@@ -859,7 +860,7 @@ class BasePlanner(CustomPlanner):
 
 		X = torch.tensor(samples, **tkwargs)
 
-		likelihood = self.cla_likelihood(self.cla_model(X.float()))
+		likelihood = self.cla_likelihood(self.cla_model(X))
 		mean = 1.-likelihood.mean.detach() # convert p_infeas to p_feas
 		mean = mean.view(mean.shape[0], 1)
 

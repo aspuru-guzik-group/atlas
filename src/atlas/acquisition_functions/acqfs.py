@@ -4,20 +4,31 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from abc import abstractmethod
 
 import itertools
+import math
+from functools import partial
 
 import gpytorch
 import numpy as np
 import torch
 from botorch.acquisition.acquisition import MCSamplerMixin
 from botorch.acquisition.objective import IdentityMCObjective
+from botorch.utils.transforms import _verify_output_shape
 
 from atlas import Logger, tkwargs
 from atlas.objects.abstract_object import Object, ABCMeta
+from atlas.acquisition_functions.acqf_utils import (
+    concatenate_pending_params,
+    t_batch_mode_transform,
+    match_batch_shape
+)
 from atlas.utils.planner_utils import (
     cat_param_to_feat,
     forward_normalize,
-    propose_randomly,
+    propose_randomly
 )
+
+
+
 
 
 # class Acqusition(Object, metaclass=ABCMeta):
@@ -44,13 +55,18 @@ class FeasibilityAwareAcquisition(Object, metaclass=ABCMeta):
     """ Base class for feasibility aware Atlas acquisition function
     for use with unknown constraints
     """
-    def __init__(self, reg_model, cla_model=None, fix_min_max=False, **acqf_args: Dict) -> None: 
+    def __init__(self, reg_model, cla_model, cla_likelihood, fix_min_max=False, **acqf_args: Dict) -> None: 
         Object.__init__(self, reg_model, cla_model, **acqf_args)
         self.reg_model = reg_model
         self.cla_model = cla_model
+        self.cla_likelihood = cla_likelihood
+
+        self.use_min_filter = acqf_args['use_min_filter']
+    
         
         # estimate min max of acquisition function
         if not fix_min_max:
+            self.set_p_feas_postprocess()
             self.acqf_min_max = self._estimate_acqf_min_max()
         else:
             self.acqf_min_max = 0., 1.
@@ -125,6 +141,26 @@ class FeasibilityAwareAcquisition(Object, metaclass=ABCMeta):
                 raise NotImplementedError
 
 
+    def _p_feas_filter(self, p_feas, filter_val: float = 0.5):
+        return torch.minimum(p_feas, torch.ones_like(p_feas) * filter_val)
+
+    def _p_feas_nofilter(self, p_feas):
+        return p_feas
+
+    def set_p_feas_postprocess(self):
+        if self.use_min_filter:
+            self.p_feas_postprocess = self._p_feas_filter
+        else:
+            self.p_feas_postprocess = self._p_feas_nofilter
+
+    def forward_unconstrained(self, X):
+        """evaluates the acquisition function without the
+        feasibility portion, i.e. $\alpha(x)$ in the paper
+        """
+        acqf = super().forward(X)
+        return acqf
+
+
     # helper methods
     def compute_mean_sigma(self, posterior) -> Tuple[torch.Tensor]:
         """ Takes in posterior of fitted model and returns 
@@ -172,15 +208,26 @@ class FeasibilityAwareAcquisition(Object, metaclass=ABCMeta):
     
 
 
-class MonteCarloAcquisition(FeasibilityAwareAcquisition):
+class MonteCarloAcquisition(FeasibilityAwareAcquisition, MCSamplerMixin):
 
-    def __init__(self, reg_model, cla_model=None, **acqf_args: Dict[str,Any]) -> None: 
-        super().__init__(reg_model, cla_model, **acqf_args)
-        MCSamplerMixin().__init__(self, sampler=None) # instantiated by get_sampler()
+    def __init__(self, reg_model, cla_model, cla_likelihood, **acqf_args: Dict[str,Any]) -> None: 
+        # TODO: eventually set fix_min_max to False
+        super().__init__(reg_model, cla_model, cla_likelihood, fix_min_max=True, **acqf_args)
+        MCSamplerMixin.__init__(self, sampler=None) # instantiated by get_sampler()
         self.reg_model = reg_model
         self.cla_model = cla_model
         self.objective = IdentityMCObjective() # default
-    
+
+        # sample shape is property of MCSamplerMixin
+        sample_shape = torch.Size([512]) # hardcoded default for MCSamplerMixin
+        sample_red_dim = tuple(range(len(sample_shape))) 
+        
+        self._sample_red_op = partial(torch.mean, dim=sample_red_dim)
+        self._batch_red_op = partial(torch.amax, dim=-1) # max reduction over last dimension
+
+        # initially there are no pending_params by convention
+        self.pending_params = self.set_pending_params(pending_params=None)
+
 
     def evaluate(self, X: torch.Tensor) -> torch.Tensor:
         return super(MonteCarloAcquisition, self).evaluate(X)
@@ -191,21 +238,44 @@ class MonteCarloAcquisition(FeasibilityAwareAcquisition):
         """
         pass
 
+    @concatenate_pending_params
+    #@t_batch_mode_transform()
+    def __call__(self, X: torch.Tensor) -> torch.Tensor:
+        """ Full forward pass of MC acquisition function - should overwrite
+        __call__ method of FeasibilityAwareAcquisition superclass
+        """
+        samples, obj = self.get_samples_obj(X)
+        acqf_val_raw = self._sample(obj) # (sample_shape x batch_shape x q)
+        acqf_val_red = self._sample_red_op(self._batch_red_op(acqf_val_raw))
+
+        return acqf_val_red
+
+
     def get_samples_obj(self, X: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """ ...
         """
         # this effectively does the conditioning on pending points?? 
-        posterior = self.model.posterior(X=X)
+        posterior = self.reg_model.posterior(X=X)
         samples = self.get_posterior_samples(posterior)
         obj = self.objective(samples=samples, X=X)
 
         return samples, obj
 
 
-    def set_pending_params(X: torch.tensor) -> None:
-        """ ... 
+    def set_pending_params(self, pending_params: Optional[torch.Tensor]=None) -> None:
+        """ Sets pending params attribute to inform the MC acquisition function
+        about parameters that have been committed to but not yet measured
+
+        Args:
+            pendings_params (torch.Tensor): `n x d` tensor of pending parameter 
+                values
         """
-        return None
+        if pending_params is not None:
+            if pending_params.requires_grad:
+                Logger.log('No gradients provided by acqf for pending params', 'WARNING')
+            self.pending_params = pending_params.detach().clone()
+        else:
+            self.pending_params = pending_params
     
     
     
@@ -247,8 +317,8 @@ class MonteCarloAcquisition(FeasibilityAwareAcquisition):
 class VarianceBased(FeasibilityAwareAcquisition):
     """ Feasibility-aware variance-based utility function 
     """
-    def __init__(self, reg_model, cla_model, **acqf_args):
-        super().__init__(reg_model, cla_model, **acqf_args)
+    def __init__(self, reg_model, cla_model, cla_likelihood, fix_min_max=False,**acqf_args):
+        super().__init__(reg_model, cla_model, cla_likelihood, fix_min_max, **acqf_args)
         self.reg_model = reg_model
 
     def evaluate(self, X: torch.Tensor):
@@ -260,8 +330,8 @@ class VarianceBased(FeasibilityAwareAcquisition):
 class LCB(FeasibilityAwareAcquisition):
     """ Feasibility-aware lower confidence bound acquisition function 
     """
-    def __init__(self, reg_model, cla_model, **acqf_args):
-        super().__init__(reg_model, cla_model, **acqf_args)
+    def __init__(self, reg_model, cla_model, cla_likelihood=None, **acqf_args):
+        super().__init__(reg_model, cla_model, cla_likelihood, **acqf_args)
         self.reg_model = reg_model
 
     def evaluate(self, X: torch.Tensor):
@@ -274,8 +344,8 @@ class LCB(FeasibilityAwareAcquisition):
 class UCB(FeasibilityAwareAcquisition):
     """ Feasibility-aware upper confidence bound acquisition function 
     """
-    def __init__(self, reg_model, cla_model, **acqf_args):
-        super().__init__(reg_model, cla_model, **acqf_args)
+    def __init__(self, reg_model, cla_model, cla_likelihood, **acqf_args):
+        super().__init__(reg_model, cla_model, cla_likelihood, **acqf_args)
         self.reg_model = reg_model
 
     def evaluate(self, X: torch.Tensor):
@@ -286,8 +356,8 @@ class UCB(FeasibilityAwareAcquisition):
 
 
 class PI(FeasibilityAwareAcquisition):
-    def __init__(self, reg_model, cla_model, **acqf_args):
-        super().__init__(reg_model, cla_model, **acqf_args)
+    def __init__(self, reg_model, cla_model, cla_likelihood, **acqf_args):
+        super().__init__(reg_model, cla_model, cla_likelihood, **acqf_args)
         self.reg_model = reg_model
 
     def evaluate(self, X: torch.Tensor) -> torch.Tensor:
@@ -300,8 +370,8 @@ class PI(FeasibilityAwareAcquisition):
 
 
 class EI(FeasibilityAwareAcquisition):
-    def __init__(self, reg_model, cla_model, **acqf_args):
-        super().__init__(reg_model, cla_model, **acqf_args)
+    def __init__(self, reg_model, cla_model, cla_likelihood, **acqf_args):
+        super().__init__(reg_model, cla_model, cla_likelihood, **acqf_args)
         self.reg_model = reg_model
 
     def evaluate(self, X: torch.Tensor):
@@ -321,11 +391,11 @@ class EI(FeasibilityAwareAcquisition):
 class General(FeasibilityAwareAcquisition):
     """ Acqusition funciton for general parameters
     """
-    def __init__(self, reg_model, cla_model, f_best_scaled, **acqf_args):
-        super().__init__(reg_model, cla_model, fix_min_max=True, **acqf_args)
+    def __init__(self, reg_model, cla_model, cla_likelihood, **acqf_args):
+        super().__init__(reg_model, cla_model, cla_likelihood, fix_min_max=True, **acqf_args)
         # self.base_acqf = EI(reg_model, cla_model **acqf_args) # base acqf
         self.reg_model = reg_model
-        self.f_best_scaled = f_best_scaled
+        self.f_best_scaled = acqf_args['f_best_scaled']
 
         # deal with general parameter stuff
         self.X_sns_empty, _ = self.generate_X_sns()
@@ -419,27 +489,70 @@ class General(FeasibilityAwareAcquisition):
         return X_sns_empty, general_raw
 
 
-def get_acqf_instance(acquisition_type, reg_model, cla_model, acqf_args:Dict[str,Any]):
+
+class qUCB(MonteCarloAcquisition):
+    """ q-Upper Confidence Bound
+    """
+
+    def __init__(self, reg_model, cla_model, cla_likelihood, **acqf_args):
+        super().__init__( reg_model, cla_model, cla_likelihood, **acqf_args)
+        self.reg_model = reg_model
+        self.beta_prime = torch.sqrt(acqf_args['beta'] * torch.Tensor([3.141])/ 2)
+
+    def _sample(self, X: torch.Tensor) -> torch.Tensor:
+        """ evaluate per sample Monte Carlo acquisition function on 
+        set of candidates X
+
+        Args:
+            X (torch.Tensor): `sample_shape x batch_shape x q` Tensor of 
+                Monte Carlo objective values
+        """
+        
+        mean = X.mean(dim=0)
+        return mean + self.beta_prime * (X - mean).abs()
+
+
+
+class qLCB(MonteCarloAcquisition):
+    """ q-Lower Confidence Bound
+    """
+    def __init__(self, reg_model, cla_model, cla_likelihood=None, **acqf_args):
+        pass
+
+
+def get_acqf_instance(acquisition_type, reg_model, cla_model, cla_likelihood, acqf_args:Dict[str,Any]):
     """ Convenience function to get acquisition function instance
     """
+    # determine if we should use q-acqf
+    batch_size = acqf_args['batch_size']
+    acquisition_optimizer_kind = acqf_args['acquisition_optimizer_kind']
+    use_q_acqf = (batch_size > 1 and acquisition_optimizer_kind == 'gradient')
+
+
     if acquisition_type in ['ei','pi']:
         module = __import__(f'atlas.acquisition_functions.acqfs', fromlist=[acquisition_type.upper()])
         _class = getattr(module, acquisition_type.upper())
-        return _class(reg_model=reg_model,cla_model=cla_model,**acqf_args)
+        return _class(reg_model=reg_model,cla_model=cla_model, cla_likelihood=cla_likelihood,**acqf_args)
     elif acquisition_type == 'general':
-        return General(reg_model=reg_model,cla_model=cla_model,**acqf_args)
+        return General(reg_model=reg_model,cla_model=cla_model,cla_likelihood=cla_likelihood,**acqf_args)
     elif acquisition_type == 'variance':
-        return VarianceBased(reg_model=reg_model,cla_model=cla_model,**acqf_args)
+        return VarianceBased(reg_model=reg_model,cla_model=cla_model,cla_likelihood=cla_likelihood,**acqf_args)
     elif acquisition_type in ['lcb', 'ucb']:
-        acqf_args['beta'] = torch.tensor([0.2], **tkwargs).repeat(acqf_args['batch_size']) # default value of beta
-        module = __import__(f'atlas.acquisition_functions.acqfs', fromlist=[acquisition_type.upper()])
-        _class = getattr(module, acquisition_type.upper())
-        return _class(reg_model=reg_model,cla_model=cla_model,**acqf_args)
+        if not use_q_acqf:
+            acqf_args['beta'] = torch.tensor([0.2], **tkwargs) # default value of beta
+            module = __import__(f'atlas.acquisition_functions.acqfs', fromlist=[acquisition_type.upper()])
+            _class = getattr(module, acquisition_type.upper())
+        else:
+            acqf_args['beta'] = torch.tensor([0.2], **tkwargs).repeat(acqf_args['batch_size']) # default value of beta
+            module = __import__(f'atlas.acquisition_functions.acqfs', fromlist=[
+                ''.join(['q', acquisition_type.upper()])
+            ])
+            _class = getattr(module, ''.join(['q', acquisition_type.upper()]))
+        return _class(reg_model=reg_model,cla_model=cla_model,cla_likelihood=cla_likelihood,**acqf_args)
     else:
         msg = f"Acquisition function type {acquisition_type} not understood!"
         Logger.log(msg, "FATAL")
         
         
-
-        
-
+if __name__ == '__main__':
+    pass

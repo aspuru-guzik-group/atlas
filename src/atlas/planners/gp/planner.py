@@ -28,7 +28,7 @@ from atlas.gps.gps import CategoricalSingleTaskGP, TanimotoGP
 
 from atlas.utils.planner_utils import get_cat_dims
 
-
+torch.set_default_dtype(torch.double)
 
 class BoTorchPlanner(BasePlanner):
     """Wrapper for GP-based Bayesiam optimization with BoTorch
@@ -225,7 +225,7 @@ class BoTorchPlanner(BasePlanner):
             # get the incumbent point
             f_best_argmin = torch.argmin(self.train_y_scaled_reg)
 
-            f_best_scaled = self.train_y_scaled_reg[f_best_argmin][0].float()
+            f_best_scaled = self.train_y_scaled_reg[f_best_argmin][0].double()
 
             # compute the ratio of infeasible to total points
             infeas_ratio = (
@@ -237,6 +237,7 @@ class BoTorchPlanner(BasePlanner):
      
             # get compile the basic feas-aware acquisition function arguments
             acqf_args = dict(
+                acquisition_optimizer_kind=self.acquisition_optimizer_kind,
                 params_obj=self.params_obj,
                 problem_type=self.problem_type,
                 feas_strategy=self.feas_strategy,
@@ -246,11 +247,13 @@ class BoTorchPlanner(BasePlanner):
                 f_best_scaled=f_best_scaled,
                 batch_size=self.batch_size,
                 use_min_filter=self.use_min_filter,
+
             )
             self.acqf = get_acqf_instance(
                 acquisition_type=self.acquisition_type, 
                 reg_model=self.reg_model,
                 cla_model=self.cla_model,
+                cla_likelihood=self.cla_likelihood,
                 acqf_args=acqf_args,
             )
 
@@ -268,6 +271,7 @@ class BoTorchPlanner(BasePlanner):
                     self.batched_strategy,
                     self.timings_dict,
                     use_reg_only=use_reg_only,
+                    acqf_args=acqf_args,
                 )
             elif self.acquisition_optimizer_kind == "genetic":
                 acquisition_optimizer = GeneticOptimizer(
@@ -281,6 +285,7 @@ class BoTorchPlanner(BasePlanner):
                     self._params,
                     self.timings_dict,
                     use_reg_only=use_reg_only,
+                    acqf_args=acqf_args,
                 )
 
             elif self.acquisition_optimizer_kind == 'pymoo':
@@ -295,6 +300,7 @@ class BoTorchPlanner(BasePlanner):
                     self._params,
                     self.timings_dict,
                     use_reg_only=use_reg_only,
+                    acqf_args=acqf_args,
                 )
 
             return_params = acquisition_optimizer.optimize()

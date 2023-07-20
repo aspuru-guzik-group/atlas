@@ -23,40 +23,40 @@ CONT = {
 	],  # init design strategies
 	"batch_size": [1],  # batch size
 	"use_descriptors": [False],  # use descriptors
-	"acquisition_type": ['ei', 'ucb', 'variance'], # 'ucb', 'variance'],
-	"acquisition_optimizer": ['pymoo'],#['gradient', 'genetic'],
+	"acquisition_type": ['ucb'],
+	"acquisition_optimizer": ['pymoo'],#['pymoo', 'genetic'],
 }
 
 DISC = {
 	"init_design_strategy": ["random"],
 	"batch_size": [1],
 	"use_descriptors": [False],
-	"acquisition_type": ['ei', 'ucb', 'variance'],
-	"acquisition_optimizer": ['pymoo'],#['gradient', 'genetic'],
+	"acquisition_type": ['ucb'],
+	"acquisition_optimizer": ['pymoo'],#['pymoo', 'genetic'],
 }
 
 CAT = {
 	"init_design_strategy": ["random"],
 	"batch_size": [1],
 	"use_descriptors": [False, True],
-	"acquisition_type": ['ei', 'ucb', 'variance'],
-	"acquisition_optimizer": ['pymoo'],#['gradient', 'genetic'],
+	"acquisition_type": ['ucb'],
+	"acquisition_optimizer": ['pymoo'],#['pymoo', 'genetic'],
 }
 
 MIXED_CAT_CONT = {
 	"init_design_strategy": ["random"],
 	"batch_size": [1],
-	"use_descriptors":['ei'], # [False, True],
-	"acquisition_type": ['ei', 'ucb', 'variance'],
-	"acquisition_optimizer": ['pymoo'],#['gradient', 'genetic'],
+	"use_descriptors":[False, True],
+	"acquisition_type": ['ucb'],
+	"acquisition_optimizer": ['pymoo'],#['pymoo', 'genetic'],
 }
 
 MIXED_DISC_CONT = {
 	"init_design_strategy": ["random"],
 	"batch_size": [1],
 	"use_descriptors": [False],
-	"acquisition_type": ['ei', 'ucb', 'variance'],
-	"acquisition_optimizer": ['pymoo'],#['gradient', 'genetic'],
+	"acquisition_type": ['ucb'],
+	"acquisition_optimizer": ['pymoo'],#['pymoo', 'genetic'],
 }
 
 
@@ -64,23 +64,25 @@ MIXED_CAT_DISC = {
 	"init_design_strategy": ["random"],
 	"batch_size": [1],
 	"use_descriptors": [False, True],
-	"acquisition_type": ['ei', 'ucb', 'variance'],
-	"acquisition_optimizer":['pymoo'],# ['gradient', 'genetic'],
+	"acquisition_type": ['ucb'],
+	"acquisition_optimizer":['pymoo'],# ['pymoo', 'genetic'],
 }
 
 MIXED_CAT_DISC_CONT = {
 	"init_design_strategy": ["random"],
 	"batch_size": [1],
 	"use_descriptors": [False, True],
-	"acquisition_type": ['ei', 'ucb', 'variance'],
-	"acquisition_optimizer": ['pymoo'],#['gradient', 'genetic'],
+	"acquisition_type": ['ucb'],
+	"acquisition_optimizer": ['pymoo'],#['pymoo', 'genetic'],
 }
 
 BATCHED = {
-	"problem_type": ['cont', 'disc', 'cat', 'mixed_cat_cont'],
+	"problem_type": [
+		'cont', 'disc', 'cat', 'mixed_cat_cont',
+		'mixed_disc_cont', 'mixed_cat_disc', 'mixed_cat_disc_cont'],
 	"init_design_strategy": ["random"],
-	"batch_size": [2, 5],
-	"acquisition_optimizer": ['pymoo'],#['gradient', 'genetic'],
+	"batch_size": [2, 4],
+	"acquisition_optimizer": ['pymoo'],#['pymoo', 'genetic'],
 }
 
 
@@ -177,19 +179,26 @@ def test_init_design_mixed_cat_disc_cont(
 def run_batched(problem_type, init_design_strategy, batch_size, acquisition_optimizer):
 
 	if problem_type == 'cont':
-		#run_continuous(init_design_strategy, batch_size, False, 'qei', acquisition_optimizer, num_init_design=5)
-		pass
+		run_continuous(init_design_strategy, batch_size, False, 'ucb', acquisition_optimizer, num_init_design=4)
 	elif problem_type == 'disc':
-		#run_discrete(init_design_strategy, batch_size, False, 'qei', acquisition_optimizer, num_init_design=5)
-		pass
+		run_discrete(init_design_strategy, batch_size, False, 'ucb', acquisition_optimizer, num_init_design=4)
 	elif problem_type == 'cat':
-		#run_categorical(init_design_strategy, batch_size, True, 'qei', acquisition_optimizer, num_init_design=5)
-		pass
+		run_categorical(init_design_strategy, batch_size, False, 'ucb', acquisition_optimizer, num_init_design=4)
+		run_categorical(init_design_strategy, batch_size, True, 'ucb', acquisition_optimizer, num_init_design=4)
 	elif problem_type == 'mixed_cat_cont': 
-		#pass
-		run_mixed_cat_cont(init_design_strategy, batch_size, True, 'qei', acquisition_optimizer, num_init_design=5)
+		run_mixed_cat_cont(init_design_strategy, batch_size, False, 'ucb', acquisition_optimizer, num_init_design=4)
+		run_mixed_cat_cont(init_design_strategy, batch_size, True, 'ucb', acquisition_optimizer, num_init_design=4)
+	elif problem_type == 'mixed_disc_cont':
+		run_mixed_disc_cont(init_design_strategy, batch_size, False, 'ucb', acquisition_optimizer, num_init_design=4)
+	elif problem_type == 'mixed_cat_disc':
+		run_mixed_cat_disc(init_design_strategy, batch_size, False, 'ucb', acquisition_optimizer, num_init_design=4)
+		run_mixed_cat_disc(init_design_strategy, batch_size, True, 'ucb', acquisition_optimizer, num_init_design=4)
+	elif problem_type == 'mixed_cat_disc_cont':
+		run_mixed_cat_disc_cont(init_design_strategy, batch_size, False, 'ucb', acquisition_optimizer, num_init_design=4)
+		run_mixed_cat_disc_cont(init_design_strategy, batch_size, True, 'ucb', acquisition_optimizer, num_init_design=4)
 	else:
 		pass
+
 
 
 def run_continuous(
@@ -229,6 +238,9 @@ def run_continuous(
 			sample_arr = sample.to_array()
 			measurement = surface_callable.run(sample_arr)
 			campaign.add_observation(sample_arr, measurement)
+
+			print('SAMPLE : ', sample)
+			print('MEASUREMENT : ', measurement)
 
 	assert len(campaign.observations.get_params()) == BUDGET
 	assert len(campaign.observations.get_values()) == BUDGET
@@ -312,6 +324,9 @@ def run_categorical(
 			measurement = np.array(surface_callable.run(sample_arr))
 			campaign.add_observation(sample_arr, measurement[0])
 
+			print('SAMPLE : ', sample)
+			print('MEASUREMENT : ', measurement)
+
 
 	assert len(campaign.observations.get_params()) == BUDGET
 	assert len(campaign.observations.get_values()) == BUDGET
@@ -358,7 +373,7 @@ def run_mixed_disc_cont(
 	init_design_strategy, batch_size, use_descriptors, acquisition_type, acquisition_optimizer, num_init_design=5
 ):
 
-	problem_gen = ProblemGenerator(problem_type='mixed_cat_cont')	
+	problem_gen = ProblemGenerator(problem_type='mixed_disc_cont')	
 	surface_callable, param_space = problem_gen.generate_instance()
 	
 	campaign = Campaign()
@@ -384,6 +399,9 @@ def run_mixed_disc_cont(
 		for sample in samples:
 			measurement = surface_callable.run(sample)
 			campaign.add_observation(sample, measurement)
+
+			print('SAMPLE : ', sample)
+			print('MEASUREMENT : ', measurement)
 
 	assert len(campaign.observations.get_params()) == BUDGET
 	assert len(campaign.observations.get_values()) == BUDGET
@@ -466,29 +484,29 @@ if __name__ == "__main__":
 	
 	# run_discrete(
 	# 	init_design_strategy='random', 
-	# 	batch_size=1, 
+	# 	batch_size=2, 
 	# 	use_descriptors=False, 
-	# 	acquisition_type='ei', 
-	# 	acquisition_optimizer='pymoo',
-	# 	num_init_design=5,
+	# 	acquisition_type='ucb', 
+	# 	acquisition_optimizer='gradient',
+	# 	num_init_design=6,
 	# )
 
 	run_continuous(
 		init_design_strategy='random', 
-		batch_size=1, 
+		batch_size=2, 
 		use_descriptors=False, 
-		acquisition_type='ei', 
+		acquisition_type='ucb', 
 		acquisition_optimizer='pymoo',
-		num_init_design=5,
+		num_init_design=4,
 	)
 	
 	# run_categorical(
 	# 	init_design_strategy='random', 
-	# 	batch_size=1, 
-	# 	use_descriptors=True, 
-	# 	acquisition_type='ei', 
-	# 	acquisition_optimizer='pymoo',
-	# 	num_init_design=5,
+	# 	batch_size=2, 
+	# 	use_descriptors=False, 
+	# 	acquisition_type='ucb', 
+	# 	acquisition_optimizer='gradient',
+	# 	num_init_design=6,
 	# )
 	
 	# run_mixed_cat_cont(
@@ -502,11 +520,11 @@ if __name__ == "__main__":
 	
 	# run_mixed_disc_cont(
 	# 	init_design_strategy='random', 
-	# 	batch_size=1, 
+	# 	batch_size=2, 
 	# 	use_descriptors=False, 
-	# 	acquisition_type='ei', 
-	# 	acquisition_optimizer='pymoo',
-	# 	num_init_design=5,
+	# 	acquisition_type='ucb', 
+	# 	acquisition_optimizer='gradient',
+	# 	num_init_design=6,
 	# 	)
 	
 	# run_mixed_cat_disc_cont(

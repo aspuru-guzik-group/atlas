@@ -22,51 +22,207 @@ from atlas.planners.gp.planner import BoTorchPlanner
 CONT = {
 	"init_design_strategy": [
 		"random",
-	],  # init design strategues
+		#"sobol",
+		#"lhs",
+	],  # init design strategies
 	"batch_size": [1],  # batch size
 	"use_descriptors": [False],  # use descriptors
-	"acquisition_optimizer": ['gradient', 'genetic'],
+	"acquisition_type": ['ucb'],
+	"acquisition_optimizer": ['pymoo'],#['pymoo', 'genetic'],
+}
+
+DISC = {
+	"init_design_strategy": ["random"],
+	"batch_size": [1],
+	"use_descriptors": [False],
+	"acquisition_type": ['ucb'],
+	"acquisition_optimizer": ['pymoo'],#['pymoo', 'genetic'],
 }
 
 CAT = {
 	"init_design_strategy": ["random"],
 	"batch_size": [1],
 	"use_descriptors": [False, True],
+	"acquisition_type": ['ucb'],
+	"acquisition_optimizer": ['pymoo'],#['pymoo', 'genetic'],
 }
 
+MIXED_CAT_CONT = {
+	"init_design_strategy": ["random"],
+	"batch_size": [1],
+	"use_descriptors":[False, True],
+	"acquisition_type": ['ucb'],
+	"acquisition_optimizer": ['pymoo'],#['pymoo', 'genetic'],
+}
+
+MIXED_DISC_CONT = {
+	"init_design_strategy": ["random"],
+	"batch_size": [1],
+	"use_descriptors": [False],
+	"acquisition_type": ['ucb'],
+	"acquisition_optimizer": ['pymoo'],#['pymoo', 'genetic'],
+}
+
+
+MIXED_CAT_DISC = {
+	"init_design_strategy": ["random"],
+	"batch_size": [1],
+	"use_descriptors": [False, True],
+	"acquisition_type": ['ucb'],
+	"acquisition_optimizer":['pymoo'],# ['pymoo', 'genetic'],
+}
 
 MIXED_CAT_DISC_CONT = {
 	"init_design_strategy": ["random"],
 	"batch_size": [1],
 	"use_descriptors": [False, True],
+	"acquisition_type": ['ucb'],
+	"acquisition_optimizer": ['pymoo'],#['pymoo', 'genetic'],
 }
+
+BATCHED = {
+	"problem_type": [
+		'cont', 'disc', 'cat', 'mixed_cat_cont',
+		'mixed_disc_cont', 'mixed_cat_disc', 'mixed_cat_disc_cont'],
+	"init_design_strategy": ["random"],
+	"batch_size": [2, 4],
+	"acquisition_optimizer": ['pymoo'],#['pymoo', 'genetic'],
+}
+
+
+
+
+
+@pytest.mark.parametrize("problem_type", BATCHED["problem_type"])
+@pytest.mark.parametrize("init_design_strategy", BATCHED["init_design_strategy"])
+@pytest.mark.parametrize("batch_size", BATCHED["batch_size"])
+@pytest.mark.parametrize("acquisition_optimizer", BATCHED["acquisition_optimizer"])
+def test_batched(problem_type, init_design_strategy, batch_size, acquisition_optimizer):
+	run_batched(problem_type, init_design_strategy, batch_size, acquisition_optimizer)
 
 
 @pytest.mark.parametrize("init_design_strategy", CONT["init_design_strategy"])
 @pytest.mark.parametrize("batch_size", CONT["batch_size"])
 @pytest.mark.parametrize("use_descriptors", CONT["use_descriptors"])
+@pytest.mark.parametrize("acquisition_type", CONT["acquisition_type"])
 @pytest.mark.parametrize("acquisition_optimizer", CONT["acquisition_optimizer"])
-def test_init_design_cont(init_design_strategy, batch_size, use_descriptors, acquisition_optimizer):
-	run_continuous(init_design_strategy, batch_size, use_descriptors, acquisition_optimizer)
+def test_cont(init_design_strategy, batch_size, use_descriptors, acquisition_type, acquisition_optimizer):
+	run_continuous(init_design_strategy, batch_size, use_descriptors, acquisition_type, acquisition_optimizer)
 
+
+@pytest.mark.parametrize("init_design_strategy", DISC["init_design_strategy"])
+@pytest.mark.parametrize("batch_size", DISC["batch_size"])
+@pytest.mark.parametrize("use_descriptors", DISC["use_descriptors"])
+@pytest.mark.parametrize("acquisition_type", DISC["acquisition_type"])
+@pytest.mark.parametrize("acquisition_optimizer", DISC["acquisition_optimizer"])
+def test_disc(init_design_strategy, batch_size, use_descriptors, acquisition_type, acquisition_optimizer):
+	run_discrete(init_design_strategy, batch_size, use_descriptors, acquisition_type, acquisition_optimizer)
+
+
+@pytest.mark.parametrize("init_design_strategy", CAT["init_design_strategy"])
+@pytest.mark.parametrize("batch_size", CAT["batch_size"])
+@pytest.mark.parametrize("use_descriptors", CAT["use_descriptors"])
+@pytest.mark.parametrize("acquisition_type", CAT["acquisition_type"])
+@pytest.mark.parametrize("acquisition_optimizer", CAT["acquisition_optimizer"])
+def test_cat(init_design_strategy, batch_size, use_descriptors, acquisition_type, acquisition_optimizer):
+	run_categorical(init_design_strategy, batch_size, use_descriptors, acquisition_type, acquisition_optimizer)
+
+
+@pytest.mark.parametrize(
+	"init_design_strategy", MIXED_CAT_CONT["init_design_strategy"]
+)
+@pytest.mark.parametrize("batch_size", MIXED_CAT_CONT["batch_size"])
+@pytest.mark.parametrize("use_descriptors", MIXED_CAT_CONT["use_descriptors"])
+@pytest.mark.parametrize("acquisition_type", MIXED_CAT_CONT["acquisition_type"])
+@pytest.mark.parametrize("acquisition_optimizer", MIXED_CAT_CONT["acquisition_optimizer"])
+def test_mixed_cat_cont(
+	init_design_strategy, batch_size, use_descriptors, acquisition_type, acquisition_optimizer
+):
+	run_mixed_cat_cont(init_design_strategy, batch_size, use_descriptors, acquisition_type, acquisition_optimizer)
+
+
+@pytest.mark.parametrize(
+	"init_design_strategy", MIXED_DISC_CONT["init_design_strategy"]
+)
+@pytest.mark.parametrize("batch_size", MIXED_DISC_CONT["batch_size"])
+@pytest.mark.parametrize("use_descriptors", MIXED_DISC_CONT["use_descriptors"])
+@pytest.mark.parametrize("acquisition_type", MIXED_DISC_CONT["acquisition_type"])
+@pytest.mark.parametrize("acquisition_optimizer", MIXED_DISC_CONT["acquisition_optimizer"])
+def test_mixed_disc_cont(
+	init_design_strategy, batch_size, use_descriptors, acquisition_type, acquisition_optimizer
+):
+	run_mixed_disc_cont(init_design_strategy, batch_size, use_descriptors, acquisition_type, acquisition_optimizer)
+
+
+@pytest.mark.parametrize(
+	"init_design_strategy", MIXED_CAT_DISC["init_design_strategy"]
+)
+@pytest.mark.parametrize("batch_size", MIXED_CAT_DISC["batch_size"])
+@pytest.mark.parametrize("use_descriptors", MIXED_CAT_DISC["use_descriptors"])
+@pytest.mark.parametrize("acquisition_type", MIXED_CAT_DISC["acquisition_type"])
+@pytest.mark.parametrize("acquisition_optimizer", MIXED_CAT_DISC["acquisition_optimizer"])
+def test_mixed_cat_disc(
+	init_design_strategy, batch_size, use_descriptors, acquisition_type, acquisition_optimizer
+):
+	run_mixed_cat_disc(init_design_strategy, batch_size, use_descriptors, acquisition_type, acquisition_optimizer)
+
+
+@pytest.mark.parametrize(
+	"init_design_strategy", MIXED_CAT_DISC_CONT["init_design_strategy"]
+)
+@pytest.mark.parametrize("batch_size", MIXED_CAT_DISC_CONT["batch_size"])
+@pytest.mark.parametrize(
+	"use_descriptors", MIXED_CAT_DISC_CONT["use_descriptors"]
+)
+@pytest.mark.parametrize("acquisition_type", MIXED_CAT_DISC_CONT["acquisition_type"])
+@pytest.mark.parametrize("acquisition_optimizer", MIXED_CAT_DISC_CONT["acquisition_optimizer"])
+def test_mixed_cat_disc_cont(
+	init_design_strategy, batch_size, use_descriptors, acquisition_type, acquisition_optimizer
+):
+	run_mixed_cat_disc_cont(init_design_strategy, batch_size, use_descriptors, acquisition_type, acquisition_optimizer)
+
+
+def run_batched(problem_type, init_design_strategy, batch_size, acquisition_optimizer):
+
+	if problem_type == 'cont':
+		run_continuous(init_design_strategy, batch_size, False, 'ucb', acquisition_optimizer, num_init_design=4)
+	elif problem_type == 'disc':
+		run_discrete(init_design_strategy, batch_size, False, 'ucb', acquisition_optimizer, num_init_design=4)
+	elif problem_type == 'cat':
+		run_categorical(init_design_strategy, batch_size, False, 'ucb', acquisition_optimizer, num_init_design=4)
+		run_categorical(init_design_strategy, batch_size, True, 'ucb', acquisition_optimizer, num_init_design=4)
+	elif problem_type == 'mixed_cat_cont': 
+		run_mixed_cat_cont(init_design_strategy, batch_size, False, 'ucb', acquisition_optimizer, num_init_design=4)
+		run_mixed_cat_cont(init_design_strategy, batch_size, True, 'ucb', acquisition_optimizer, num_init_design=4)
+	elif problem_type == 'mixed_disc_cont':
+		run_mixed_disc_cont(init_design_strategy, batch_size, False, 'ucb', acquisition_optimizer, num_init_design=4)
+	elif problem_type == 'mixed_cat_disc':
+		run_mixed_cat_disc(init_design_strategy, batch_size, False, 'ucb', acquisition_optimizer, num_init_design=4)
+		run_mixed_cat_disc(init_design_strategy, batch_size, True, 'ucb', acquisition_optimizer, num_init_design=4)
+	elif problem_type == 'mixed_cat_disc_cont':
+		run_mixed_cat_disc_cont(init_design_strategy, batch_size, False, 'ucb', acquisition_optimizer, num_init_design=4)
+		run_mixed_cat_disc_cont(init_design_strategy, batch_size, True, 'ucb', acquisition_optimizer, num_init_design=4)
+	else:
+		pass
+
+		
 
 def run_continuous(
-	init_design_strategy, batch_size, use_descriptors, acquisition_optimizer, num_init_design=5
+	init_design_strategy, batch_size, use_descriptors, acquisition_type, acquisition_optimizer, num_init_design=5
 ):
 
 	problem_gen = ProblemGenerator(problem_type='continuous')
 	surface_callable, param_space = problem_gen.generate_instance()
 	known_constraints = KnownConstraintsGenerator().get_constraint('continuous')
 
-	param_test = np.array([0.1, 0.9])
-	print(known_constraints(param_test))
 	
 	planner = BoTorchPlanner(
 		goal="minimize",
 		init_design_strategy=init_design_strategy,
 		num_init_design=num_init_design,
 		batch_size=batch_size,
-		acquisition_type='ei',
+		use_descriptors=use_descriptors,
+		acquisition_type=acquisition_type,
 		acquisition_optimizer_kind=acquisition_optimizer,
 		known_constraints=[known_constraints],
 	)
@@ -92,10 +248,6 @@ def run_continuous(
 	# check that all the measured values pass the known constraint
 	meas_params = campaign.observations.get_params()
 
-	# for param in meas_params:
-	#     print(param)
-	#     for kc in planner.known_constraints:
-	#         print(kc(param))
 
 	kcs = [known_constraints(param) for param in meas_params]
 	print(kcs)
@@ -103,7 +255,7 @@ def run_continuous(
 
 
 def run_discrete(
-	init_design_strategy, batch_size, use_descriptors, acquisition_optimizer, num_init_design=5
+	init_design_strategy, batch_size, use_descriptors, acquisition_type, acquisition_optimizer, num_init_design=5
 ):
 	problem_gen = ProblemGenerator(problem_type='discrete')
 	surface_callable, param_space = problem_gen.generate_instance()
@@ -114,12 +266,12 @@ def run_discrete(
 
 	planner = BoTorchPlanner(
 		goal="minimize",
-		feas_strategy="naive-0",
 		init_design_strategy=init_design_strategy,
 		num_init_design=num_init_design,
-		acquisition_type='ei',
-		acquisition_optimizer_kind=acquisition_optimizer,
 		batch_size=batch_size,
+		use_descriptors=use_descriptors,
+		acquisition_type=acquisition_type,
+		acquisition_optimizer_kind=acquisition_optimizer,
 		known_constraints=[known_constraints],
 	)
 
@@ -152,7 +304,8 @@ def run_categorical(
 	init_design_strategy,
 	batch_size, 
 	use_descriptors, 
-	acquisition_optimizer_kind , 
+	acquisition_type,
+	acquisition_optimizer, 
 	num_init_design=5
 ):
 
@@ -165,12 +318,12 @@ def run_categorical(
 
 	planner = BoTorchPlanner(
 		goal="minimize",
-		feas_strategy="naive-0",
 		init_design_strategy=init_design_strategy,
 		num_init_design=num_init_design,
 		batch_size=batch_size,
 		use_descriptors=use_descriptors,
-		acquisition_optimizer_kind=acquisition_optimizer_kind,
+		acquisition_type=acquisition_type,
+		acquisition_optimizer_kind=acquisition_optimizer,
 		known_constraints=[known_constraints],
 	)
 	planner.set_param_space(surface_callable.param_space)
@@ -183,7 +336,6 @@ def run_categorical(
 		for sample in samples:
 			sample_arr = sample.to_array()
 			measurement = np.array(surface_callable.run(sample_arr))
-			print(sample, measurement)
 			campaign.add_observation(sample_arr, measurement[0])
 
 	assert len(campaign.observations.get_params()) == BUDGET
@@ -199,7 +351,8 @@ def run_mixed_disc_cont(
 	init_design_strategy, 
 	batch_size, 
 	use_descriptors, 
-	acquisition_optimizer_kind, 
+	acquisition_type,
+	acquisition_optimizer, 
 	num_init_design=5,
 ):
 
@@ -209,12 +362,12 @@ def run_mixed_disc_cont(
 
 	planner = BoTorchPlanner(
 		goal="minimize",
-		feas_strategy="naive-0",
 		init_design_strategy=init_design_strategy,
 		num_init_design=num_init_design,
 		batch_size=batch_size,
 		use_descriptors=use_descriptors,
-		acquisition_optimizer_kind=acquisition_optimizer_kind,
+		acquisition_type=acquisition_type,
+		acquisition_optimizer_kind=acquisition_optimizer,
 		known_constraints=[known_constraints],
 	)
 
@@ -228,8 +381,6 @@ def run_mixed_disc_cont(
 	while len(campaign.observations.get_values()) < BUDGET:
 
 		samples = planner.recommend(campaign.observations)
-		print(samples)
-		print('len(samples) : ', len(samples))
 		
 		for sample in samples:
 			measurement = surface_callable.run(sample)
@@ -246,7 +397,7 @@ def run_mixed_disc_cont(
 
 
 def run_mixed_cat_disc(
-	init_design_strategy, batch_size, use_descriptors, acquisition_optimizer_kind, num_init_design=5,
+	init_design_strategy, batch_size, use_descriptors, acquisition_type, acquisition_optimizer, num_init_design=5,
 ):
 
 	problem_gen = ProblemGenerator(problem_type='mixed_cat_disc')
@@ -255,12 +406,12 @@ def run_mixed_cat_disc(
 
 	planner = BoTorchPlanner(
 		goal="minimize",
-		feas_strategy="naive-0",
 		init_design_strategy=init_design_strategy,
 		num_init_design=num_init_design,
 		batch_size=batch_size,
 		use_descriptors=use_descriptors,
-		acquisition_optimizer_kind=acquisition_optimizer_kind,
+		acquisition_type=acquisition_type,
+		acquisition_optimizer_kind=acquisition_optimizer,
 		known_constraints=[known_constraints],
 	)
 
@@ -274,8 +425,7 @@ def run_mixed_cat_disc(
 	while len(campaign.observations.get_values()) < BUDGET:
 
 		samples = planner.recommend(campaign.observations)
-		print(samples)
-		print('len(samples) : ', len(samples))
+
 		for sample in samples:
 			measurement = surface_callable.run(sample)
 			campaign.add_observation(sample, measurement)
@@ -290,7 +440,7 @@ def run_mixed_cat_disc(
 	assert all(kcs)
 
 
-def run_mixed_cat_cont(init_design_strategy, batch_size, use_descriptors, acquisition_optimizer_kind, num_init_design=5,
+def run_mixed_cat_cont(init_design_strategy, batch_size, use_descriptors, acquisition_type, acquisition_optimizer, num_init_design=5,
 ):
 
 	problem_gen = ProblemGenerator(problem_type='mixed_cat_cont')
@@ -299,12 +449,12 @@ def run_mixed_cat_cont(init_design_strategy, batch_size, use_descriptors, acquis
 
 	planner = BoTorchPlanner(
 		goal="minimize",
-		feas_strategy="naive-0",
 		init_design_strategy=init_design_strategy,
 		num_init_design=num_init_design,
 		batch_size=batch_size,
 		use_descriptors=use_descriptors,
-		acquisition_optimizer_kind=acquisition_optimizer_kind,
+		acquisition_type=acquisition_type,
+		acquisition_optimizer_kind=acquisition_optimizer,
 		known_constraints=[known_constraints],
 	)
 
@@ -318,8 +468,7 @@ def run_mixed_cat_cont(init_design_strategy, batch_size, use_descriptors, acquis
 	while len(campaign.observations.get_values()) < BUDGET:
 
 		samples = planner.recommend(campaign.observations)
-		print(samples)
-		print('len(samples) : ', len(samples))
+
 		for sample in samples:
 			measurement = surface_callable.run(sample)
 			campaign.add_observation(sample, measurement)
@@ -335,7 +484,7 @@ def run_mixed_cat_cont(init_design_strategy, batch_size, use_descriptors, acquis
 
 
 def run_mixed_cat_disc_cont(
-	init_design_strategy, batch_size, use_descriptors, acquisition_optimizer_kind, num_init_design=5
+	init_design_strategy, batch_size, use_descriptors, acquisition_type, acquisition_optimizer, num_init_design=5
 ):
 
 	problem_gen = ProblemGenerator(problem_type='mixed_cat_disc_cont')
@@ -344,12 +493,13 @@ def run_mixed_cat_disc_cont(
 
 	planner = BoTorchPlanner(
 		goal="minimize",
-		feas_strategy="naive-0",
 		init_design_strategy=init_design_strategy,
 		num_init_design=num_init_design,
 		batch_size=batch_size,
 		use_descriptors=use_descriptors,
-		acquisition_optimizer_kind=acquisition_optimizer_kind,
+		acquisition_type=acquisition_type,
+		acquisition_optimizer_kind=acquisition_optimizer,
+		known_constraints=[known_constraints],
 	)
 
 	planner.set_param_space(param_space)
@@ -377,7 +527,7 @@ def run_mixed_cat_disc_cont(
 
 def run_compositional_constraint_cont(
 	init_design_strategy, batch_size, num_init_design=5
-):
+	):
 	param_space = ParameterSpace()
 	param_0 = ParameterContinuous(name="param_0", low=0.0, high=1.0)
 	param_1 = ParameterContinuous(name="param_1", low=0.0, high=1.0)
@@ -423,7 +573,7 @@ def run_compositional_constraint_cont(
 
 def run_permutation_constraint_mixed_cat_disc(
 	init_design_strategy, batch_size, num_init_design=5
-):
+	):
 	param_space = ParameterSpace()
 	param_0 = ParameterDiscrete(
 		name="param_0",
@@ -685,11 +835,29 @@ def run_pymoo(init_design_strategy, batch_size, use_descriptors, num_init_design
 
 
 if __name__ == '__main__':
-	#print(type(known_constraints_cont))
-	
-	#WORKING
 
-	run_continuous('random', 1, False, 'pymoo')
+	# run_continuous('random', 1, False, 'ucb', 'pymoo')
+	# run_discrete('random', 1, False, 'ucb', 'pymoo')
+	# run_categorical('random', 1, False, 'ucb', 'pymoo')
+	# run_categorical('random', 1, True, 'ucb', 'pymoo')
+
+	# run_mixed_cat_cont('random', 1, False, 'ucb', 'pymoo')
+	# run_mixed_cat_cont('random', 1, True, 'ucb', 'pymoo')
+	
+	#run_mixed_disc_cont('random', 1, False, 'ucb', 'pymoo')
+
+	# run_mixed_cat_disc('random', 1, False, 'ucb', 'pymoo')
+	# run_mixed_cat_disc('random', 1, True, 'ucb', 'pymoo')
+
+	run_mixed_cat_disc_cont('random', 1, False, 'ucb', 'pymoo')
+	run_mixed_cat_disc_cont('random', 1, True, 'ucb', 'pymoo')
+
+
+
+
+
+
+	#WORKING
 	# run_discrete('random', 1, False, 'gradient')
 	# run_categorical('random', 1, False, 'pymoo')
 	# run_mixed_cat_disc('random', 1, False, 'pymoo')
