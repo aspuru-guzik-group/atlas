@@ -398,7 +398,7 @@ class General(FeasibilityAwareAcquisition):
         self.f_best_scaled = acqf_args['f_best_scaled']
 
         # deal with general parameter stuff
-        self.X_sns_empty, _ = self.generate_X_sns()
+        self.X_sns_empty, _ = self.generate_X_sns() # (# exp general dims, # batch size, # exp param dims)
         self.functional_dims = np.logical_not(self.params_obj.exp_general_mask)
 
         
@@ -406,20 +406,19 @@ class General(FeasibilityAwareAcquisition):
     def evaluate(self, X: torch.Tensor) -> torch.Tensor:
         X = X.double()
         #TODO: messy clean this up
-        if X.shape[-1] == self.X_sns_empty.shape[-1]:
-            X = X[:, :, self.functional_dims]
+        # if X.shape[-1] == self.X_sns_empty.shape[-1]:
+        #X = X[:, :, self.functional_dims]
         self.f_best_scaled = self.f_best_scaled.to(X)
         # shape (# samples, # exp general dims, # batch size, # exp param dims)
-        X_sns = torch.empty((X.shape[0],) + self.X_sns_empty.shape).double()
+        X_sns = torch.empty((X.shape[0],) + self.X_sns_empty.shape).double() 
 
         for x_ix in range(X.shape[0]):
             X_sn = torch.clone(self.X_sns_empty)
-            #X_sn[:, :, self.functional_dims] = X[x_ix, :, self.functional_dims]
-            X_sn[:, :, self.functional_dims] = X[x_ix, :]
+            X_sn[:, :, self.functional_dims] = X[x_ix, :, self.functional_dims]
+            #X_sn[:, :, self.functional_dims] = X[x_ix, :]
             X_sns[x_ix, :, :, :] = X_sn
 
         pred_mu_x, pred_sigma_x = [], []
-
         for X_sn in X_sns:
             posterior = self.reg_model.posterior(X_sn.double())
             mu = posterior.mean
@@ -429,20 +428,22 @@ class General(FeasibilityAwareAcquisition):
             pred_mu_x.append(mu)
             pred_sigma_x.append(sigma)
 
-        pred_mu_x = torch.stack(pred_mu_x)
-        pred_sigma_x = torch.stack(pred_sigma_x)
-        mu_x = torch.mean(pred_mu_x, 0)
-        sigma_x = torch.mean(pred_sigma_x, 0)
+        pred_mu_x = torch.stack(pred_mu_x)      # (# samples, # general dims)
+        pred_sigma_x = torch.stack(pred_sigma_x) # (# samples, # general dims)
 
-        u = - (mu_x - self.f_best_scaled.expand_as(mu_x)) / sigma_x
+        mu_x = torch.mean(pred_mu_x, dim=-1) # (# samples,)
+        sigma_x = torch.mean(pred_sigma_x, dim=-1) # (# samples,)
+
+        u = - (mu_x - self.f_best_scaled.expand_as(mu_x)) / sigma_x # (# samples,)
+
         normal = torch.distributions.Normal(
             torch.zeros_like(u), torch.ones_like(u)
         )
         ucdf = normal.cdf(u)
         updf = torch.exp(normal.log_prob(u))
-        acqf_val = sigma * (updf + u * ucdf)
+        acqf_val = sigma_x * (updf + u * ucdf)
 
-        return acqf_val
+        return acqf_val # (# samples,)
 
 
     def generate_X_sns(self):

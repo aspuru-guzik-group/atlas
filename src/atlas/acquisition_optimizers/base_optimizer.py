@@ -83,17 +83,11 @@ class AcquisitionOptimizer:
                 X_sn[:, :, functional_dims] = X_star[x_ix, :, functional_dims]
                 X_sns[x_ix,:,:,:] = X_sn
 
-            # acqf_sn = get_acqf_instance(
-            #     acquisition_type='variance', 
-            #     reg_model=self.acqf.reg_model,
-            #     cla_model=self.acqf.cla_modesl,
-            #     acqf_args=self.acqf_args,
-            # )
-
 
             acqf_sn = VarianceBased(
                 reg_model=self.acqf.reg_model,
-                cla_model=self.acqf.cla_model,
+                cla_model=None,
+                cla_likelihood=None,
                 # dont estimate max min of acqf unknown constraints
                 # have already been taken care of
                 fix_min_max=True,   

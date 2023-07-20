@@ -20,6 +20,7 @@ from problem_generator import HybridSurface
 
 FEAS_STRATEGY_PARAM = [
     "naive-0_0",
+    "naive-0_replace",
     "fia_1000",
     "fwa_0",
     #"fca_0.2", # TODO: fca strategies broken with pymoo for now...
@@ -113,7 +114,7 @@ BATCHED = {
 		'cont', 'disc', 'cat', 'mixed_cat_cont',
 		'mixed_disc_cont', 'mixed_cat_disc', 'mixed_cat_disc_cont'],
 	"init_design_strategy": ["random"],
-	"batch_size": [2, 4],
+	"batch_size": [2], # limit num of tess
     'feas_strategy_param': FEAS_STRATEGY_PARAM,
 	"acquisition_optimizer": ['pymoo'],#['pymoo', 'genetic'],
 }

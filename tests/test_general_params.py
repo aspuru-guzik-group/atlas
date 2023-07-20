@@ -87,8 +87,6 @@ def surface_cat_general_cat_func(x, s):
 #     return None
     
 
-
-
 def run_cat_general_cont_func(batch_size, use_descriptors, acquisition_optimizer):
     """ single categorical general parameter
     """
@@ -431,7 +429,7 @@ def run_cat_general_cat_func(batch_size, use_descriptors, acquisition_optimizer)
 
 if __name__ == '__main__':
 
-    run_cat_general_cont_func(batch_size=1, use_descriptors=False, acquisition_optimizer='gradient') 
+    run_cat_general_cont_func(batch_size=1, use_descriptors=False, acquisition_optimizer='pymoo') 
     #run_cat_general_cat_func(batch_size=1, use_descriptors=False, acquisition_optimizer='gradient')  
     #run_cat_general_mixed_cat_cont_func(batch_size=1, use_descriptors=False, acquisition_optimizer='gradient')  
    
