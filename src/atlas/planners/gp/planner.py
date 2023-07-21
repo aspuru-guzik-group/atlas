@@ -2,6 +2,7 @@
 
 import time
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+import warnings
 
 import gpytorch
 import numpy as np
@@ -28,7 +29,9 @@ from atlas.gps.gps import CategoricalSingleTaskGP, TanimotoGP
 
 from atlas.utils.planner_utils import get_cat_dims
 
+warnings.filterwarnings("ignore", "^.*jitter.*", category=RuntimeWarning)
 torch.set_default_dtype(torch.double)
+
 
 class BoTorchPlanner(BasePlanner):
     """Wrapper for GP-based Bayesiam optimization with BoTorch

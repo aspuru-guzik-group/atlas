@@ -13,6 +13,8 @@ from olympus.objects import (
     ParameterVector,
 )
 
+torch.set_default_dtype(torch.double)
+
 
 def infer_problem_type(param_space: ParameterSpace) -> str:
     """infer the parameter space from Olympus. The three possibilities are

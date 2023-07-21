@@ -28,6 +28,8 @@ from atlas.utils.planner_utils import (
 )
 
 
+torch.set_default_dtype(torch.double)
+
 
 
 

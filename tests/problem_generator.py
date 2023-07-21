@@ -344,6 +344,8 @@ class HybridSurface:
             params = params.to_array()
         elif isinstance(params, np.ndarray):
             pass
+        elif isinstance(params, list):
+            params = np.array(params)
         else:
             raise TypeError
 

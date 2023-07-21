@@ -13,8 +13,10 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.autograd import Variable
 
+from atlas import Logger, tkwargs
 from atlas.utils.network_utils import get_args, parse_params
 
+torch.set_default_dtype(torch.double)
 
 class Feature(nn.Module):
     """
@@ -236,15 +238,15 @@ class DKT:
             if isinstance(train_task["params"], np.ndarray):
                 tmp_train_task["params"] = torch.from_numpy(
                     train_task["params"]
-                ).float()
+                )
             elif isinstance(train_task["params"], torch.Tensor):
-                tmp_train_task["params"] = train_task["params"].float()
+                tmp_train_task["params"] = train_task["params"]
             if isinstance(train_task["values"], np.ndarray):
                 tmp_train_task["values"] = torch.from_numpy(
                     train_task["values"]
-                ).float()
+                )
             elif isinstance(train_task["values"], torch.Tensor):
-                tmp_train_task["values"] = train_task["values"].float()
+                tmp_train_task["values"] = train_task["values"]
             _train_tasks.append(tmp_train_task)
         if not isinstance(valid_tasks, type(None)):
             for valid_task in valid_tasks:
@@ -252,19 +254,21 @@ class DKT:
                 if isinstance(valid_task["params"], np.ndarray):
                     tmp_valid_task["params"] = torch.from_numpy(
                         valid_task["params"]
-                    ).float()
+                    )
                 elif isinstance(valid_task["params"], torch.Tensor):
-                    tmp_valid_task["params"] = valid_task["params"].float()
+                    tmp_valid_task["params"] = valid_task["params"]
                 if isinstance(valid_task["values"], np.ndarray):
                     tmp_valid_task["values"] = torch.from_numpy(
                         valid_task["values"]
-                    ).float()
+                    )
                 elif isinstance(valid_task["values"], torch.Tensor):
-                    tmp_valid_task["values"] = valid_task["values"].float()
+                    tmp_valid_task["values"] = valid_task["values"]
                 _valid_tasks.append(tmp_valid_task)
 
         train_tasks = _train_tasks
         valid_tasks = _valid_tasks
+
+      
 
         self.likelihood.train()
         self.gp.train()
@@ -314,8 +318,9 @@ class DKT:
 
                 loss = np.around(loss.detach().numpy(), 3)
                 mse = np.around(mse.detach().numpy(), 3)
-                print(
-                    f"[EPOCH {epoch}] - Train loss: {round(loss,2)} Train mse: {round(mse,2)}"
+                Logger.log(
+                    f"[EPOCH {epoch}] - Train loss: {round(loss,2)} Train mse: {round(mse,2)}",
+                    'INFO'
                 )
 
         # set the likelihood and net to evaluation mode
@@ -388,13 +393,13 @@ if __name__ == "__main__":
 
         context_x = torch.from_numpy(
             valid_tasks[0]["params"][context_indices, :]
-        ).float()
+        )
         context_y = torch.from_numpy(
             valid_tasks[0]["values"][context_indices, :]
-        ).float()
+        )
 
-        target_x = torch.from_numpy(valid_tasks[0]["params"]).float()
-        target_y = torch.from_numpy(valid_tasks[0]["values"]).float()
+        target_x = torch.from_numpy(valid_tasks[0]["params"])
+        target_y = torch.from_numpy(valid_tasks[0]["values"])
 
         mu, sigma, likelihood = model.forward(
             context_x, context_y, target_x, None

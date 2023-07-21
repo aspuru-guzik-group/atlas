@@ -29,6 +29,8 @@ from gpytorch.priors import NormalPrior
 
 from atlas.gps.kernels import TanimotoKernel
 
+torch.set_default_dtype(torch.double)
+
 
 class ClassificationGPMatern(ApproximateGP):
     """Variational GP for binary classification. Produces a latent distribution,
@@ -137,8 +139,8 @@ class DKTGP(GP, GPyTorchModel):
     def __init__(self, model, context_x, context_y):
         super().__init__()
         self.model = model
-        self.context_x = context_x.float()
-        self.context_y = context_y.float()
+        self.context_x = context_x
+        self.context_y = context_y
 
     def forward(self, x):
         """
@@ -146,7 +148,7 @@ class DKTGP(GP, GPyTorchModel):
         mean shape (# proposals, # params)
         covar shape (# proposals, q_batch_size, # params)
         """
-        x = x.float()
+        x = x
         _, __, likelihood = self.model.forward(
             self.context_x, self.context_y, x
         )
@@ -181,7 +183,7 @@ class RGPE(GP, GPyTorchModel):
         # self.to(weights)
 
     def forward(self, x):
-        x = x.float()
+        x = x
         weighted_means = []
         weighted_covars = []
         # filter model with zero weights

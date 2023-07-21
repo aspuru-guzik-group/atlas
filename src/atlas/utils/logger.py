@@ -95,14 +95,9 @@ class MessageLogger:
             self.console.print(f"{title:{line}^80}", style=style)
 
     def log_welcome(self, line="─"):
-        # if self.verbosity >= 4:
-        # image_path = f'{__home__}/ot2/soteria_logo_w_20.png'
-        # with Image.open(image_path) as image:
-        #     pixels = Pixels.from_image(image)
-        #
         # self.console.print(pixels, justify='center')
         self.console.rule()
-        msg1 = "\nWelcome to NanoMAP by Soteria Therapeutics!"
+        msg1 = "\nWelcome to ATLAS!"
         self.console.print(msg1, justify="center", style="#c53a5d bold")
         msg2 = f"Made with :two_hearts: in :Canada:\n"
         self.console.print(msg2, justify="center", style="#e6ad14 bold")

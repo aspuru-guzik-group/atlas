@@ -43,7 +43,7 @@ from atlas.utils.planner_utils import (
 )
 
 warnings.filterwarnings("ignore", "^.*jitter.*", category=RuntimeWarning)
-
+torch.set_default_dtype(torch.double)
 
 
 class RGPEPlanner(BasePlanner):
@@ -415,6 +415,7 @@ class RGPEPlanner(BasePlanner):
         
             # get compile the basic feas-aware acquisition function arguments
             acqf_args = dict(
+                acquisition_optimizer_kind=self.acquisition_optimizer_kind,
                 params_obj=self.params_obj,
                 problem_type=self.problem_type,
                 feas_strategy=self.feas_strategy,
@@ -429,6 +430,7 @@ class RGPEPlanner(BasePlanner):
                 acquisition_type=self.acquisition_type, 
                 reg_model=self.reg_model,
                 cla_model=self.cla_model,
+                cla_likelihood=self.cla_likelihood,
                 acqf_args=acqf_args,
             )
 

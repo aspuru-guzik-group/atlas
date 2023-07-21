@@ -14,6 +14,8 @@ from olympus.surfaces.surface_cat_dejong import CatDejong
 from olympus.surfaces.surface_cat_michalewicz import CatMichalewicz
 from scipy.stats import norm, pearsonr, spearmanr
 
+torch.set_default_dtype(torch.double)
+
 OLYMP_SURFACES = olympus.surfaces.get_surfaces_list()
 
 ALL_SYNTHETIC = ["trig", "gp", "olympus", "bra", "gprice", "hm3"]
@@ -502,7 +504,7 @@ def metaBO_factory(
 	return tasks
 
 
-def olymp_cat_source_task_gen(num_train_tasks, num_valid_tasks, use_descriptors=False):
+def olymp_cat_source_task_gen(num_train_tasks, num_valid_tasks, num_opts, use_descriptors=False):
 
 	train_tasks = []
 	for task in range(num_train_tasks):
@@ -510,7 +512,7 @@ def olymp_cat_source_task_gen(num_train_tasks, num_valid_tasks, use_descriptors=
 		params_, values, _, __ = olymp_factory_cat(
 			param_dim=2,
 			surface_kind=surf_name,
-			num_opts=21,
+			num_opts=num_opts,
 			noise_level=0.2,
 			descriptors=use_descriptors,  # whether or not to use descriptors
 		)
@@ -522,7 +524,7 @@ def olymp_cat_source_task_gen(num_train_tasks, num_valid_tasks, use_descriptors=
 		params_, values, _, __ = olymp_factory_cat(
 			param_dim=2,
 			surface_kind=surf_name,
-			num_opts=21,
+			num_opts=num_opts,
 			noise_level=0.2,
 			descriptors=use_descriptors,  # whether or not to use descriptors
 		)
@@ -541,6 +543,7 @@ def mixed_source_code(problem_type):
 		train_tasks_cat, valid_tasks_cat = olymp_cat_source_task_gen(
 		num_train_tasks=10,
 		num_valid_tasks=5,
+		num_opts=5,
 		use_descriptors=False,
 		)
 		
@@ -555,7 +558,7 @@ def mixed_source_code(problem_type):
 		noise_var_range=[0.01, 1.0],
 		length_scale_range=[0.05, 0.1],
 		num_samples=10,
-		resolution=441,
+		resolution=25,
 		plot=False,
 	)
 		valid_tasks_disc = train_tasks_disc[:5]
@@ -570,7 +573,7 @@ def mixed_source_code(problem_type):
 		noise_var_range=[0.01, 1.0],
 		length_scale_range=[0.05, 0.1],
 		num_samples=10,
-		resolution=441,
+		resolution=25,
 		plot=False,
 	)
 		valid_tasks_cont = train_tasks_cont[:5]

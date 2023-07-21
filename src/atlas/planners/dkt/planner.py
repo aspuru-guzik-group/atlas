@@ -4,6 +4,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import pickle
 import time
 
+import warnings
+
 import gpytorch
 import numpy as np
 import torch
@@ -35,6 +37,8 @@ from atlas.utils.planner_utils import (
     propose_randomly
 )
 
+warnings.filterwarnings("ignore", "^.*jitter.*", category=RuntimeWarning)
+torch.set_default_dtype(torch.double)
 
 class DKTPlanner(BasePlanner):
     """Wrapper for deep kernel transfer planner in a closed loop
@@ -120,18 +124,20 @@ class DKTPlanner(BasePlanner):
         self._valid_tasks = self.scaler.transform_tasks(self._valid_tasks)
 
     def _load_model(self) -> None:
-        # calculate the dimensionality
+        # calculate the input dimensionality
         x_dim = 0
         for param in self.param_space:
             if param.type in ["continuous", "discrete"]:
                 x_dim += 1
             elif param.type == "categorical":
+            
                 if param.descriptors[0] is not None:
                     # we have descriptors
                     x_dim += len(param.descriptors[0])
                 else:
                     # we dont have descritpors, one hot encodings
                     x_dim += len(param.options)
+
 
         self.model = DKT(
             x_dim=x_dim,
@@ -251,7 +257,7 @@ class DKTPlanner(BasePlanner):
 
             # get the incumbent point
             f_best_argmin = torch.argmin(self.train_y_scaled_reg)
-            f_best_scaled = self.train_y_scaled_reg[f_best_argmin][0].float()
+            f_best_scaled = self.train_y_scaled_reg[f_best_argmin][0].double()
 
             # compute the ratio of infeasible to total points
             infeas_ratio = (
@@ -261,6 +267,7 @@ class DKTPlanner(BasePlanner):
             
             # get compile the basic feas-aware acquisition function arguments
             acqf_args = dict(
+                acquisition_optimizer_kind=self.acquisition_optimizer_kind,
                 params_obj=self.params_obj,
                 problem_type=self.problem_type,
                 feas_strategy=self.feas_strategy,
@@ -275,6 +282,7 @@ class DKTPlanner(BasePlanner):
                 acquisition_type=self.acquisition_type, 
                 reg_model=self.reg_model,
                 cla_model=self.cla_model,
+                cla_likelihood=self.cla_likelihood,
                 acqf_args=acqf_args,
             )
 
@@ -508,9 +516,9 @@ if __name__ == "__main__":
 
                 if iter > 0:
                     # plot the predicitons of the deep gp
-                    context_x = torch.from_numpy(params).float()
-                    context_y = torch.from_numpy(values).float()
-                    target_x = torch.from_numpy(domain.reshape(-1, 1)).float()
+                    context_x = torch.from_numpy(params)
+                    context_y = torch.from_numpy(values)
+                    target_x = torch.from_numpy(domain.reshape(-1, 1)).floa
 
                     mu, sigma, likelihood = planner.model.forward(
                         context_x,
@@ -550,7 +558,7 @@ if __name__ == "__main__":
                         planner.ei(
                             torch.from_numpy(
                                 domain.reshape((domain.shape[0], 1, 1))
-                            ).float()
+                            )
                         )
                         .detach()
                         .numpy()

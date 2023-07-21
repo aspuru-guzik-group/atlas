@@ -3,6 +3,7 @@
 import torch
 import gpytorch
 
+torch.set_default_dtype(torch.double)
 
 # Code taken from https://github.com/leojklarner/gauche/blob/main/gauche/kernels/fingerprint_kernels/tanimoto_kernel.py
 # Publication: https://arxiv.org/pdf/2212.04450.pdf
