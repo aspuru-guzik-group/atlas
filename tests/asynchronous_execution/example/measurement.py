@@ -28,6 +28,7 @@ class Worker:
         self.measurement_time_range = measurement_time_range
 
         self.is_available = True
+        self.pending_exp = None
 
     def measure(self, params):
         measurement_time = np.random.uniform(
@@ -105,6 +106,7 @@ class Workers:
                 status_file = f'{self.dump_dir}worker_status_{worker.worker_id}.pkl'
                 if os.path.exists(status_file):
                     worker.is_available = True
+                    worker.pending_exp = None
                     avail_workers.append(worker)
                     os.system(f'rm {status_file}')
 
@@ -113,6 +115,20 @@ class Workers:
     def get_new_experiments(self, priority_queue_dict):
         exp_ids = [d['exp_id'] for d in priority_queue_dict]
         return [priority_queue_dict[ix] for ix, k in enumerate(exp_ids) if not k in self.used_exp_ids]
+
+    def write_pending_exps(self):
+        """ If we have some pending experiments, write them to disk to be 
+        parsed by run_opt execute function which in turn informs Atlas 
+        about them
+        """
+        pending_exps = []
+        for worker in self.workers:
+            if worker.pending_exp is not None:
+                pending_exps.append(worker.pending_exp)
+        with open(f'{self.dump_dir}pending_exps.pkl', 'wb') as f:
+            pickle.dump(pending_exps, f)
+        f.close()
+
 
     def monitor_pickup(self):
         while True:
@@ -156,10 +172,13 @@ class Workers:
 
                             # create process
                             worker.is_available = False
+                            worker.pending_exp = param_vec
+                            self.write_pending_exps()
                             Logger.log(
                                 f'Submitting parameters {param_vec} (exp id {param_exp_id}) to worker {worker.worker_id}',
                                 'INFO',
                             )
+
                             self.used_exp_ids.append(param_exp_id)
                             process = multiprocessing.Process(target=worker.measure, args=(param_vec,))
                             # run the measurement process

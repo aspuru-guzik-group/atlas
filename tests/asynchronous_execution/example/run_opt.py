@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from olympus import Campaign, Surface
+from atlas import Logger
 from atlas.planners.gp.planner import BoTorchPlanner
 
 
@@ -36,6 +37,16 @@ def refill_priority_queue(planner, campaign):
         pickle.dump(pickup_samples, f)
     f.close()
 
+
+def check_set_pending_exps(planner) -> None:
+    if os.path.exists(f'{DUMP_DIR}pending_exps.pkl'):
+        with open(f'{DUMP_DIR}pending_exps.pkl', 'rb') as f:
+            pending_exps = pickle.load(f)
+        f.close()
+        # let atlas know about pending experiments
+        Logger.log(f'Pending_exps : {pending_exps}', 'WARNING')
+        
+        planner.set_pending_experiments(pending_experiments=pending_exps)
 
 
 def execute_opt():
@@ -82,10 +93,15 @@ def execute_opt():
                 # remove the measurement file
                 os.system(f'rm {measurement_file}')
 
-                # TODO: need to update the planners pending experiments attribute
+        
 
                 # (re)fill the priority queue if initial design has completed
                 if len(campaign.observations.get_values()) >= 3:
+                    # tell Atlas planner about pending experiments
+                    check_set_pending_exps(planner)
+
+                    # refill the priority queue with planner conditioned on 
+                    # pending experiments
                     refill_priority_queue(planner, campaign)
                     iter_+=1
 

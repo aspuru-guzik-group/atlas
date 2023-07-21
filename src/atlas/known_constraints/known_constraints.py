@@ -147,15 +147,10 @@ class PendingExperimentConstraint:
         # NOTE: str dtype so we dont have to check parameter types? 
         for pending_exp in self.pending_experiments:
             pending_exp_arr = pending_exp.to_array().astype(str)
-            if (params == pending_exp_arr).all():
+            if (params_arr == pending_exp_arr).all():
                 return False
         
         return True
-    
-
-
-
-
 
 
 class KnownConstraints:
