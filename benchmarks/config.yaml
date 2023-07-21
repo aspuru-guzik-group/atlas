@@ -1,0 +1,43 @@
+general:
+  problem_spec:
+    - "single_objective" 
+problems:
+  suzuki:
+    num_repeats: 5
+    budget: 15
+    optimizer:
+      init_design_strategy: 
+        - "random"
+      num_init_design: 
+        - 8
+      batch_size:
+        - 1
+        - 4
+      use_descriptors: 
+        - False
+      acqusition_type: 
+        - "ucb"
+      acquisition_optimizer: 
+        - "pymoo"
+  hplc:
+    num_repeats: 5
+    budget: 15
+    optimizer:
+      init_design_strategy: 
+        - "random"
+      num_init_design: 
+        - 8
+      batch_size:
+        - 1
+        - 4
+      use_descriptors: 
+        - False
+      acqusition_type: 
+        - "ucb"
+      acquisition_optimizer: 
+        - "pymoo"
+
+
+
+
+  

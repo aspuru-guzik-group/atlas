@@ -54,7 +54,7 @@ torch.set_default_dtype(torch.double)
 
 
 class FeasibilityAwareAcquisition(Object, metaclass=ABCMeta):
-    """ Base class for feasibility aware Atlas acquisition function
+    """ Base class for feasibility-aware Atlas acquisition function
     for use with unknown constraints
     """
     def __init__(self, reg_model, cla_model, cla_likelihood, fix_min_max=False, **acqf_args: Dict) -> None: 
@@ -313,7 +313,7 @@ class MonteCarloAcquisition(FeasibilityAwareAcquisition, MCSamplerMixin):
 
 
 #--------------------------------
-# ACQUISITION FUNCTION INSTANCES
+# ACQUISITION FUNCTIONS
 #--------------------------------
 
 class VarianceBased(FeasibilityAwareAcquisition):

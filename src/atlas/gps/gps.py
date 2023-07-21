@@ -27,6 +27,7 @@ from botorch.models import SingleTaskGP
 
 from gpytorch.priors import NormalPrior
 
+from atlas import Logger, tkwargs
 from atlas.gps.kernels import TanimotoKernel
 
 torch.set_default_dtype(torch.double)
@@ -175,19 +176,18 @@ class RGPE(GP, GPyTorchModel):
         self.models = ModuleList(models)
         for m in models:
             if not hasattr(m, "likelihood"):
-                raise ValueError(
-                    "RGPE currently only supports models that have a likelihood (e.g. ExactGPs)"
+                Logger.log(
+                    "RGPEPlanner only supports models that have a likelihood (e.g. ExactGPs)",
+                    "FATAL"
                 )
         self.likelihood = LikelihoodList(*[m.likelihood for m in models])
         self.weights = weights
-        # self.to(weights)
 
     def forward(self, x):
         x = x
         weighted_means = []
         weighted_covars = []
-        # filter model with zero weights
-        # weights on covariance matrices are weight**2
+
         non_zero_weight_indices = (self.weights**2 > 0).nonzero()
         non_zero_weights = self.weights[non_zero_weight_indices]
         # re-normalize
@@ -197,17 +197,13 @@ class RGPE(GP, GPyTorchModel):
             raw_idx = non_zero_weight_indices[non_zero_weight_idx].item()
             model = self.models[raw_idx]
             posterior = model.posterior(x)
-            # unstandardize predictions
-            # posterior_mean = posterior.mean.squeeze(-1)*model.Y_std + model.Y_mean
-            # posterior_cov = posterior.mvn.lazy_covariance_matrix * model.Y_std.pow(2)
             posterior_mean = posterior.mean.squeeze(-1)
             posterior_cov = posterior.mvn.lazy_covariance_matrix
-            # apply weight
+            # apply weights 
             weight = non_zero_weights[non_zero_weight_idx]
             weighted_means.append(weight * posterior_mean)
             weighted_covars.append(posterior_cov * weight**2)
-        # set mean and covariance to be the rank-weighted sum the means and covariances of the
-        # base models and target model
+
         mean_x = torch.stack(weighted_means).sum(dim=0)
         covar_x = PsdSumLazyTensor(*weighted_covars)
         return MultivariateNormal(mean_x, covar_x)
@@ -246,8 +242,8 @@ class MixedTanimotoSingleTaskGP(SingleTaskGP):
     producing a regular kernel of the form
 
     K((x1, c1), (x2, c2)) =
-            K_cont_1(x1, x2) + K_cat_1(c1, c2) +
-            K_cont_2(x1, x2) * K_cat_2(c1, c2)
+            K_cont_1(x1, x2) + K_mol_1(c1, c2) +
+            K_cont_2(x1, x2) * K_mol_2(c1, c2)
 
 
     inspired by:
