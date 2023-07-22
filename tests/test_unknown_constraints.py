@@ -20,7 +20,7 @@ from problem_generator import HybridSurface
 
 FEAS_STRATEGY_PARAM = [
     "naive-0_0",
-    "naive-0_replace",
+    "naive-replace_0",
     "fia_1000",
     "fwa_0",
     #"fca_0.2", # TODO: fca strategies broken with pymoo for now...

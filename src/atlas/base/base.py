@@ -508,9 +508,9 @@ class BasePlanner(CustomPlanner):
 		self,
 		X: torch.Tensor,
 		return_np: bool = False,
-	) -> Tuple[
+		) -> Tuple[
 		Union[torch.Tensor, np.ndarray], Union[torch.Tensor, np.ndarray]
-	]:
+		]:
 		"""make prediction using regression surrogate model
 
 		Args:
@@ -574,7 +574,7 @@ class BasePlanner(CustomPlanner):
 		X: torch.Tensor,
 		return_np: bool = False,
 		normalize: bool = True,
-	) -> Union[torch.Tensor, np.ndarray]:
+		) -> Union[torch.Tensor, np.ndarray]:
 
 		if not hasattr(self, "cla_model"):
 			msg = "Optimizer does not yet have classification surrogate model"
@@ -632,7 +632,7 @@ class BasePlanner(CustomPlanner):
 		return_np: bool = True,
 		normalize: bool = True,
 		unconstrained: bool = False,
-	) -> Union[torch.Tensor, np.ndarray]:
+		) -> Union[torch.Tensor, np.ndarray]:
 
 		X_proc = []
 		# adapt the data from olympus form to torch tensors
