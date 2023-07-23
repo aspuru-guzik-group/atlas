@@ -51,9 +51,9 @@ class RGPEPlanner(BasePlanner):
     https://arxiv.org/pdf/1802.02219.pdf
     code adapted from: https://botorch.org/v/0.1.0/tutorials/meta_learning_with_rgpe
     Args:
-            cache_weights (bool): save the weights of the RGPE procedure to disk for
-                    a posteriori analysis
-            weights_path (str): the directory in which to save the weights, if cache_weights=True
+        cache_weights (bool): save the weights of the RGPE procedure to disk for
+                a posteriori analysis
+        weights_path (str): the directory in which to save the weights, if cache_weights=True
     """
 
     def __init__(

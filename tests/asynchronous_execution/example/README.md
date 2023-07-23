@@ -25,8 +25,10 @@ The `dump/worker_result_*.pkl` files are loaded by the `run_opt.py` script and i
 * First, this creates a `pending_experiment` constraint, which assures that experiments that are pending will not be proposed by the planner in subsequent calls to `recommend()`. This is particularly relevant when dealing with discrete or categorical parameters. 
 * Second, `pending_experiments` are also used to update the regression surrogate model of the planner such that ...
 
+The figure below gives a conceptual overview of this demo and of asynchronous experimental execution more generally. 
 
-![alt text](https://github.com/rileyhickman/atlas/blob/main/static/async_demo_figure.png)
+
+![alt text](https://github.com/rileyhickman/atlas/blob/main/static/async_opt_demo_fig.png)
 
 
 ## Usage
