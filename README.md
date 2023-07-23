@@ -159,7 +159,7 @@ are encouraged. Please reach out to [Riley](riley.hickman@mail.utoronto.ca) by e
 `atlas` is an academic research software. If you use `atlas` in a scientific publication, please cite the following article.
 
 ```
-@misc{atlas,
+@misc{hickman_atlas_2023,
 
 }
 ```

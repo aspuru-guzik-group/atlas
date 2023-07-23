@@ -14,8 +14,6 @@ def default_postprocess_script(x):
 
 
 
-
-
 def batch_tanimoto_sim(
     x1: torch.Tensor, x2: torch.Tensor, eps: float = 1e-6
 ) -> torch.Tensor:
