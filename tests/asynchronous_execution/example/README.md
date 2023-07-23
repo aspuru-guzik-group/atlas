@@ -56,7 +56,22 @@ Before restarting the experiment, clear all the residual files by running the `c
 
 ## Extensions
 
-While this demo is very primitive, it lays a simple foundation framework for aysnchronous experimentaion in SDLs. Feel free to customize this demo (especially the `measurement.py` file) to fit your measurement apparatus. Below are some notes and suggestions concerning extensions to the code.
+While this demo is very primitive, it lays a simple foundation for aysnchronous experimentaion in SDLs. Feel free to customize this demo (especially the `measurement.py` file) to fit your measurement apparatus. Below are some notes and suggestions concerning extensions to the code.
 
 * As an alternative to writing the priority queue and measurements to disk as pickle files, I've found that using the [Google sheets API](https://developers.google.com/sheets/api/guides/concepts) to be a nice approach for implementing proof-of-concept asynchronous workflows. You can use a Google sheet to house the prority queue, pending experiments, _and_ the completed observations. I would recommend using the [`gspread` Python library](https://docs.gspread.org/en/v5.10.0/) to progammatically update the cells in the Google sheet. This approach also works nicely for hybrid human-robotic SDLs, in which, for example, a human must make the measurements while robotic laboratory equipment prepares samples recommended by an `atlas` planner. A Google sheet is human-readable and editable, and can be accessed from anywhere using any internet browser.
-*        
+
+To use the Google doc feature, you must install the Google client library
+
+```bash
+pip install --upgrade google-api-python-client google-auth-httplib2 google-auth-oauthlib
+```
+
+and `gspread`
+
+```bash
+pip install gspread
+```
+
+
+* ... 
+
