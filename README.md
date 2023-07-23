@@ -48,7 +48,7 @@ This section gives minimal code examples showcasing some of the primary features
 You can also familiarize yourself with the package by checking out the following Google colab
 notebook.
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/rileyhickman/atlas/blob/main/atlas_get_started.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/aspuru-guzik-group/atlas/blob/main/atlas_get_started.ipynb)
 
 
 
