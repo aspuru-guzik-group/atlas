@@ -28,7 +28,7 @@ The `dump/worker_result_*.pkl` files are loaded by the `run_opt.py` script and i
 The figure below gives a conceptual overview of this demo and of asynchronous experimental execution more generally. 
 
 
-![alt text](https://github.com/rileyhickman/atlas/blob/main/static/async_opt_demo_fig.png)
+![alt text](https://github.com/aspuru-guzik-group/atlas/blob/main/static/async_opt_demo_fig.png)
 
 
 ## Usage
