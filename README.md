@@ -51,6 +51,30 @@ notebook.
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/aspuru-guzik-group/atlas/blob/main/atlas_get_started.ipynb)
 
 
+Here we provide a minimal code example in which the `GPPlanner` from `atlas` is used to minimize the Branin-Hoo surface $f : \mathcal{X} \in \mathbb{R}^2 \mapsto \mathbb{R}$. "Ask-tell" experimentation proceeds iteratively by generating parameters to be measured using the planner's `recommend()` method, and informing the `olympus` `Campaign` instance about the corresponding measurement using its `add_observation()` method. We opt to use a flexible "ask-tell" interface in order to remain SDL application-agnostic. Measurement steps usually involve calls to specialized robotic laboratory equipment or computational simulation packages, which can be fully customized by the user.
+
+```python
+from olympus import Surface, Campaign
+from atlas.planners.gp.planner import GPPlanner
+
+surface = Surface(kind='Branin') # instantiate 2d Branin-Hoo objective function
+
+campaign = Campaign() # define Olympus campaign object 
+campaign.set_param_space(surface.param_space)
+
+planner = GPPlanner(goal='minimize', num_init_design=5) # instantiate Atlas planner 
+planner.set_param_space(surface.param_space)
+
+while len(campaign.observations.get_values()) < 30:
+    samples = planner.recommend(campaign.observations) # ask planner for batch of parameters 
+    for sample in samples:
+        measurement = surface.run(sample) # measure Branin-Hoo function
+        campaign.add_observation(sample, measurement) # tell planner about most recent observation
+```
+
+![alt text](https://github.com/rileyhickman/atlas/blob/main/static/2d_branin_minimal_code.png)
+
+
 ## License
 
 Distributed under the [MIT](https://choosealicense.com/licenses/mit/)
