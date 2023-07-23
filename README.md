@@ -18,7 +18,7 @@ optimization, meta-learning optimization, data-driven search space expansion/con
 `atlas` is proudly developed in 🇨🇦 at the University of Toronto and the Vector Institute for Artificial Intelligence.
 
 
-![alt text](https://github.com/rileyhickman/atlas/blob/main/static/atlas_logo.png)
+![alt text](https://github.com/aspuru-guzik-group/atlas/blob/main/static/atlas_logo.png)
 
 ## Installation
 
@@ -72,7 +72,7 @@ while len(campaign.observations.get_values()) < 30:
         campaign.add_observation(sample, measurement) # tell planner about most recent observation
 ```
 
-![alt text](https://github.com/rileyhickman/atlas/blob/main/static/2d_branin_minimal_code.png)
+![alt text](https://github.com/aspuru-guzik-group/atlas/blob/main/static/2d_branin_minimal_code.png)
 
 
 ## License
@@ -92,5 +92,34 @@ are encouraged. Please reach out to [Riley](riley.hickman@mail.utoronto.ca) by e
 ```
 @misc{hickman_atlas_2023,
 
+}
+```
+
+`olympus` works hand-in-hand with `atlas`. We would be grateful for citations of the following publications as well. 
+
+```
+@article{hase_olympus_2021,
+      author = {H{\"a}se, Florian and Aldeghi, Matteo and Hickman, Riley J. and Roch, Lo{\"\i}c M. and Christensen, Melodie and Liles, Elena and Hein, Jason E. and Aspuru-Guzik, Al{\'a}n},
+      doi = {10.1088/2632-2153/abedc8},
+      issn = {2632-2153},
+      journal = {Machine Learning: Science and Technology},
+      month = jul,
+      number = {3},
+      pages = {035021},
+      title = {Olympus: a benchmarking framework for noisy optimization and experiment planning},
+      volume = {2},
+      year = {2021}
+}
+
+@misc{hickman_olympus_2023,
+	author = {Hickman, Riley and Parakh, Priyansh and Cheng, Austin and Ai, Qianxiang and Schrier, Joshua and Aldeghi, Matteo and Aspuru-Guzik, Al{\'a}n},
+	doi = {10.26434/chemrxiv-2023-74w8d},
+	language = {en},
+	month = may,
+	publisher = {ChemRxiv},
+	shorttitle = {Olympus, enhanced},
+	title = {Olympus, enhanced: benchmarking mixed-parameter and multi-objective optimization in chemistry and materials science},
+	urldate = {2023-06-21},
+	year = {2023},
 }
 ```
