@@ -1,4 +1,4 @@
-# atlas
+# Atlas
 
 
 [![rileyhickman](https://circleci.com/gh/rileyhickman/atlas.svg?style=svg&circle-token=96039a8d33f9fade7e4c1a5420312b0711b16cde)](https://app.circleci.com/pipelines/github/rileyhickman/atlas)
@@ -49,99 +49,6 @@ You can also familiarize yourself with the package by checking out the following
 notebook.
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/aspuru-guzik-group/atlas/blob/main/atlas_get_started.ipynb)
-
-
-
-### Proof-of-concept optimization
-
-
-
-
-### Optimization of mixed-parameter spaces
-
-
-### Optimization with a-priori known constraints
-
-
-### Optimization with a-priori unknown constraints
-
-
-### Multi-objective optimization
-
-
-### Robust optimization with Golem
-
-
-### Optimization for a generalizable set of parameters
-
-
-Often, researchers may like to find parameters that are _generalizable_.
-For example, one might want to find a single set of chemical reaction conditions which give good yield across several different substrates. [cite MADNESS Science paper]
-
-Consider an optimization problem with $d$ continuous reaction parameters, $\mathcal{X} \in \mathbb{R}^d$
-(functional parameters), and a set of $n$ substrates $\mathcal{S} = { s_i }_{i=1}^n$ (non-functional
-parameters). The goal of such an optimization is to maximize the objective function $f(\mathbf{x})$, which is
-the average response across all molecules,
-
-$$ f_{\mathcal{C}} = \frac{1}{n} \sum_{i=1}^n f(\mathbb{x}, s_i)  . $$
-
-For a minimization problem, the best performing parameters are
-
-$$  \mathbf{x}^* = argmin_{\mathbf{x}\in \mathcal{X}, s_i \in \mathcal{C}} f_{\mathcal{C}}  .$$
-
-`atlas` employs an approach which removes the need to measure $f_{\mathcal{C}}$ at each iteration. Consider a toy problem,
-where $n=3$, and the following piecewise function is used for $f_{\mathcal{C}}$, and is to be minimized.
-
-$$ f(\mathbf{x}, s) = \sin(x_1) + 12\cos(x_2) - 0.1x_3   \text{  if}  s = s_1$$
-
-$$ f(\mathbf{x}, s) = 3\sin(x_1) + 0.01\cos(x_2) + x_3^2  \text{  if }  s = s_2$$
-
-$$ f(\mathbf{x}, s) = 5\cos(x_1) + 0.01\cos(x_2) + 2x_3^3  \text{  if } s = s_3$$
-
-
-The variable $s$ is a categorical parameter with 3 options. $f_{\mathcal{C}}$ has a minimum value of approximately
-3.830719 at $\mathbf{x}^* = (0.0, 1.0, 0.0404)$. Given the appropriate `olympus` parameter space, one can instantiate
-a planner as follows.
-
-```python
-
-param_space = ParameterSpace()
-
-# add general parameter, one-hot-encoded
-param_space.add(
-    ParameterCategorical(
-        name='s',
-        options=[str(i) for i in range(3)],
-        descriptors=[None for i in range(3)],       
-    )
-)
-param_space.add(
-    ParameterContinuous(name='x_1',low=0.,high=1.)
-)
-param_space.add(
-    ParameterContinuous(name='x_2',low=0.,high=1.)
-)
-param_space.add(
-    ParameterContinuous(name='x_3',low=0.,high=1.)
-)
-
-planner  = BoTorchPlanner(
-    goal='minimize',
-    batch_size=1,
-    num_init_design=5,
-    general_parameters=[0] # indices of general parameters
-)
-
-planner.set_param_space(param_space)
-
-```
-
-The `general_parameters` argument to the constructor takes a list of integers, which
-represent the parameter space indices which are intended to be treated as _general_ or _non functional_
-parameters. The figure below shows the performance of `atlas` compared to random sampling on this toy
-problem (10 repeats).
-
-![alt text](https://github.com/rileyhickman/atlas/blob/main/static/synthetic_general_conditions_gradient.png)
 
 
 ## License

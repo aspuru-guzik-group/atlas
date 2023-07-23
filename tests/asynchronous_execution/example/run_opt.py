@@ -4,8 +4,6 @@ import os, sys, binascii
 import glob
 import time
 import pickle
-import numpy as np
-import pandas as pd
 
 from olympus import Campaign, Surface
 from atlas import Logger

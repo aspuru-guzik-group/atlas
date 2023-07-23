@@ -2,7 +2,7 @@
 
 import os, sys
 
-os.system('rm ./pickup/*')
-os.system('rm ./dump/*')
+os.system('rm ./pickup/*.pkl')
+os.system('rm ./dump/*.pkl')
 os.system('rm campaign.pkl')
 
