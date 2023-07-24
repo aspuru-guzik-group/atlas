@@ -4,16 +4,16 @@ API Documentation
 *****************
 
 
-Olympus
+Atlas
 #######
 
-.. autoclass:: olympus.Olympus
+.. autoclass:: atlas.base.base.Base
   :members:
 
-Datasets
-########
+GPPlanner
+#########
 
-.. autoclass:: olympus.datasets.Dataset
+.. autoclass:: atlas.planners.gp.planner.BoTorchPlanner
 
 
 Models

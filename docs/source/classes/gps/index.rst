@@ -1,0 +1,4 @@
+.. _gps:
+
+Gaussian processes
+===================

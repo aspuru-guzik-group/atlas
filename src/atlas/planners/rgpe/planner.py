@@ -165,8 +165,8 @@ class RGPEPlanner(BasePlanner):
         return source_models
 
     @staticmethod
-    def roll_col(X, shift):
-        """roll columns to the right by amount shift"""
+    def roll_col(X, shift): 
+        """roll columns to the right by `shift` indices""" 
         return torch.cat((X[..., -shift:], X[..., :-shift]), dim=-1)
 
     def compute_ranking_loss(self, f_samps, target_y):
