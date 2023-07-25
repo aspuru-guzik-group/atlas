@@ -153,6 +153,7 @@ def test_golem_opt_cont():
     assert len(campaign.observations.get_values()) == BUDGET
 
 
+
 # def test_golem_opt_mixed(golem_config):
 #     ...
 
@@ -161,9 +162,4 @@ if __name__ == "__main__":
 
     # test_get_golem_dists_cont(CONT['golem_config'][0])
 
-    test_golem_opt_cont(
-        golem_config={
-            "param0": Normal(0.2),
-            "param1": Normal(0.3),
-        }
-    )
+    test_golem_opt_cont()

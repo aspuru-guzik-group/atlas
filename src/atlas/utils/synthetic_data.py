@@ -596,9 +596,6 @@ def mixed_source_code(problem_type):
 		valid_tasks.append({'params':params, 'values': values.view(values.shape[0],1)})
 	
 	return train_tasks, valid_tasks
-		
-
-
 
 
 if __name__ == "__main__":
@@ -669,6 +666,45 @@ if __name__ == "__main__":
 	for task_cat, task_cont in zip(valid_tasks_cat, valid_tasks_cont):
 		params = torch.cat((torch.tensor(task_cat['params']), task_cont['params']), dim=1)
 		values = torch.sum(torch.cat((torch.tensor(task_cat['values']), task_cont['values']), dim=1), dim=1)
+		
+		valid_tasks.append({'params':params, 'values': values.view(values.shape[0],1)})
+
+	print(valid_tasks[0]['params'].shape)
+	print(valid_tasks[0]['values'].shape)
+
+
+	train_tasks_cont = trig_factory(
+		param_dim=2,
+		kernel="rbf",
+		noise_var_range=[0.01, 1.0],
+		length_scale_range=[0.05, 0.1],
+		num_samples=20,
+		resolution=441,
+		plot=False,
+	)
+	valid_tasks_cont = trig_factory(
+		param_dim=2,
+		kernel="rbf",
+		noise_var_range=[0.01, 1.0],
+		length_scale_range=[0.05, 0.1],
+		num_samples=5,
+		resolution=441,
+		plot=False,
+	)
+	
+	train_tasks = []
+
+	for task_cont in zip(train_tasks_cont):
+		params = torch.cat((torch.tensor(task_cat['params']), task_cont['params']), dim=1)
+		values = torch.sum(torch.cat((torch.tensor(task_cat['values']), task_cont['values']), dim=1))
+		
+		train_tasks.append({'params':params, 'values': values.view(values.shape[0],1)})
+
+	valid_tasks = []
+
+	for task_cont in zip(valid_tasks_cont):
+		params = torch.cat(torch.tensor(task_cont['params']), dim=1)
+		values = torch.sum(torch.cat((torch.tensor(task_cont['values'])), dim=1))
 		
 		valid_tasks.append({'params':params, 'values': values.view(values.shape[0],1)})
 

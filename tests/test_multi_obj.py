@@ -803,5 +803,5 @@ if __name__ == "__main__":
 	# run_mixed_disc_cont('random', 1, False, 'Hypervolume', 'pymoo', 5, True)
 	# run_mixed_cat_disc('random', 1, False, 'Hypervolume', 'pymoo', 5, True)
 	# run_mixed_cat_cont('random', 1, False, 'Hypervolume', 'pymoo', 5, True)
-	# run_mixed_cat_disc_cont('random', 1, False, 'Hypervolume', 'pymoo', 5, True)
+	run_mixed_cat_disc_cont('random', 1, False, 'Hypervolume', 'pymoo', 5, True)
 	

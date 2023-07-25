@@ -213,6 +213,7 @@ class KnownConstraintsGenerator():
         
         np.random.seed(100703)
         arr = np.random.randint(NUM_CAT_OPTS, size=(10,2))
+        np.random.seed()
         for x in arr:
             if [x0, x1] == [f'x{x[0]}', f'x{x[1]}']:
                 return False
@@ -230,13 +231,7 @@ class KnownConstraintsGenerator():
         if np.abs(x0-x1)<0.1:
             return False
         
-        if 0.15 < x0 < 0.5:
-            return False
-        
         if np.abs(x2-x3)<0.1:
-            return False
-        
-        if 0.15 < x2 < 0.5:
             return False
         
         return True
@@ -251,6 +246,7 @@ class KnownConstraintsGenerator():
 
         np.random.seed(100703)
         arr = np.random.randint(NUM_CAT_OPTS, size=(10,2))
+        np.random.seed()
         for x in arr:
             if [x0, x1] == [f'x{x[0]}', f'x{x[1]}']:
                 return False
@@ -270,12 +266,12 @@ class KnownConstraintsGenerator():
         x3 = float(params[3]) # continuous
 
         np.random.seed(100702)
-        arr = np.random.randint(NUM_CAT_OPTS, size=(10,2))
+        arr = np.random.randint(NUM_CAT_OPTS, size=(5,2))
+        np.random.seed()
         for x in arr:
             if [x0, x1] == [f'x{x[0]}', f'x{x[1]}']:
                 return False
-        
-        
+       
         return True
 
 
@@ -289,7 +285,8 @@ class KnownConstraintsGenerator():
         x5 = float(params[5]) # continuous
        
         np.random.seed(100704)
-        arr = np.random.randint(NUM_CAT_OPTS, size=(10,2))
+        arr = np.random.randint(NUM_CAT_OPTS, size=(5,2))
+        np.random.seed()
         for x in arr:
             if [x0, x1] == [f'x{x[0]}', f'x{x[1]}']:
                 return False
@@ -297,12 +294,8 @@ class KnownConstraintsGenerator():
         if np.abs(x2-x3)<0.1:
             return False
         
-        if 0. < x2 < 0.2:
-            return False
-        
         if np.abs(x4-x5)<0.1:
             return False
-        
         
         return True
     
