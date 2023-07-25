@@ -23,11 +23,11 @@ copyright = "2023, Riley Hickman"
 author = "Riley Hickman"
 
 # The short X.Y version.
-#from olympus import _version
+# from olympus import _version
 
-#version = ".".join(_version.get_versions()["version"].split(".")[:3])
+# version = ".".join(_version.get_versions()["version"].split(".")[:3])
 ## The full version, including alpha/beta/rc tags.
-#release = _version.get_versions()["version"]
+# release = _version.get_versions()["version"]
 
 
 # -- General configuration ---------------------------------------------------
@@ -190,7 +190,7 @@ spelling_show_suggestions = True
 
 
 def setup(app):
-    #app.add_stylesheet("custom.css") # required update for sphinx >= 3.3.1
+    # app.add_stylesheet("custom.css") # required update for sphinx >= 3.3.1
     app.add_css_file("custom.css")
     try:
         import re
@@ -200,7 +200,6 @@ def setup(app):
         from sphinx.util.inspect import safe_getattr
 
         class AutoAutoSummary(Autosummary):
-
             option_spec = {
                 "methods": directives.unchanged,
                 "attributes": directives.unchanged,

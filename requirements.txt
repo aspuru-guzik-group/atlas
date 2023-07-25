@@ -19,3 +19,6 @@ pytest
 pytest-cov
 gspread
 matter-golem
+olympus @ git+https://github.com/aspuru-guzik-group/olympus@main
+pymoo
+GPy

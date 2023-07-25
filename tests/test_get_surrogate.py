@@ -18,6 +18,7 @@ from olympus.surfaces import Surface
 from atlas.planners.gp.planner import BoTorchPlanner
 from atlas.utils.synthetic_data import trig_factory
 
+
 def test_reg_surrogate_cont():
     def surface(x):
         return np.sin(8 * x[0]) - 2 * np.cos(6 * x[1]) + np.exp(-2.0 * x[2])
@@ -46,7 +47,6 @@ def test_reg_surrogate_cont():
     BUDGET = 10
 
     while len(campaign.observations.get_values()) < BUDGET:
-
         samples = planner.recommend(campaign.observations)
         for sample in samples:
             sample_arr = sample.to_array()
@@ -97,7 +97,6 @@ def test_cla_surrogate_cont():
     BUDGET = 10
 
     while len(campaign.observations.get_values()) < BUDGET:
-
         samples = planner.recommend(campaign.observations)
         for sample in samples:
             sample_arr = sample.to_array()
@@ -141,7 +140,6 @@ def test_acquisition_function():
     BUDGET = 10
 
     while len(campaign.observations.get_values()) < BUDGET:
-
         samples = planner.recommend(campaign.observations)
         for sample in samples:
             sample_arr = sample.to_array()
@@ -157,6 +155,5 @@ def test_acquisition_function():
     assert np.shape(acqf_vals) == (X.shape[0], 1)
 
 
-if __name__ == '__main__':
-
-	test_acquisition_function()
+if __name__ == "__main__":
+    test_acquisition_function()

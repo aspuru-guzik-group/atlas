@@ -277,30 +277,29 @@ def flip_source_tasks(source_tasks):
 
 
 def partition(S):
-    """ ...
-    """
+    """..."""
     if len(S) == 1:
         yield [S]
-        return 
+        return
 
     first = S[0]
     for smaller in partition(S[1:]):
         for n, subset in enumerate(smaller):
-            yield smaller[:n]+[[first] + subset]+smaller[n+1:]
-        yield [[first]]+smaller 
-    
+            yield smaller[:n] + [[first] + subset] + smaller[n + 1 :]
+        yield [[first]] + smaller
+
+
 def gen_partitions(S):
     """
     generate all possible partitions of Ns-element set S
-    
-    Args: 
+
+    Args:
         S (list): list of non-functional parameters S
     """
-    return [p for _, p in enumerate(partition(S),1)]
+    return [p for _, p in enumerate(partition(S), 1)]
 
 
 class Scaler:
-
     SUPP_TYPES = ["standardization", "normalization", "identity"]
 
     """ scaler for source data
@@ -524,5 +523,3 @@ class Scaler:
                 )
             elif self.value_type == "identity":
                 return self.identity(sample, "reverse")
-
-

@@ -2,30 +2,28 @@
 
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
-import numpy as np
 import botorch
 import gpytorch
-import torch 
-from torch.nn import ModuleList
+import numpy as np
+import torch
+from botorch.models import SingleTaskGP
 from botorch.models.gpytorch import GPyTorchModel
-from gpytorch.distributions import MultivariateNormal
-from gpytorch.kernels import MaternKernel, RBFKernel, ScaleKernel
-from gpytorch.likelihoods import Likelihood, GaussianLikelihood, LikelihoodList
 from botorch.models.kernels.downsampling import DownsamplingKernel
 from botorch.models.kernels.exponential_decay import ExponentialDecayKernel
 from botorch.utils.datasets import SupervisedDataset
-from gpytorch.models import ApproximateGP, ExactGP, GP
-from gpytorch.priors import GammaPrior
-from gpytorch.lazy import PsdSumLazyTensor
 from gpytorch.constraints import GreaterThan
+from gpytorch.distributions import MultivariateNormal
+from gpytorch.kernels import MaternKernel, RBFKernel, ScaleKernel
+from gpytorch.lazy import PsdSumLazyTensor
+from gpytorch.likelihoods import GaussianLikelihood, Likelihood, LikelihoodList
+from gpytorch.models import GP, ApproximateGP, ExactGP
+from gpytorch.priors import GammaPrior, NormalPrior
 from gpytorch.variational import (
     CholeskyVariationalDistribution,
     UnwhitenedVariationalStrategy,
     VariationalStrategy,
 )
-from botorch.models import SingleTaskGP
-
-from gpytorch.priors import NormalPrior
+from torch.nn import ModuleList
 
 from atlas import Logger, tkwargs
 from atlas.gps.kernels import TanimotoKernel
@@ -57,8 +55,8 @@ class ClassificationGPMatern(ApproximateGP):
         )
         super(ClassificationGPMatern, self).__init__(variational_strategy)
         self.mean_module = gpytorch.means.ConstantMean()
-        lambda_=100.
-        #scale=1.*np.exp(-train_y.shape[0]/lambda_)
+        lambda_ = 100.0
+        # scale=1.*np.exp(-train_y.shape[0]/lambda_)
         # self.covar_module = ScaleKernel(MaternKernel(
         #     lengthscale_prior=NormalPrior(loc=0., scale=scale)
         #     ))  # RBFKernel())
@@ -72,7 +70,6 @@ class ClassificationGPMatern(ApproximateGP):
 
 
 class CategoricalSingleTaskGP(ExactGP, GPyTorchModel):
-
     # meta-data for BoTorch
     _num_outputs = 1
 
@@ -108,18 +105,18 @@ class CategoricalSingleTaskGP(ExactGP, GPyTorchModel):
 #     """ Single task multi-fidelity GP model
 #     """
 
-#     _num_outputs = 1 
+#     _num_outputs = 1
 
 #     def __init__(
 #         self,
 #         train_x: torch.Tensor,
 #         train_y: torch.Tensor,
-#         data_fidelity: Optional[int] = None, 
+#         data_fidelity: Optional[int] = None,
 #         nu: float = 0.2,
 #         likelihood: Optional[Likelihood] = GaussianLikelihood,
 
 #     ):
-        
+
 #         self.train_x = train_x
 #         self.train_y = train_y
 #         self.data_fidelity = data_fidelity
@@ -133,7 +130,6 @@ class CategoricalSingleTaskGP(ExactGP, GPyTorchModel):
 
 
 class DKTGP(GP, GPyTorchModel):
-
     # meta-data for botorch
     _num_outputs = 1
 
@@ -159,7 +155,6 @@ class DKTGP(GP, GPyTorchModel):
         return gpytorch.distributions.MultivariateNormal(mean, covar)
 
 
-
 class RGPE(GP, GPyTorchModel):
     """Rank-weighted GP ensemble. This class inherits from GPyTorchModel which
     provides an interface for GPyTorch models in botorch
@@ -178,7 +173,7 @@ class RGPE(GP, GPyTorchModel):
             if not hasattr(m, "likelihood"):
                 Logger.log(
                     "RGPEPlanner only supports models that have a likelihood (e.g. ExactGPs)",
-                    "FATAL"
+                    "FATAL",
                 )
         self.likelihood = LikelihoodList(*[m.likelihood for m in models])
         self.weights = weights
@@ -199,7 +194,7 @@ class RGPE(GP, GPyTorchModel):
             posterior = model.posterior(x)
             posterior_mean = posterior.mean.squeeze(-1)
             posterior_cov = posterior.mvn.lazy_covariance_matrix
-            # apply weights 
+            # apply weights
             weight = non_zero_weights[non_zero_weight_idx]
             weighted_means.append(weight * posterior_mean)
             weighted_covars.append(posterior_cov * weight**2)
@@ -210,11 +205,10 @@ class RGPE(GP, GPyTorchModel):
 
 
 class TanimotoGP(ExactGP, GPyTorchModel):
-
     _num_outputs = 1
 
     def __init__(self, train_x: torch.Tensor, train_y: torch.Tensor):
-        """ Single task GP for molecular fingerprint inputs
+        """Single task GP for molecular fingerprint inputs
         Args:
                 train_x (torch.tensor): 2D tensor with training inputs
                 train_y (torch.tensor): 2D tensor with training targets
@@ -230,14 +224,12 @@ class TanimotoGP(ExactGP, GPyTorchModel):
         return MultivariateNormal(mean_x, covar_x)
 
 
-
-
 class MixedTanimotoSingleTaskGP(SingleTaskGP):
-    """ Supports mixed molecular-continuous/discrete parameter spaces
-    where the molecular parameter options are represented using 
+    """Supports mixed molecular-continuous/discrete parameter spaces
+    where the molecular parameter options are represented using
     Morgan fingerprints
 
-    Similar kernel to MixedSingleTaskGP from BoTorch, but instead of 
+    Similar kernel to MixedSingleTaskGP from BoTorch, but instead of
     using CategoricalKernel based on Hamming distance it uses TanimotoKernel
     producing a regular kernel of the form
 
@@ -253,16 +245,18 @@ class MixedTanimotoSingleTaskGP(SingleTaskGP):
     _num_outputs = 1
 
     def __init__(
-        self, 
-        train_x: torch.Tensor, 
+        self,
+        train_x: torch.Tensor,
         train_y: torch.Tensor,
-        molecular_dims: List[int],  
+        molecular_dims: List[int],
     ):
         if len(molecular_dims) == 0:
-            msg = 'You must define at least one molecular dimension to use the MixedTanimotoSingleTaskGP'
-            Logger.log(msg, 'FATAL')
+            msg = "You must define at least one molecular dimension to use the MixedTanimotoSingleTaskGP"
+            Logger.log(msg, "FATAL")
 
-        _, aug_batch_shape = self.get_batch_dimensions(train_X=train_X, train_Y=train_Y)
+        _, aug_batch_shape = self.get_batch_dimensions(
+            train_X=train_X, train_Y=train_Y
+        )
 
         def cont_kernel_factory(
             batch_shape: torch.Size,
@@ -337,7 +331,6 @@ class MixedTanimotoSingleTaskGP(SingleTaskGP):
             input_transform=None,
         )
 
-
     @classmethod
     def construct_inputs(
         cls,
@@ -358,6 +351,3 @@ class MixedTanimotoSingleTaskGP(SingleTaskGP):
             "cat_dims": categorical_features,
             "likelihood": likelihood,
         }
-
-
-        

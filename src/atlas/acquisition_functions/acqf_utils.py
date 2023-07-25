@@ -1,17 +1,15 @@
 #!/usr/bin/env python
 
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import itertools
 from copy import deepcopy
 from functools import wraps
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import torch
-
 from botorch.acquisition.acquisition import MCSamplerMixin
 from botorch.acquisition.objective import IdentityMCObjective
 from botorch.utils.transforms import _verify_output_shape
-
 
 from atlas import Logger
 from atlas.utils.planner_utils import (
@@ -22,27 +20,28 @@ from atlas.utils.planner_utils import (
 
 
 def concatenate_pending_params(
-        method: Callable[[Any, torch.Tensor], Any],
-    ) ->  Callable[[Any, torch.Tensor], Any]:
-    """ Decorator to add pending parameters to MC acqf argument
+    method: Callable[[Any, torch.Tensor], Any],
+) -> Callable[[Any, torch.Tensor], Any]:
+    """Decorator to add pending parameters to MC acqf argument
     Works if the MonteCarloAcquisition instance has attribute `pending_params`
-    that is not None 
+    that is not None
     """
+
     @wraps(method)
     def decorated(mc_acqf: Any, X: torch.Tensor, **kwargs: Any) -> Any:
         if mc_acqf.pending_params is not None:
-            X = torch.cat([X, match_batch_shape(mc_acqf.pending_params, X)], dim=-2)
+            X = torch.cat(
+                [X, match_batch_shape(mc_acqf.pending_params, X)], dim=-2
+            )
         return method(mc_acqf, X, **kwargs)
 
     return decorated
 
+
 def t_batch_mode_transform(
     expected_q: Optional[int] = None,
     assert_output_shape: bool = True,
-) -> Callable[
-    [Callable[[Any, Any], Any]],
-    Callable[[Any, Any], Any],
-]:
+) -> Callable[[Callable[[Any, Any], Any]], Callable[[Any, Any], Any],]:
     r"""Factory for decorators enabling consistent t-batch behavior.
 
     This method creates decorators for instance methods to transform an input tensor
@@ -71,7 +70,7 @@ def t_batch_mode_transform(
         >>>     def arbitrary_q_method(self, X):
         >>>         ...
 
-    Code taken and modified from: 
+    Code taken and modified from:
         https://github.com/pytorch/botorch/blob/main/botorch/utils/transforms.py#L298
 
     """
@@ -80,10 +79,7 @@ def t_batch_mode_transform(
         method: Callable[[Any, Any], Any],
     ) -> Callable[[Any, Any], Any]:
         @wraps(method)
-        def decorated(
-            acqf: Any, X: Any, *args: Any, **kwargs: Any
-        ) -> Any:
-
+        def decorated(acqf: Any, X: Any, *args: Any, **kwargs: Any) -> Any:
             # Allow using acquisition functions for other inputs (e.g. lists of strings)
             if not isinstance(X, torch.Tensor):
                 return method(acqf, X, *args, **kwargs)
@@ -101,7 +97,9 @@ def t_batch_mode_transform(
             # add t-batch dim
             X = X if X.dim() > 2 else X.unsqueeze(0)
             output = method(acqf, X, *args, **kwargs)
-            if hasattr(acqf, "reg_model"): # and is_fully_bayesian(acqf.reg_model): -> NOTE: Not relevant in Atlas
+            if hasattr(
+                acqf, "reg_model"
+            ):  # and is_fully_bayesian(acqf.reg_model): -> NOTE: Not relevant in Atlas
                 output = output.mean(dim=-1)
             if assert_output_shape and not _verify_output_shape(
                 acqf=acqf,
@@ -122,11 +120,8 @@ def t_batch_mode_transform(
 
 
 def match_batch_shape(X: torch.Tensor, Y: torch.Tensor) -> torch.Tensor:
-    """ Expand shape of tensor `X` to match that of `Y`
-    """
+    """Expand shape of tensor `X` to match that of `Y`"""
     return X.expand(X.shape[: -(Y.dim())] + Y.shape[:-2] + X.shape[-2:])
-
-
 
 
 def get_batch_initial_conditions(
@@ -134,7 +129,7 @@ def get_batch_initial_conditions(
     batch_size,
     param_space,
     known_constraints,
-    fca_constraint, 
+    fca_constraint,
     mins_x,
     maxs_x,
     has_descriptors,
@@ -175,17 +170,17 @@ def get_batch_initial_conditions(
         raw_samples.shape[0] // batch_size, batch_size, raw_samples.shape[1]
     )
 
-    if known_constraints.is_empty and fca_constraint==[]:
+    if known_constraints.is_empty and fca_constraint == []:
         # no constraints, return samples
         batch_initial_conditions = raw_samples
         batch_initial_conditions_raw = raw_proposals
 
     else:
-        #----------------
+        # ----------------
         # fca constraint
-        #----------------
-        if type(fca_constraint)==callable:
-            # we have an fca constraint 
+        # ----------------
+        if type(fca_constraint) == callable:
+            # we have an fca constraint
             # evaluate using expanded torch representation
             constraint_val = fca_constraint(raw_samples)
             if len(constraint_val.shape) == 1:
@@ -194,27 +189,31 @@ def get_batch_initial_conditions(
                 )
             constraint_vals.append(constraint_val)
 
-            fca_feas_idx = torch.where(torch.all(constraint_vals>=0, dim=1))[0]
+            fca_feas_idx = torch.where(torch.all(constraint_vals >= 0, dim=1))[
+                0
+            ]
         else:
             # no fca constraint
             fca_feas_idx = torch.arange(raw_samples.shape[0])
 
-        #------------------------------
+        # ------------------------------
         # user-level known constraints
-        #------------------------------
+        # ------------------------------
         if not known_constraints.is_empty:
             # we have some user-level known constraints
-            # use raw_propsals here, user-level known constraints 
+            # use raw_propsals here, user-level known constraints
             # evaluated on compressed representation of parameters
             constraint_vals = []
-            #loop through all known constriaint callables
+            # loop through all known constriaint callables
             for constraint_callable in known_constraints:
                 # returns True if feasible, False if infeasible
-                kc_res = [constraint_callable(params) for params in raw_proposals] 
+                kc_res = [
+                    constraint_callable(params) for params in raw_proposals
+                ]
                 constraint_vals.append(kc_res)
 
             constraint_vals = torch.tensor(constraint_vals)
-    
+
             # get indices for which known constraints are satisfied
             kc_feas_idx = torch.where(torch.all(constraint_vals, dim=0))[0]
         else:
@@ -223,8 +222,6 @@ def get_batch_initial_conditions(
 
         # find the union of the two sets of feasible indices
         feas_idx = np.intersect1d(kc_feas_idx, fca_feas_idx)
-
-
 
         # project onto original proposals
         batch_initial_conditions = raw_samples[feas_idx, :, :]
@@ -238,7 +235,7 @@ def get_batch_initial_conditions(
                 batch_initial_conditions_raw[:num_restarts, :],
             )
         return batch_initial_conditions[:num_restarts, :, :]
-    
+
     elif 0 < batch_initial_conditions.shape[0] < num_restarts:
         # we dont have enough proposals, sample around the feasible ones we have...
         Logger.log(
@@ -362,8 +359,8 @@ def create_available_options(
 
     if len(cart_product) > max_options:
         Logger.log(
-            f'CP space of cardnality {len(cart_product)} exceeds max allowed options. Proceeding with random subset..',
-            'WARNING',
+            f"CP space of cardnality {len(cart_product)} exceeds max allowed options. Proceeding with random subset..",
+            "WARNING",
         )
         select_idx = np.random.choice(
             np.arange(len(cart_product)),
@@ -372,7 +369,6 @@ def create_available_options(
             p=None,
         )
         cart_product = [cart_product[idx] for idx in select_idx]
-
 
     if len(param_names) == len(param_space):
         # no continuous parameters

@@ -10,6 +10,7 @@ from olympus.objects import (
 	ParameterDiscrete,
 )
 from olympus.surfaces import Surface
+from problem_generator import ProblemGenerator
 
 from atlas.planners.gp.planner import BoTorchPlanner
 
@@ -139,7 +140,9 @@ def test_cat_general_cat_func(init_design_strategy, batch_size, use_descriptors,
 	run_cat_general_cat_func(init_design_strategy, batch_size, use_descriptors, acquisition_type, acquisition_optimizer, is_constrained)
 
 
-@pytest.mark.parametrize("init_design_strategy", MIXED_CAT_CONT["init_design_strategy"])
+@pytest.mark.parametrize(
+    "init_design_strategy", MIXED_CAT_CONT["init_design_strategy"]
+)
 @pytest.mark.parametrize("batch_size", MIXED_CAT_CONT["batch_size"])
 @pytest.mark.parametrize("use_descriptors", MIXED_CAT_CONT["use_descriptors"])
 @pytest.mark.parametrize("acquisition_type", MIXED_CAT_CONT["acquisition_type"])
@@ -148,7 +151,10 @@ def test_cat_general_cat_func(init_design_strategy, batch_size, use_descriptors,
 def test_cat_general_mixed_cat_cont_func(init_design_strategy, batch_size, use_descriptors, acquisition_type, acquisition_optimizer, is_constrained):
 	run_cat_general_mixed_cat_cont_func(init_design_strategy, batch_size, use_descriptors, acquisition_type, acquisition_optimizer, is_constrained)
 
-@pytest.mark.parametrize("init_design_strategy", MIXED_DISC_CONT["init_design_strategy"])
+
+@pytest.mark.parametrize(
+    "init_design_strategy", MIXED_DISC_CONT["init_design_strategy"]
+)
 @pytest.mark.parametrize("batch_size", MIXED_DISC_CONT["batch_size"])
 @pytest.mark.parametrize("use_descriptors", MIXED_DISC_CONT["use_descriptors"])
 @pytest.mark.parametrize("acquisition_type", MIXED_DISC_CONT["acquisition_type"])
@@ -158,7 +164,9 @@ def test_cat_general_mixed_disc_cont_func(init_design_strategy, batch_size, use_
 	run_cat_general_mixed_disc_cont_func(init_design_strategy, batch_size, use_descriptors, acquisition_type, acquisition_optimizer, is_constrained)
 
 
-@pytest.mark.parametrize("init_design_strategy", MIXED_CAT_DISC["init_design_strategy"])
+@pytest.mark.parametrize(
+    "init_design_strategy", MIXED_CAT_DISC["init_design_strategy"]
+)
 @pytest.mark.parametrize("batch_size", MIXED_CAT_DISC["batch_size"])
 @pytest.mark.parametrize("use_descriptors", MIXED_CAT_DISC["use_descriptors"])
 @pytest.mark.parametrize("acquisition_type", MIXED_CAT_DISC["acquisition_type"])
@@ -168,7 +176,9 @@ def test_cat_general_mixed_cat_disc_func(init_design_strategy, batch_size, use_d
 	run_cat_general_mixed_cat_disc_func(init_design_strategy, batch_size, use_descriptors, acquisition_type, acquisition_optimizer, is_constrained)
 
 
-@pytest.mark.parametrize("init_design_strategy", MIXED_CAT_DISC_CONT["init_design_strategy"])
+@pytest.mark.parametrize(
+    "init_design_strategy", MIXED_CAT_DISC_CONT["init_design_strategy"]
+)
 @pytest.mark.parametrize("batch_size", MIXED_CAT_DISC_CONT["batch_size"])
 @pytest.mark.parametrize("use_descriptors", MIXED_CAT_DISC_CONT["use_descriptors"])
 @pytest.mark.parametrize("acquisition_type", MIXED_CAT_DISC_CONT["acquisition_type"])
@@ -178,7 +188,9 @@ def test_cat_general_mixed_cat_disc_cont_func(init_design_strategy, batch_size, 
 	run_cat_general_mixed_cat_disc_cont_func(init_design_strategy, batch_size, use_descriptors, acquisition_type, acquisition_optimizer, is_constrained)
 
 @pytest.mark.parametrize("problem_type", BATCHED["problem_type"])
-@pytest.mark.parametrize("init_design_strategy", BATCHED["init_design_strategy"])
+@pytest.mark.parametrize(
+    "init_design_strategy", BATCHED["init_design_strategy"]
+)
 @pytest.mark.parametrize("batch_size", BATCHED["batch_size"])
 @pytest.mark.parametrize("acquisition_optimizer", BATCHED["acquisition_optimizer"])
 @pytest.mark.parametrize("is_constrained", BATCHED["is_constrained"])
@@ -186,18 +198,16 @@ def test_batched(problem_type, init_design_strategy, batch_size, acquisition_opt
 	run_batched(problem_type, init_design_strategy, batch_size, acquisition_optimizer, is_constrained)
 
 
-
-
-#------------------------
+# ------------------------
 # GENERAL PARAM SURFACES
-#------------------------
+# ------------------------
 
 
 def surface_general(x, s, surfaces):
 	return surfaces[s].run(x)
 
 
-#------------------------
+# ------------------------
 
 
 def run_batched(problem_type, init_design_strategy, batch_size, acquisition_optimizer, is_constrained):

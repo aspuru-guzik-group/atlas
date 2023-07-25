@@ -1,36 +1,33 @@
 #!/usr/bin/env python
 
 
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from copy import deepcopy
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
+import gpytorch
 import numpy as np
 import torch
-import gpytorch
+
 
 class UnknownConstraints:
-
     def __init__(
-        self, 
-        params_obj, 
+        self,
+        params_obj,
         feas_strategy,
         feas_param,
-
     ):
         self.params_obj = params_obj
         self.feas_strategy = feas_strategy
         self.feas_param = feas_param
 
-
     def handle_naive_feas_strategies(
         self,
-        train_x_scaled_reg: torch.Tensor, 
+        train_x_scaled_reg: torch.Tensor,
         train_y_scaled_reg: torch.Tensor,
         train_x_scaled_cla: torch.Tensor,
         train_y_scaled_cla: torch.Tensor,
         reg_model: Optional[gpytorch.models.ExactGP] = None,
-    ) -> Tuple[torch.Tensor,torch.Tensor,torch.Tensor,torch.Tensor,bool]:
-
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, bool]:
         use_p_feas_only = False
 
         if "naive-" in self.feas_strategy:
@@ -56,9 +53,7 @@ class UnknownConstraints:
                         posterior = reg_model.posterior(X=input_)
                         pred_mu = posterior.mean.detach()
 
-                        new_train_y_scaled_reg[
-                            infeas_ix
-                        ] = pred_mu.squeeze(-1)
+                        new_train_y_scaled_reg[infeas_ix] = pred_mu.squeeze(-1)
                         new_train_y_scaled_reg[
                             feas_ix
                         ] = train_y_scaled_reg.squeeze(-1)
@@ -66,11 +61,9 @@ class UnknownConstraints:
                         train_x_scaled_reg = deepcopy(
                             train_x_scaled_cla
                         ).double()
-                        train_y_scaled_reg = (
-                            new_train_y_scaled_reg.view(
-                                self.train_y_scaled_cla.size(0), 1
-                            ).double()
-                        )
+                        train_y_scaled_reg = new_train_y_scaled_reg.view(
+                            self.train_y_scaled_cla.size(0), 1
+                        ).double()
 
                     else:
                         use_p_feas_only = True
@@ -91,9 +84,7 @@ class UnknownConstraints:
                         feas_ix
                     ] = train_y_scaled_reg.squeeze()
 
-                    train_x_scaled_reg = (
-                        train_x_scaled_cla.double()
-                    )
+                    train_x_scaled_reg = train_x_scaled_cla.double()
                     train_y_scaled_reg = new_train_y_scaled_reg.view(
                         train_y_scaled_cla.size(0), 1
                     )
@@ -105,12 +96,10 @@ class UnknownConstraints:
                 # do nothing at all and use the feasibilty surrogate as the acquisition
                 use_p_feas_only = True
 
-        return ( 
+        return (
             train_x_scaled_reg,
             train_y_scaled_reg,
             train_x_scaled_cla,
             train_y_scaled_cla,
-            use_p_feas_only
+            use_p_feas_only,
         )
-
-

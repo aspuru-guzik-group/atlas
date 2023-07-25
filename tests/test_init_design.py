@@ -11,38 +11,33 @@ from olympus.objects import (
     ParameterDiscrete,
     ParameterVector,
 )
-
 from olympus.surfaces import Surface
 
 from atlas.planners.gp.planner import BoTorchPlanner
 
-
 RANDOM = {
-    'param_type': ['cont', 'disc', 'cat'],
-    'batch_size': [1, 5],
-    'num_init_design': [10],
+    "param_type": ["cont", "disc", "cat"],
+    "batch_size": [1, 5],
+    "num_init_design": [10],
 }
 
 LHS = {
-    'param_type': ['cont'],
-    'batch_size': [1, 5],
-    'num_init_design': [10],
+    "param_type": ["cont"],
+    "batch_size": [1, 5],
+    "num_init_design": [10],
 }
 
 SOBOL = {
-    'param_type': ['cont'],
-    'batch_size': [1, 5],
-    'num_init_design': [10],
+    "param_type": ["cont"],
+    "batch_size": [1, 5],
+    "num_init_design": [10],
 }
 
 # TODO implement Grid as inital design planner
-GRID = {
+GRID = {}
 
-}
-    
 
 def set_cont(init_design_strategy, batch_size, num_init_design):
-
     param_space = ParameterSpace()
     param_0 = ParameterContinuous(name="param_0", low=0.0, high=1.0)
     param_1 = ParameterContinuous(name="param_1", low=0.0, high=1.0)
@@ -64,6 +59,7 @@ def set_cont(init_design_strategy, batch_size, num_init_design):
     campaign.set_param_space(param_space)
 
     return planner, campaign
+
 
 def set_disc(init_design_strategy, batch_size, num_init_design):
     param_space = ParameterSpace()
@@ -97,6 +93,7 @@ def set_disc(init_design_strategy, batch_size, num_init_design):
 
     return planner, campaign
 
+
 def set_cat(init_design_strategy, batch_size, num_init_design):
     surface_kind = "CatDejong"
     surface = Surface(kind=surface_kind, param_dim=2, num_opts=21)
@@ -122,11 +119,13 @@ def set_cat(init_design_strategy, batch_size, num_init_design):
 def test_init_design_random(param_type, batch_size, num_init_design):
     run_random(param_type, batch_size, num_init_design)
 
+
 @pytest.mark.parametrize("param_type", LHS["param_type"])
 @pytest.mark.parametrize("batch_size", LHS["batch_size"])
 @pytest.mark.parametrize("num_init_design", LHS["num_init_design"])
 def test_init_design_lhs(param_type, batch_size, num_init_design):
     run_lhs(param_type, batch_size, num_init_design)
+
 
 @pytest.mark.parametrize("param_type", SOBOL["param_type"])
 @pytest.mark.parametrize("batch_size", SOBOL["batch_size"])
@@ -135,20 +134,17 @@ def test_init_design_sobol(param_type, batch_size, num_init_design):
     run_sobol(param_type, batch_size, num_init_design)
 
 
-
 def run_random(param_type, batch_size, num_init_design):
-
-    if param_type == 'cont':
-        planner, campaign = set_cont('random', batch_size, num_init_design)
-    elif param_type == 'disc':
-        planner, campaign = set_disc('random', batch_size, num_init_design)
-    elif param_type == 'cat':
-        planner, campaign = set_cat('random', batch_size, num_init_design)
+    if param_type == "cont":
+        planner, campaign = set_cont("random", batch_size, num_init_design)
+    elif param_type == "disc":
+        planner, campaign = set_disc("random", batch_size, num_init_design)
+    elif param_type == "cat":
+        planner, campaign = set_cat("random", batch_size, num_init_design)
 
     BUDGET = num_init_design
 
     while len(campaign.observations.get_values()) < BUDGET:
-
         samples = planner.recommend(campaign.observations)
         for sample in samples:
             sample_arr = sample.to_array()
@@ -161,18 +157,15 @@ def run_random(param_type, batch_size, num_init_design):
     assert len(values_) == BUDGET
     # check that no recommendations are duplicated
     assert np.unique(params_, axis=0).shape[0] == params_.shape[0]
-
 
 
 def run_lhs(param_type, batch_size, num_init_design):
-
-    if param_type == 'cont':
-        planner, campaign = set_cont('lhs', batch_size, num_init_design)
+    if param_type == "cont":
+        planner, campaign = set_cont("lhs", batch_size, num_init_design)
 
     BUDGET = num_init_design
 
     while len(campaign.observations.get_values()) < BUDGET:
-
         samples = planner.recommend(campaign.observations)
         for sample in samples:
             sample_arr = sample.to_array()
@@ -185,18 +178,15 @@ def run_lhs(param_type, batch_size, num_init_design):
     assert len(values_) == BUDGET
     # check that no recommendations are duplicated
     assert np.unique(params_, axis=0).shape[0] == params_.shape[0]
-
 
 
 def run_sobol(param_type, batch_size, num_init_design):
-
-    if param_type == 'cont':
-        planner, campaign = set_cont('sobol', batch_size, num_init_design)
+    if param_type == "cont":
+        planner, campaign = set_cont("sobol", batch_size, num_init_design)
 
     BUDGET = num_init_design
 
     while len(campaign.observations.get_values()) < BUDGET:
-
         samples = planner.recommend(campaign.observations)
         for sample in samples:
             sample_arr = sample.to_array()
@@ -210,15 +200,6 @@ def run_sobol(param_type, batch_size, num_init_design):
     # check that no recommendations are duplicated
     assert np.unique(params_, axis=0).shape[0] == params_.shape[0]
 
-    
 
-
-
-
-
-
-
-
-if __name__ == '__main__':
-
-    run_lhs('cont', 5, 10)
+if __name__ == "__main__":
+    run_lhs("cont", 5, 10)

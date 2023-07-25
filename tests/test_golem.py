@@ -54,7 +54,6 @@ CONT = {
 
 @pytest.mark.parametrize("golem_config", CONT["golem_config"])
 def test_get_golem_dists_cont(golem_config):
-
     test_name = golem_config["name"]
     config = golem_config["config"]
 
@@ -142,7 +141,6 @@ def test_golem_opt_cont():
     BUDGET = 10
 
     while len(campaign.observations.get_values()) < BUDGET:
-
         samples = planner.recommend(campaign.observations)
         for sample in samples:
             sample_arr = sample.to_array()
@@ -153,13 +151,11 @@ def test_golem_opt_cont():
     assert len(campaign.observations.get_values()) == BUDGET
 
 
-
 # def test_golem_opt_mixed(golem_config):
 #     ...
 
 
 if __name__ == "__main__":
-
     # test_get_golem_dists_cont(CONT['golem_config'][0])
 
     test_golem_opt_cont()

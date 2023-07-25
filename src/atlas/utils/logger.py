@@ -13,7 +13,6 @@ from atlas import __home__
 
 
 class MessageLogger:
-
     # DEBUG, INFO           --> stdout
     # WARNING, ERROR, FATAL --> stderr
 
@@ -76,7 +75,6 @@ class MessageLogger:
         self.verbosity_levels = self.VERBOSITY_LEVELS[self.verbosity]
 
     def log(self, message, message_type):
-
         # check if we need to log the message
         if message_type in self.verbosity_levels:
             color = self.COLORS[message_type]
@@ -104,7 +102,6 @@ class MessageLogger:
         self.console.rule()
 
     def log_config(self, full_campaign, campaign_config):
-
         # -----------------
         # parameter space
         # -----------------

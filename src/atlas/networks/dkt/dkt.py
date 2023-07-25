@@ -18,6 +18,7 @@ from atlas.utils.network_utils import get_args, parse_params
 
 torch.set_default_dtype(torch.double)
 
+
 class Feature(nn.Module):
     """
     Feature extractor
@@ -58,7 +59,6 @@ class ExactGPModel(gpytorch.models.ExactGP):
 
 
 class DKT:
-
     DEFAULT_HYPERPARAMS = {
         "model": {
             "device": "cpu",
@@ -145,7 +145,6 @@ class DKT:
         scaled=False,
         return_unscaled=False,
     ):
-
         if len(target_x.shape) == 3:
             # remove middle dimension
             target_x = target_x[:, 0, :]
@@ -268,8 +267,6 @@ class DKT:
         train_tasks = _train_tasks
         valid_tasks = _valid_tasks
 
-      
-
         self.likelihood.train()
         self.gp.train()
         self.net.train()
@@ -277,7 +274,6 @@ class DKT:
         criterion = nn.MSELoss()
 
         for epoch in range(self.hp["model"]["epochs"]):
-
             self.optimizer.zero_grad()
 
             # training
@@ -315,12 +311,11 @@ class DKT:
             mse = criterion(preds.mean, train_context_y_batch)
 
             if epoch % self.hp["model"]["pred_int"] == 0:
-
                 loss = np.around(loss.detach().numpy(), 3)
                 mse = np.around(mse.detach().numpy(), 3)
                 Logger.log(
                     f"[EPOCH {epoch}] - Train loss: {round(loss,2)} Train mse: {round(mse,2)}",
-                    'INFO'
+                    "INFO",
                 )
 
         # set the likelihood and net to evaluation mode
@@ -357,7 +352,6 @@ class DKT:
 
 # DEBUG:
 if __name__ == "__main__":
-
     import matplotlib.pyplot as plt
     import seaborn as sns
 
@@ -384,7 +378,6 @@ if __name__ == "__main__":
 
     # make a prediction on a new function
     for n_context in [1, 2, 3, 5, 10]:  # [1, 2, 3, 4, 5]:
-
         n_target = 100
 
         context_indices = np.arange(100)
