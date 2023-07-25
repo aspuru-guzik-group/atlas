@@ -23,24 +23,22 @@ optimization, meta-learning optimization, data-driven search space expansion/con
 
 ## Installation
 
-Install `atlas` from source by executing the following commands
+Atlas is available for installation using `pip` or `conda-forge`
+
+```bash
+pip install matter-atlas
+```
+
+```bash
+conda install -c conda-forge matter-atlas
+```
+
+Alternatively you can install `atlas` from source in edit mode by executing the following commands
 
 ```bash
 git clone git@github.com:rileyhickman/atlas.git
 cd atlas
 pip install -e .
-```
-
-To use the Google doc feature, you must install the Google client library
-
-```
-pip install --upgrade google-api-python-client google-auth-httplib2 google-auth-oauthlib
-```
-
-and `gspread`
-
-```
-pip install gspread
 ```
 
 ## Usage
