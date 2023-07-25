@@ -24,7 +24,6 @@ from atlas.utils.synthetic_data import (
     gp_factory,
     mixed_source_code,
     olymp_cat_source_task_gen,
-    single_source_code,
     trig_factory,
 )
 
