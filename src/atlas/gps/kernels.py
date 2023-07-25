@@ -1,17 +1,16 @@
 #!/usr/bin/env python
 
-import torch
 import gpytorch
+import torch
 
 torch.set_default_dtype(torch.double)
 
 # Code taken from https://github.com/leojklarner/gauche/blob/main/gauche/kernels/fingerprint_kernels/tanimoto_kernel.py
 # Publication: https://arxiv.org/pdf/2212.04450.pdf
- 
+
 
 def default_postprocess_script(x):
     return x
-
 
 
 def batch_tanimoto_sim(
@@ -188,4 +187,3 @@ class TanimotoKernel(BitKernel):
             )
         else:
             return self.covar_dist(x1, x2, **params)
-

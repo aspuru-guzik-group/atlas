@@ -1,37 +1,31 @@
 #!/usr/bin/env python
 
 import time
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import warnings
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import gpytorch
 import numpy as np
 import torch
-
 from botorch.fit import fit_gpytorch_mll
 from botorch.models import MixedSingleTaskGP, SingleTaskGP
-
 from gpytorch.mlls import ExactMarginalLogLikelihood
 from olympus import ParameterVector
 from olympus.campaigns import ParameterSpace
 
 from atlas import Logger, tkwargs
-
 from atlas.acquisition_functions.acqfs import get_acqf_instance
-
 from atlas.acquisition_optimizers import (
     GeneticOptimizer,
     GradientOptimizer,
-    PymooGAOptimizer
+    PymooGAOptimizer,
 )
 from atlas.base.base import BasePlanner
 from atlas.gps.gps import CategoricalSingleTaskGP, TanimotoGP
-
 from atlas.utils.planner_utils import get_cat_dims
 
 warnings.filterwarnings("ignore", "^.*jitter.*", category=RuntimeWarning)
 torch.set_default_dtype(torch.double)
-
 
 
 class BoTorchPlanner(BasePlanner):
@@ -96,11 +90,11 @@ class BoTorchPlanner(BasePlanner):
 
         # check that we are using the 'general' parameter acquisition
         if self.general_parameters is not None:
-            if not self.acquisition_type == 'general':
+            if not self.acquisition_type == "general":
                 msg = f'Acquisition type {self.acquisition_type} requested, but general parameters specified. Overriding to "general"...'
-                Logger.log(msg, 'WARNING')
+                Logger.log(msg, "WARNING")
 
-                self.acquisition_type = 'general'
+                self.acquisition_type = "general"
 
     def build_train_regression_gp(
         self, train_x: torch.Tensor, train_y: torch.Tensor
@@ -112,7 +106,7 @@ class BoTorchPlanner(BasePlanner):
             "fully_discrete",
             "mixed_disc_cont",
         ]:
-            model = SingleTaskGP(train_x, train_y).to(tkwargs['device'])
+            model = SingleTaskGP(train_x, train_y).to(tkwargs["device"])
         elif self.problem_type == "fully_categorical":
             if self.has_descriptors:
                 # we have some descriptors, use the Matern kernel or Tanimoto if we have all molecular dims
@@ -120,26 +114,34 @@ class BoTorchPlanner(BasePlanner):
                     # use TanimotoGP
                     # NOTE: here we assume we are given Morgan FPs as descriptors, might want to validate
                     # NOTE: this is only implemented for single molecular dimension
-                    model = TanimotoGP(train_x, train_y).to(tkwargs['device'])
+                    model = TanimotoGP(train_x, train_y).to(tkwargs["device"])
                 else:
                     # no molecular parameters, use Matern GP
-                    model = SingleTaskGP(train_x, train_y).to(tkwargs['device'])
+                    model = SingleTaskGP(train_x, train_y).to(
+                        tkwargs["device"]
+                    )
             else:
                 # if we have no descriptors, use a Categorical kernel
                 # based on the HammingDistance
-                model = CategoricalSingleTaskGP(train_x, train_y).to(tkwargs['device'])
+                model = CategoricalSingleTaskGP(train_x, train_y).to(
+                    tkwargs["device"]
+                )
         elif "mixed_cat_" in self.problem_type:
             if self.has_descriptors:
                 # we have some descriptors, use the Matern kernel
-                model = SingleTaskGP(train_x, train_y).to(tkwargs['device'])
+                model = SingleTaskGP(train_x, train_y).to(tkwargs["device"])
             else:
                 cat_dims = get_cat_dims(self.param_space)
-                model = MixedSingleTaskGP(train_x, train_y, cat_dims=cat_dims).to(tkwargs['device'])
+                model = MixedSingleTaskGP(
+                    train_x, train_y, cat_dims=cat_dims
+                ).to(tkwargs["device"])
 
         else:
             raise NotImplementedError
 
-        mll = ExactMarginalLogLikelihood(model.likelihood, model).to(tkwargs['device'])
+        mll = ExactMarginalLogLikelihood(model.likelihood, model).to(
+            tkwargs["device"]
+        )
         # fit the GP
         start_time = time.time()
         with gpytorch.settings.cholesky_jitter(self.max_jitter):
@@ -181,14 +183,13 @@ class BoTorchPlanner(BasePlanner):
                 self.train_y_scaled_reg,
                 self.train_x_scaled_cla,
                 self.train_y_scaled_cla,
-                use_p_feas_only
+                use_p_feas_only,
             ) = self.unknown_constraints.handle_naive_feas_strategies(
                 self.train_x_scaled_reg,
                 self.train_y_scaled_reg,
                 self.train_x_scaled_cla,
                 self.train_y_scaled_cla,
             )
-
 
             # builds and fits the regression surrogate model
             self.reg_model = self.build_train_regression_gp(
@@ -237,8 +238,6 @@ class BoTorchPlanner(BasePlanner):
                 / self.train_x_scaled_cla.size(0)
             ).item()
 
-        
-     
             # get compile the basic feas-aware acquisition function arguments
             acqf_args = dict(
                 acquisition_optimizer_kind=self.acquisition_optimizer_kind,
@@ -251,16 +250,14 @@ class BoTorchPlanner(BasePlanner):
                 f_best_scaled=f_best_scaled,
                 batch_size=self.batch_size,
                 use_min_filter=self.use_min_filter,
-
             )
             self.acqf = get_acqf_instance(
-                acquisition_type=self.acquisition_type, 
+                acquisition_type=self.acquisition_type,
                 reg_model=self.reg_model,
                 cla_model=self.cla_model,
                 cla_likelihood=self.cla_likelihood,
                 acqf_args=acqf_args,
             )
-
 
             if self.acquisition_optimizer_kind == "gradient":
                 acquisition_optimizer = GradientOptimizer(
@@ -292,7 +289,7 @@ class BoTorchPlanner(BasePlanner):
                     acqf_args=acqf_args,
                 )
 
-            elif self.acquisition_optimizer_kind == 'pymoo':
+            elif self.acquisition_optimizer_kind == "pymoo":
                 acquisition_optimizer = PymooGAOptimizer(
                     self.params_obj,
                     self.acquisition_type,
@@ -310,5 +307,3 @@ class BoTorchPlanner(BasePlanner):
             return_params = acquisition_optimizer.optimize()
 
         return return_params
-    
-

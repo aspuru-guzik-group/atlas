@@ -1,44 +1,38 @@
 #!/usr/bin/env python
 
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import pickle
 import time
-
 import warnings
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import gpytorch
 import numpy as np
 import torch
-from botorch.acquisition import (
-    ExpectedImprovement,
-    qExpectedImprovement,
-)
+from botorch.acquisition import ExpectedImprovement, qExpectedImprovement
 from botorch.models.gpytorch import GPyTorchModel
-
 from gpytorch.models import GP
-from olympus import ParameterVector, ParameterSpace
-
+from olympus import ParameterSpace, ParameterVector
 
 from atlas import Logger
-from atlas.networks.dkt.dkt import DKT
-from atlas.gps.gps import DKTGP
 from atlas.acquisition_functions.acqfs import get_acqf_instance
 from atlas.acquisition_optimizers import (
     GeneticOptimizer,
     GradientOptimizer,
-    PymooGAOptimizer
+    PymooGAOptimizer,
 )
 from atlas.base.base import BasePlanner
-
+from atlas.gps.gps import DKTGP
+from atlas.networks.dkt.dkt import DKT
 from atlas.utils.planner_utils import (
     Scaler,
     flip_source_tasks,
     forward_normalize,
-    propose_randomly
+    propose_randomly,
 )
 
 warnings.filterwarnings("ignore", "^.*jitter.*", category=RuntimeWarning)
 torch.set_default_dtype(torch.double)
+
 
 class DKTPlanner(BasePlanner):
     """Wrapper for deep kernel transfer planner in a closed loop
@@ -47,33 +41,33 @@ class DKTPlanner(BasePlanner):
 
     def __init__(
         self,
-		goal: str,
-		feas_strategy: Optional[str] = "naive-0",
-		feas_param: Optional[float] = 0.2,
-		use_min_filter: bool = True,
-		batch_size: int = 1,
-		batched_strategy: str = 'sequential', # sequential or greedy
-		random_seed: Optional[int] = None,
-		use_descriptors: bool = False,
-		num_init_design: int = 5,
-		init_design_strategy: str = "random",
-		acquisition_type: str = "ei",  # ei, ucb
-		acquisition_optimizer_kind: str = "gradient",  # gradient, genetic
-		vgp_iters: int = 2000,
-		vgp_lr: float = 0.1,
-		max_jitter: float = 1e-1,
-		cla_threshold: float = 0.5,
-		known_constraints: Optional[List[Callable]] = None,
-		compositional_params: Optional[List[int]] = None,
+        goal: str,
+        feas_strategy: Optional[str] = "naive-0",
+        feas_param: Optional[float] = 0.2,
+        use_min_filter: bool = True,
+        batch_size: int = 1,
+        batched_strategy: str = "sequential",  # sequential or greedy
+        random_seed: Optional[int] = None,
+        use_descriptors: bool = False,
+        num_init_design: int = 5,
+        init_design_strategy: str = "random",
+        acquisition_type: str = "ei",  # ei, ucb
+        acquisition_optimizer_kind: str = "gradient",  # gradient, genetic
+        vgp_iters: int = 2000,
+        vgp_lr: float = 0.1,
+        max_jitter: float = 1e-1,
+        cla_threshold: float = 0.5,
+        known_constraints: Optional[List[Callable]] = None,
+        compositional_params: Optional[List[int]] = None,
         permutation_params: Optional[List[int]] = None,
-		batch_constrained_params: Optional[List[int]] = None,
-		general_parameters: Optional[List[int]] = None,
-		is_moo: bool = False,
-		value_space: Optional[ParameterSpace] = None,
-		scalarizer_kind: Optional[str] = "Hypervolume",
-		moo_params: Dict[str, Union[str, float, int, bool, List]] = {},
-		goals: Optional[List[str]] = None,
-		golem_config: Optional[Dict[str, Any]] = None,
+        batch_constrained_params: Optional[List[int]] = None,
+        general_parameters: Optional[List[int]] = None,
+        is_moo: bool = False,
+        value_space: Optional[ParameterSpace] = None,
+        scalarizer_kind: Optional[str] = "Hypervolume",
+        moo_params: Dict[str, Union[str, float, int, bool, List]] = {},
+        goals: Optional[List[str]] = None,
+        golem_config: Optional[Dict[str, Any]] = None,
         # meta-learning stuff
         warm_start=False,
         model_path="./.tmp_models",
@@ -83,7 +77,6 @@ class DKTPlanner(BasePlanner):
         hyperparams={},
         **kwargs,
     ):
-
         local_args = {
             key: val for key, val in locals().items() if key != "self"
         }
@@ -130,14 +123,12 @@ class DKTPlanner(BasePlanner):
             if param.type in ["continuous", "discrete"]:
                 x_dim += 1
             elif param.type == "categorical":
-            
                 if param.descriptors[0] is not None:
                     # we have descriptors
                     x_dim += len(param.descriptors[0])
                 else:
                     # we dont have descritpors, one hot encodings
                     x_dim += len(param.options)
-
 
         self.model = DKT(
             x_dim=x_dim,
@@ -181,7 +172,6 @@ class DKTPlanner(BasePlanner):
         if not hasattr(self, "model"):
             self._meta_train()
 
-
         # if we have all nan values, just keep randomly sampling
         if np.logical_or(
             len(self._values) < self.num_init_design,
@@ -209,7 +199,7 @@ class DKTPlanner(BasePlanner):
                 self.train_y_scaled_reg,
                 self.train_x_scaled_cla,
                 self.train_y_scaled_cla,
-                use_p_feas_only
+                use_p_feas_only,
             ) = self.unknown_constraints.handle_naive_feas_strategies(
                 self.train_x_scaled_reg,
                 self.train_y_scaled_reg,
@@ -254,7 +244,6 @@ class DKTPlanner(BasePlanner):
                 self.cla_model, self.cla_likelihood = None, None
                 self.cla_surr_min_, self.cla_surr_max_ = None, None
 
-
             # get the incumbent point
             f_best_argmin = torch.argmin(self.train_y_scaled_reg)
             f_best_scaled = self.train_y_scaled_reg[f_best_argmin][0].double()
@@ -264,7 +253,7 @@ class DKTPlanner(BasePlanner):
                 torch.sum(self.train_y_scaled_cla)
                 / self.train_x_scaled_cla.size(0)
             ).item()
-            
+
             # get compile the basic feas-aware acquisition function arguments
             acqf_args = dict(
                 acquisition_optimizer_kind=self.acquisition_optimizer_kind,
@@ -279,13 +268,12 @@ class DKTPlanner(BasePlanner):
                 use_min_filter=self.use_min_filter,
             )
             self.acqf = get_acqf_instance(
-                acquisition_type=self.acquisition_type, 
+                acquisition_type=self.acquisition_type,
                 reg_model=self.reg_model,
                 cla_model=self.cla_model,
                 cla_likelihood=self.cla_likelihood,
                 acqf_args=acqf_args,
             )
-
 
             # set acquisition optimizer
             if self.acquisition_optimizer_kind == "gradient":
@@ -316,7 +304,7 @@ class DKTPlanner(BasePlanner):
                     use_reg_only=use_reg_only,
                 )
 
-            elif self.acquisition_optimizer_kind == 'pymoo':
+            elif self.acquisition_optimizer_kind == "pymoo":
                 acquisition_optimizer = PymooGAOptimizer(
                     self.params_obj,
                     self.acquisition_type,
@@ -334,7 +322,6 @@ class DKTPlanner(BasePlanner):
 
         return return_params
 
-
     def get_aqcf_min_max(self, reg_model, f_best_scaled, num_samples=2000):
         """computes the min and max value of the acquisition function without
         the feasibility contribution. These values will be used to approximately
@@ -348,13 +335,17 @@ class DKTPlanner(BasePlanner):
             acqf = qExpectedImprovement(
                 reg_model, f_best_scaled, objective=None, maximize=False
             )
-        samples, _ = propose_randomly(num_samples, self.param_space, self.has_descriptors)
+        samples, _ = propose_randomly(
+            num_samples, self.param_space, self.has_descriptors
+        )
         if (
             not self.problem_type == "fully_categorical"
             and not self.has_descriptors
         ):
             # we dont scale the parameters if we have a one-hot-encoded representation
-            samples = forward_normalize(samples, self.params_obj._mins_x, self.params_obj._maxs_x)
+            samples = forward_normalize(
+                samples, self.params_obj._mins_x, self.params_obj._maxs_x
+            )
 
         acqf_vals = acqf(
             torch.tensor(samples)
@@ -373,7 +364,6 @@ class DKTPlanner(BasePlanner):
 
 # DEBUGGING
 if __name__ == "__main__":
-
     from botorch.utils.sampling import draw_sobol_samples
     from botorch.utils.transforms import normalize, unnormalize
     from olympus.campaigns import Campaign, ParameterSpace
@@ -467,7 +457,6 @@ if __name__ == "__main__":
         # ---------------------
 
         for iter in range(BUDGET):
-
             samples = planner.recommend(campaign.observations)
             print(f"ITER : {iter}\tSAMPLES : {samples}")
 
@@ -618,7 +607,6 @@ if __name__ == "__main__":
                 plt.pause(2)
 
     elif PARAM_TYPE == "categorical":
-
         # test directly the 2d synthetic Olympus tests
 
         # -----------------------------
@@ -659,7 +647,6 @@ if __name__ == "__main__":
         # ---------------------
 
         for iter in range(BUDGET):
-
             samples = planner.recommend(campaign.observations)
             print(f"ITER : {iter}\tSAMPLES : {samples}")
             sample = samples[0]
@@ -668,7 +655,6 @@ if __name__ == "__main__":
             campaign.add_observation(sample_arr, measurement[0])
 
     elif PARAM_TYPE == "mixed":
-
         from summit.benchmarks import MIT_case1
         from summit.strategies import LHS
         from summit.utils.dataset import DataSet

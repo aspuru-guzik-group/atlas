@@ -11,15 +11,24 @@ from olympus.campaigns import ParameterSpace
 from rich.progress import track
 
 from atlas import Logger
-from atlas.acquisition_functions.acqf_utils import get_batch_initial_conditions, create_available_options
+from atlas.acquisition_functions.acqf_utils import (
+    create_available_options,
+    get_batch_initial_conditions,
+)
 from atlas.acquisition_optimizers.base_optimizer import AcquisitionOptimizer
 from atlas.params.params import Parameters
-from atlas.utils.planner_utils import (cat_param_to_feat, forward_normalize,
-                                    forward_standardize, get_cat_dims,
-                                    get_fixed_features_list,
-                                    infer_problem_type, param_vector_to_dict,
-                                    propose_randomly, reverse_normalize,
-                                    reverse_standardize)
+from atlas.utils.planner_utils import (
+    cat_param_to_feat,
+    forward_normalize,
+    forward_standardize,
+    get_cat_dims,
+    get_fixed_features_list,
+    infer_problem_type,
+    param_vector_to_dict,
+    propose_randomly,
+    reverse_normalize,
+    reverse_standardize,
+)
 
 
 class GeneticOptimizer(AcquisitionOptimizer):
@@ -34,7 +43,7 @@ class GeneticOptimizer(AcquisitionOptimizer):
         fca_constraint: Callable,
         params: torch.Tensor,
         timings_dict: Dict,
-        use_reg_only:bool=False,
+        use_reg_only: bool = False,
         acqf_args=None,
         **kwargs: Any,
     ):
@@ -65,74 +74,79 @@ class GeneticOptimizer(AcquisitionOptimizer):
         self._mins_x = self.params_obj._mins_x
         self._maxs_x = self.params_obj._maxs_x
 
-        self.kind = 'genetic'
+        self.kind = "genetic"
 
         # range of opt domain dimensions
         self.param_ranges = self._get_param_ranges()
-
-    
-
 
     def _wrapped_fca_constraint(self, params):
         # >= 0 is a feasible point --> True
         # < 0 is an infeasible point --> False
         # transform dictionary rep of x to expanded format
         expanded = self.params_obj.param_vectors_to_expanded(
-            [ParameterVector().from_dict(params,self.param_space)],
+            [ParameterVector().from_dict(params, self.param_space)],
             is_scaled=True,
-            return_scaled=False # should already be scaled
+            return_scaled=False,  # should already be scaled
         )
-        val = self.fca_constraint(
-            torch.tensor(expanded).view(expanded.shape[0], 1, expanded.shape[1])
-        ).detach().numpy()[0][0]
+        val = (
+            self.fca_constraint(
+                torch.tensor(expanded).view(
+                    expanded.shape[0], 1, expanded.shape[1]
+                )
+            )
+            .detach()
+            .numpy()[0][0]
+        )
 
         if val >= 0:
             return True
         else:
             return False
 
-
     def _get_param_ranges(self):
         param_ranges = []
         counter = 0
         for param in self.param_space:
-            if param.type == 'continuous':
-                param_ranges.append(self.bounds[1,counter]-self.bounds[0,counter])
-                counter+=1
-            elif param.type=='discrete':
+            if param.type == "continuous":
+                param_ranges.append(
+                    self.bounds[1, counter] - self.bounds[0, counter]
+                )
+                counter += 1
+            elif param.type == "discrete":
                 param_ranges.append(len(param.options))
-                counter+=1
-            elif param.type == 'categorical':
+                counter += 1
+            elif param.type == "categorical":
                 param_ranges.append(len(param.options))
                 if self.has_descriptors:
-                    counter+=len(param.descriptors[0])
+                    counter += len(param.descriptors[0])
                 else:
-                    counter+=len(param.options)
+                    counter += len(param.options)
         return np.array(param_ranges)
-
 
     def indexify(self):
         samples = []
         counter = 0
-        for cond, cond_raw in zip(self.batch_initial_conditions, self.raw_conditions):
+        for cond, cond_raw in zip(
+            self.batch_initial_conditions, self.raw_conditions
+        ):
             sample = []
             counter = 0
             for elem, p in zip(cond_raw, self.param_space):
-                if p.type == 'continuous':
+                if p.type == "continuous":
                     sample.append(float(cond[counter]))
-                    counter+=1
-                elif p.type == 'discrete':
+                    counter += 1
+                elif p.type == "discrete":
                     sample.append(float(p.options.index(float(elem))))
-                    counter+=1
-                elif p.type == 'categorical':
+                    counter += 1
+                elif p.type == "categorical":
                     sample.append(float(p.options.index(elem)))
                     if self.has_descriptors:
-                        counter+=len(p.descriptors[0])
+                        counter += len(p.descriptors[0])
                     else:
-                        counter+=len(p.options)
+                        counter += len(p.options)
             samples.append(sample)
         return np.array(samples)
-    
+
     # def indexify_x(self, x):
     #     """ same function as above but indexifies a given set of
     #     inputs  x
@@ -145,32 +159,30 @@ class GeneticOptimizer(AcquisitionOptimizer):
 
     #     return None
 
-
     def deindexify(self, x):
         samples = []
         for x_ in x:
             sample = []
             counter = 0
             for elem, p in zip(x_, self.param_space):
-
-                if p.type == 'continuous':
+                if p.type == "continuous":
                     sample.append(float(elem))
-                    counter+=1
-                elif p.type == 'discrete':
+                    counter += 1
+                elif p.type == "discrete":
                     sample.append(float(p.options[int(elem)]))
-                    counter+=1
-                elif p.type == 'categorical':
+                    counter += 1
+                elif p.type == "categorical":
                     sample.extend(
                         cat_param_to_feat(
-                            p, p.options[int(elem)], self.has_descriptors,
+                            p,
+                            p.options[int(elem)],
+                            self.has_descriptors,
                         )
                     )
             samples.append(sample)
         return np.array(samples)
 
-
     def acquisition(self, x: np.ndarray) -> Tuple:
-
         x = self.deindexify(x.reshape((1, x.shape[0])))
         # x = torch.tensor(
         #     x.reshape((1, self.batch_size, x.shape[1]))
@@ -179,11 +191,11 @@ class GeneticOptimizer(AcquisitionOptimizer):
         x = torch.tile(torch.tensor(x), dims=(1, self.batch_size, 1))
         # return the negative of the acqf - this is conventionally minimized by
         # deap, but we want to maximize acqf
-        return -self.acqf(x).detach().numpy()[0],
+        return (-self.acqf(x).detach().numpy()[0],)
 
-
-
-    def _optimize(self, max_iter:int=10, show_progress:bool=True) -> List[ParameterVector]:
+    def _optimize(
+        self, max_iter: int = 10, show_progress: bool = True
+    ) -> List[ParameterVector]:
         """
         Returns list of parameter vectors with the optimized recommendations
 
@@ -193,10 +205,12 @@ class GeneticOptimizer(AcquisitionOptimizer):
         (
             self.nonlinear_inequality_constraints,
             self.batch_initial_conditions,
-            self.raw_conditions
+            self.raw_conditions,
         ) = self.gen_initial_conditions()
 
-        self.batch_initial_conditions = self.batch_initial_conditions.squeeze().numpy() # scaled
+        self.batch_initial_conditions = (
+            self.batch_initial_conditions.squeeze().numpy()
+        )  # scaled
 
         if type(self.nonlinear_inequality_constraints) == type(None):
             self.nonlinear_inequality_constraints = []
@@ -204,14 +218,19 @@ class GeneticOptimizer(AcquisitionOptimizer):
         # define which single-step optimization function to use, based on whether or not
         # we have known constraints
         if self.nonlinear_inequality_constraints != []:
-            Logger.log('GA acquisition optimizer using constrained evolution', 'INFO')
+            Logger.log(
+                "GA acquisition optimizer using constrained evolution", "INFO"
+            )
             self._one_step_evolution = self._constrained_evolution
         else:
-            Logger.log('GA acquisition optimizer using unconstrained evolution', 'INFO')
+            Logger.log(
+                "GA acquisition optimizer using unconstrained evolution",
+                "INFO",
+            )
             self._one_step_evolution = self._evolution
 
         # indexify the discrete and categorical options
-        samples = self.indexify() # scaled
+        samples = self.indexify()  # scaled
 
         # crossover and mutation probabilites
         CXPB = 0.5
@@ -272,7 +291,6 @@ class GeneticOptimizer(AcquisitionOptimizer):
         record = stats.compile(population) if stats else {}
         logbook.record(gen=0, nevals=len(population), **record)
 
-
         # ------------------------------
         # Begin the generational process
         # ------------------------------
@@ -329,67 +347,75 @@ class GeneticOptimizer(AcquisitionOptimizer):
         acqf_vals = [self.acquisition(x)[0] for x in np.array(population)]
 
         batch_pop, batch_acqf_vals = self.batch_sample_selector(
-            acqf_vals, population, exp_scale_factor=0.01,
+            acqf_vals,
+            population,
+            exp_scale_factor=0.01,
         )
 
         # TODO: this bit is pretty hacky...
         batch_pop_deindex = self.deindexify(batch_pop)
         batch_pop_deindex = reverse_normalize(
-            batch_pop_deindex, self.params_obj._mins_x, self.params_obj._maxs_x,
+            batch_pop_deindex,
+            self.params_obj._mins_x,
+            self.params_obj._maxs_x,
         )
 
         batch = []
         for best_index, best_deindex in zip(batch_pop, batch_pop_deindex):
-
             sample = []
             counter = 0
             for elem, p in zip(best_index, self.param_space):
-
-                if p.type=='continuous':
+                if p.type == "continuous":
                     sample.append(
                         _project_bounds(
-                            best_deindex[counter], p.low, p.high,
+                            best_deindex[counter],
+                            p.low,
+                            p.high,
                         )
                     )
-                    counter+=1
-                elif p.type == 'discrete':
+                    counter += 1
+                elif p.type == "discrete":
                     sample.append(
                         _project_bounds(
-                            p.options[int(elem)], p.low, p.high,
+                            p.options[int(elem)],
+                            p.low,
+                            p.high,
                         )
                     )
-                    counter+=1
-                elif p.type == 'categorical':
-                    #sample.append(elem)
+                    counter += 1
+                elif p.type == "categorical":
+                    # sample.append(elem)
                     sample.append(p.options[int(elem)])
                     if self.has_descriptors:
-                        counter+=len(p.descriptors[0])
+                        counter += len(p.descriptors[0])
                     else:
-                        counter+=len(p.options)
+                        counter += len(p.options)
             batch.append(sample)
 
-        #batch_dicts = [param_vector_to_dict(sample, self.param_space) for sample in np.array(batch)]
+        # batch_dicts = [param_vector_to_dict(sample, self.param_space) for sample in np.array(batch)]
         batch_dicts = []
         for sample in batch:
-            batch_dicts.append({p.name:elem for elem, p in zip(sample, self.param_space)})
+            batch_dicts.append(
+                {p.name: elem for elem, p in zip(sample, self.param_space)}
+            )
 
-        return_params = [ParameterVector().from_dict(dict_,self.param_space) for dict_ in batch_dicts]
+        return_params = [
+            ParameterVector().from_dict(dict_, self.param_space)
+            for dict_ in batch_dicts
+        ]
         return return_params
 
-
     def batch_sample_selector(self, acqf_vals, population, exp_scale_factor):
-        """ select batch of samples from GA population
-        """
+        """select batch of samples from GA population"""
         sort_idx = np.argsort(acqf_vals)
         sort_acqf_vals = np.array(acqf_vals)[sort_idx]
         sort_pop = np.array(population)[sort_idx]
 
-        if self.batch_size==1:
+        if self.batch_size == 1:
             # return best sample
             # TODO: check inclusion in previous observations
             batch_pop = sort_pop[0]
             batch_acqf_vals = sort_acqf_vals[0]
-
 
         else:
             # return batch of samples
@@ -397,14 +423,14 @@ class GeneticOptimizer(AcquisitionOptimizer):
             # set probs
             decay = np.arange(len(acqf_vals))[::-1]
             probs = np.exp(decay) / (np.sum(np.exp(decay)))
-            
+
             batch_pop = np.empty((self.batch_size, self.params_obj.num_params))
             batch_acqf_vals = []
-            
+
             # probabilistic sample
             sample_idxs = np.random.choice(
-                np.arange(len(acqf_vals)), 
-                size=(len(acqf_vals)), 
+                np.arange(len(acqf_vals)),
+                size=(len(acqf_vals)),
                 replace=False,
                 p=probs,
             )
@@ -420,22 +446,16 @@ class GeneticOptimizer(AcquisitionOptimizer):
                     # quit()
                     batch_pop[num_added, :] = sort_pop[sample_idx]
                     batch_acqf_vals.append(sort_acqf_vals[sample_idx])
-                    num_added+=1
+                    num_added += 1
                     if num_added == self.batch_size:
                         break
                 else:
                     pass
 
-            
             print(batch_pop)
             print(batch_acqf_vals)
 
-    
-
-
         return batch_pop, batch_acqf_vals
-
-
 
     def _converged(self, population, slack=0.1):
         """If all individuals within specified subvolume, the population is not very diverse"""
@@ -448,7 +468,6 @@ class GeneticOptimizer(AcquisitionOptimizer):
 
     @staticmethod
     def _evolution(population, toolbox, halloffame, cxpb=0.5, mutpb=0.3):
-
         # size of hall of fame
         hof_size = len(halloffame.items) if halloffame.items else 0
 
@@ -472,9 +491,9 @@ class GeneticOptimizer(AcquisitionOptimizer):
 
         return offspring
 
-
-    def _constrained_evolution(self, population, toolbox, halloffame, cxpb=0.5, mutpb=0.3):
-
+    def _constrained_evolution(
+        self, population, toolbox, halloffame, cxpb=0.5, mutpb=0.3
+    ):
         # size of hall of fame
         hof_size = len(halloffame.items) if halloffame.items else 0
 
@@ -516,12 +535,14 @@ class GeneticOptimizer(AcquisitionOptimizer):
         # TODO: dont pass the parameter space here?? These should be scaled so they
         # might register a 'parameter out of bounds warning message' ...
         param = param_vector_to_dict(
-            sample=sample,
-            param_space=self.param_space
+            sample=sample, param_space=self.param_space
         )
         param_list = list(param.values())
-        #feasible = [constr(param) for constr in self.known_constraints]
-        feasible = [constr(param_list) for constr in self.nonlinear_inequality_constraints]
+        # feasible = [constr(param) for constr in self.known_constraints]
+        feasible = [
+            constr(param_list)
+            for constr in self.nonlinear_inequality_constraints
+        ]
 
         return all(feasible)
 
@@ -531,7 +552,6 @@ class GeneticOptimizer(AcquisitionOptimizer):
             ind[i] = v
 
     def _apply_feasibility_constraint(self, child, parent):
-
         child_vector = np.array(
             child, dtype=object
         )  # object needed to allow strings of different lengths
@@ -594,14 +614,14 @@ class GeneticOptimizer(AcquisitionOptimizer):
                 )
                 # update discrete, note that it can happen that child_discrete reverts to parent_discrete
                 # add noise so that we can converge to the parent if needed
-                noisy_mean = np.abs(np.mean(
-                    [parent_discrete, child_discrete], axis=0
-                ) + np.random.uniform(
-                    low=-0.1, high=0.1, size=len(parent_discrete)
-                ))
-            
-                new_discrete = np.round(noisy_mean.astype(np.double), 0)
+                noisy_mean = np.abs(
+                    np.mean([parent_discrete, child_discrete], axis=0)
+                    + np.random.uniform(
+                        low=-0.1, high=0.1, size=len(parent_discrete)
+                    )
+                )
 
+                new_discrete = np.round(noisy_mean.astype(np.double), 0)
 
                 new_vector[self.params_obj.cont_mask] = new_continuous
                 new_vector[self.params_obj.disc_mask] = new_discrete
@@ -664,7 +684,9 @@ class GeneticOptimizer(AcquisitionOptimizer):
             self._update_individual(child, new_vector)
             return
 
-    def _custom_mutation(self, individual, indpb=0.3, continuous_scale=0.1, discrete_scale=0.1):
+    def _custom_mutation(
+        self, individual, indpb=0.3, continuous_scale=0.1, discrete_scale=0.1
+    ):
         """Custom mutation that can handled continuous, discrete, and categorical variables.
         Parameters
         ----------
@@ -687,20 +709,20 @@ class GeneticOptimizer(AcquisitionOptimizer):
             if param_type == "continuous":
                 if np.random.random() < indpb:
                     # Gaussian perturbation with scale being 0.1 of domain range
-                    bound_low = self.bounds[0,bounds_ix]
-                    bound_high = self.bounds[1,bounds_ix]
+                    bound_low = self.bounds[0, bounds_ix]
+                    bound_high = self.bounds[1, bounds_ix]
                     scale = (bound_high - bound_low) * continuous_scale
                     individual[i] += np.random.normal(loc=0.0, scale=scale)
                     individual[i] = _project_bounds(
                         individual[i], bound_low, bound_high
                     )
-                bounds_ix+=1
+                bounds_ix += 1
             elif param_type == "discrete":
                 if np.random.random() < indpb:
                     # add/substract an integer by rounding Gaussian perturbation
-                    #scale is 0.1 of domain range
+                    # scale is 0.1 of domain range
                     bound_low = 0
-                    bound_high = len(param.options)-1
+                    bound_high = len(param.options) - 1
                     # if we have very few discrete variables, just move +/- 1
                     if bound_high - bound_low < 10:
                         delta = np.random.choice([-1, 1])
@@ -712,7 +734,7 @@ class GeneticOptimizer(AcquisitionOptimizer):
                     individual[i] = _project_bounds(
                         individual[i], bound_low, bound_high
                     )
-                bounds_ix+=1
+                bounds_ix += 1
 
             elif param_type == "categorical":
                 if np.random.random() < indpb:
@@ -729,7 +751,6 @@ class GeneticOptimizer(AcquisitionOptimizer):
                     bounds_ix += len(self.param_space[i].descriptors[0])
             else:
                 raise ValueError()
-            
 
         return (individual,)
 
@@ -748,7 +769,6 @@ def _project_bounds(x, x_low, x_high):
         return x_high
     else:
         return x
-    
 
 
 def param_vectors_to_deap_population(param_vectors):

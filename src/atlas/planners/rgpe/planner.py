@@ -1,40 +1,36 @@
 #!/usr/bin/env python
 
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import os
 import pickle
 
 # remove warnings about adding jitter
 import warnings
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import gpytorch
 import numpy as np
 import torch
-
 from botorch.fit import fit_gpytorch_mll
-from botorch.models import  SingleTaskGP
+from botorch.models import SingleTaskGP
 from botorch.models.gpytorch import GPyTorchModel
-
 from botorch.sampling.normal import SobolQMCNormalSampler
 from gpytorch.distributions import MultivariateNormal
 from gpytorch.lazy import PsdSumLazyTensor
 from gpytorch.likelihoods import LikelihoodList
 from gpytorch.mlls import ExactMarginalLogLikelihood
 from gpytorch.models import GP
-from olympus import ParameterVector, ParameterSpace
+from olympus import ParameterSpace, ParameterVector
 from torch.nn import ModuleList
 
 from atlas import Logger, tkwargs
-from atlas.gps.gps import RGPE
 from atlas.acquisition_functions.acqfs import get_acqf_instance
 from atlas.acquisition_optimizers import (
     GeneticOptimizer,
     GradientOptimizer,
-    PymooGAOptimizer
+    PymooGAOptimizer,
 )
-
 from atlas.base.base import BasePlanner
-
+from atlas.gps.gps import RGPE
 from atlas.utils.planner_utils import (
     Scaler,
     flip_source_tasks,
@@ -58,42 +54,41 @@ class RGPEPlanner(BasePlanner):
 
     def __init__(
         self,
-		goal: str,
-		feas_strategy: Optional[str] = "naive-0",
-		feas_param: Optional[float] = 0.2,
-		use_min_filter: bool = True,
-		batch_size: int = 1,
-		batched_strategy: str = 'sequential', # sequential or greedy
-		random_seed: Optional[int] = None,
-		use_descriptors: bool = False,
-		num_init_design: int = 5,
-		init_design_strategy: str = "random",
-		acquisition_type: str = "ei",  # ei, ucb
-		acquisition_optimizer_kind: str = "gradient",  # gradient, genetic
-		vgp_iters: int = 2000,
-		vgp_lr: float = 0.1,
-		max_jitter: float = 1e-1,
-		cla_threshold: float = 0.5,
-		known_constraints: Optional[List[Callable]] = None,
-		compositional_params: Optional[List[int]] = None,
+        goal: str,
+        feas_strategy: Optional[str] = "naive-0",
+        feas_param: Optional[float] = 0.2,
+        use_min_filter: bool = True,
+        batch_size: int = 1,
+        batched_strategy: str = "sequential",  # sequential or greedy
+        random_seed: Optional[int] = None,
+        use_descriptors: bool = False,
+        num_init_design: int = 5,
+        init_design_strategy: str = "random",
+        acquisition_type: str = "ei",  # ei, ucb
+        acquisition_optimizer_kind: str = "gradient",  # gradient, genetic
+        vgp_iters: int = 2000,
+        vgp_lr: float = 0.1,
+        max_jitter: float = 1e-1,
+        cla_threshold: float = 0.5,
+        known_constraints: Optional[List[Callable]] = None,
+        compositional_params: Optional[List[int]] = None,
         permutation_params: Optional[List[int]] = None,
-		batch_constrained_params: Optional[List[int]] = None,
-		general_parameters: Optional[List[int]] = None,
-		is_moo: bool = False,
-		value_space: Optional[ParameterSpace] = None,
-		scalarizer_kind: Optional[str] = "Hypervolume",
-		moo_params: Dict[str, Union[str, float, int, bool, List]] = {},
-		goals: Optional[List[str]] = None,
-		golem_config: Optional[Dict[str, Any]] = None,
+        batch_constrained_params: Optional[List[int]] = None,
+        general_parameters: Optional[List[int]] = None,
+        is_moo: bool = False,
+        value_space: Optional[ParameterSpace] = None,
+        scalarizer_kind: Optional[str] = "Hypervolume",
+        moo_params: Dict[str, Union[str, float, int, bool, List]] = {},
+        goals: Optional[List[str]] = None,
+        golem_config: Optional[Dict[str, Any]] = None,
         # meta-learning stuff
         cache_weights: bool = False,
-        weights_path: str ="./weights/",
+        weights_path: str = "./weights/",
         train_tasks: List = [],
         valid_tasks: Optional[List] = None,
         hyperparams: Optional[Dict] = {},
         **kwargs,
     ):
-
         local_args = {
             key: val for key, val in locals().items() if key != "self"
         }
@@ -165,8 +160,8 @@ class RGPEPlanner(BasePlanner):
         return source_models
 
     @staticmethod
-    def roll_col(X, shift): 
-        """roll columns to the right by `shift` indices""" 
+    def roll_col(X, shift):
+        """roll columns to the right by `shift` indices"""
         return torch.cat((X[..., -shift:], X[..., :-shift]), dim=-1)
 
     def compute_ranking_loss(self, f_samps, target_y):
@@ -243,7 +238,9 @@ class RGPEPlanner(BasePlanner):
             # Since we have a batch mode gp and model.posterior always returns an output dimension,
             # the output from `posterior.sample()` here `num_samples x n x n x 1`, so let's squeeze
             # the last dimension.
-            sampler = SobolQMCNormalSampler(sample_shape=torch.tensor([num_samples]).size())
+            sampler = SobolQMCNormalSampler(
+                sample_shape=torch.tensor([num_samples]).size()
+            )
             return sampler(posterior).squeeze(-1)
 
     def compute_rank_weights(
@@ -266,7 +263,9 @@ class RGPEPlanner(BasePlanner):
             model = base_models[task_ix]
             # compute posterior over training points for target task
             posterior = model.posterior(train_x)
-            sampler = SobolQMCNormalSampler(sample_shape=torch.tensor([num_samples]).size())
+            sampler = SobolQMCNormalSampler(
+                sample_shape=torch.tensor([num_samples]).size()
+            )
             base_f_samps = sampler(posterior).squeeze(-1).squeeze(-1)
             # compute and save ranking loss
             ranking_losses.append(
@@ -329,7 +328,7 @@ class RGPEPlanner(BasePlanner):
                 self.train_y_scaled_reg,
                 self.train_x_scaled_cla,
                 self.train_y_scaled_cla,
-                use_p_feas_only
+                use_p_feas_only,
             ) = self.unknown_constraints.handle_naive_feas_strategies(
                 self.train_x_scaled_reg,
                 self.train_y_scaled_reg,
@@ -369,7 +368,7 @@ class RGPEPlanner(BasePlanner):
                         },
                         f,
                     )
-            
+
             # TODO: can probably put this bit in the unknown constraints module
             if (
                 not "naive-" in self.feas_strategy
@@ -402,7 +401,6 @@ class RGPEPlanner(BasePlanner):
                 self.cla_model, self.cla_likelihood = None, None
                 self.cla_surr_min_, self.cla_surr_max_ = None, None
 
-
             # get the incumbent point
             f_best_argmin = torch.argmin(self.train_y_scaled_reg)
             f_best_scaled = self.train_y_scaled_reg[f_best_argmin][0].float()
@@ -412,7 +410,7 @@ class RGPEPlanner(BasePlanner):
                 torch.sum(self.train_y_scaled_cla)
                 / self.train_x_scaled_cla.size(0)
             ).item()
-        
+
             # get compile the basic feas-aware acquisition function arguments
             acqf_args = dict(
                 acquisition_optimizer_kind=self.acquisition_optimizer_kind,
@@ -427,7 +425,7 @@ class RGPEPlanner(BasePlanner):
                 use_min_filter=self.use_min_filter,
             )
             self.acqf = get_acqf_instance(
-                acquisition_type=self.acquisition_type, 
+                acquisition_type=self.acquisition_type,
                 reg_model=self.reg_model,
                 cla_model=self.cla_model,
                 cla_likelihood=self.cla_likelihood,
@@ -463,7 +461,7 @@ class RGPEPlanner(BasePlanner):
                     use_reg_only=use_reg_only,
                 )
 
-            elif self.acquisition_optimizer_kind == 'pymoo':
+            elif self.acquisition_optimizer_kind == "pymoo":
                 acquisition_optimizer = PymooGAOptimizer(
                     self.params_obj,
                     self.acquisition_type,
