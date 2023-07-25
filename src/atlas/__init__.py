@@ -3,7 +3,7 @@
 import os
 from glob import glob
 import torch
-
+import botorch
 
 atlas_home = os.path.dirname(os.path.abspath(__file__))
 atlas_scratch = os.path.join(

@@ -33,6 +33,7 @@ warnings.filterwarnings("ignore", "^.*jitter.*", category=RuntimeWarning)
 torch.set_default_dtype(torch.double)
 
 
+
 class BoTorchPlanner(BasePlanner):
     """Wrapper for GP-based Bayesiam optimization with BoTorch
     Args:

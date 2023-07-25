@@ -1,0 +1,30 @@
+# Use the latest 2.1 version of CircleCI pipeline process engine.
+# See: https://circleci.com/docs/2.0/configuration-reference
+version: 2.1
+
+orbs:
+  codecov: codecov/codecov@3.2.2
+
+# Define a job to be invoked later in a workflow.
+# See: https://circleci.com/docs/2.0/configuration-reference/#jobs
+jobs:
+  build-and-test:
+    executor: python/default
+    # docker:
+    #   - image: cimg/python:3.8.15
+    steps:
+      - checkout
+      - run:
+          name: install-requirements
+          command: pip install -r requirements.txt
+      - run:
+          name: run-tests-cov
+          command: pytest --cov=src/
+      - codecov/upload
+
+# Invoke jobs via workflows
+# See: https://circleci.com/docs/2.0/configuration-reference/#workflows
+workflows:
+  build-and-test-workflow:
+    jobs:
+      - build-and-test
