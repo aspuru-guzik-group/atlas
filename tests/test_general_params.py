@@ -206,7 +206,13 @@ def run_batched(problem_type, init_design_strategy, batch_size, acquisition_opti
 		pass
 
 def run_cat_general_cont_func(
-        init_design_strategy, batch_size, use_descriptors, acquisition_type, acquisition_optimizer, num_init_design=5):
+        init_design_strategy, 
+        batch_size, 
+        use_descriptors, 
+        acquisition_type, 
+        acquisition_optimizer, 
+        num_init_design=5,
+    ):
     """ single categorical general parameter
     """
     param_space = ParameterSpace()
@@ -228,6 +234,8 @@ def run_cat_general_cont_func(
     for general_param_option in param_space[0].options:
         surface_callable, _ = problem_gen.generate_instance()
         surfaces[general_param_option] = surface_callable
+    
+
         
 
     campaign = Campaign()

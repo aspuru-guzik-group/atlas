@@ -44,6 +44,10 @@ from atlas.known_constraints.known_constraints import (
 
 torch.set_default_dtype(torch.double)
 
+gpytorch.settings.debug(state=False)
+import botorch
+botorch.settings.validate_input_scaling(state=False)
+
 
 class BasePlanner(CustomPlanner):
 	def __init__(
