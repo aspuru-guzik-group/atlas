@@ -23,7 +23,7 @@ optimization, meta-learning optimization, data-driven search space expansion/con
 
 ## Installation
 
-Atlas is available for installation using `pip` or `conda-forge`
+Atlas is available for installation using `pip` or `conda-forge`.
 
 ```bash
 pip install matter-atlas
