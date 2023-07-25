@@ -1,7 +1,8 @@
 # Atlas
 
 
-[![aspuru-guzik-group](https://circleci.com/gh/aspuru-guzik-group/atlas.svg?style=svg)](https://app.circleci.com/pipelines/github/aspuru-guzik-group/atlas)
+[![aspuru-guzik-group](https://circleci.com/gh/aspuru-guzik-group/atlas.svg?style=shield)](https://app.circleci.com/pipelines/github/aspuru-guzik-group/atlas)
+
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
