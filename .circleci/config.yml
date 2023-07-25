@@ -18,6 +18,9 @@ jobs:
       - run:
           name: install-requirements
           command: pip install -r requirements.txt
+      - run: 
+          name: install-package
+          command: pip install .
       - run:
           name: run-tests-cov
           command: pytest --cov=src/
