@@ -31,6 +31,7 @@ from atlas.acquisition_functions.acqf_utils import (
 )
 from atlas.acquisition_optimizers.base_optimizer import AcquisitionOptimizer
 from atlas.params.params import Parameters
+from atlas.sample_selector.sample_selector import batch_local_penalization_selector
 from atlas.utils.planner_utils import infer_problem_type, propose_randomly
 
 
@@ -468,6 +469,7 @@ class PymooGAOptimizer(AcquisitionOptimizer):
                 pop_size=self.pop_size,
                 # sampling=gen_initial_population,
                 # eliminate_duplicates=self.eliminate_duplicates,
+                mu=1000.,
             )
 
             res = minimize(
@@ -487,5 +489,14 @@ class PymooGAOptimizer(AcquisitionOptimizer):
         # NOTE: this will only work for a single fixed parameter now but that
         # should be fine.... might need to change later
         return_params = self._batch_sample_selector(all_res[0].pop)
+        # return_params = batch_local_penalization_selector(
+        #     pymoo_results=all_res,
+        #     pymoo_problem=self.pymoo_problem,
+        #     batch_size=self.batch_size,
+        #     dist_param=0.5,
+        # )
+
+
+
 
         return return_params

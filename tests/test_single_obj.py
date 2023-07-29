@@ -684,14 +684,14 @@ if __name__ == "__main__":
     # 	num_init_design=6,
     # )
 
-    run_continuous(
-        init_design_strategy="random",
-        batch_size=1,
-        use_descriptors=False,
-        acquisition_type="ucb",
-        acquisition_optimizer="pymoo",
-        num_init_design=4,
-    )
+    # run_continuous(
+    #     init_design_strategy="random",
+    #     batch_size=1,
+    #     use_descriptors=False,
+    #     acquisition_type="ucb",
+    #     acquisition_optimizer="pymoo",
+    #     num_init_design=4,
+    # )
 
     # run_categorical(
     # 	init_design_strategy='random',
@@ -737,3 +737,10 @@ if __name__ == "__main__":
     # 	acquisition_optimizer='pymoo',
     # 	num_init_design=5,
     # )
+
+    run_batched(
+        problem_type='cont', 
+        init_design_strategy='random', 
+        batch_size=2, 
+        acquisition_optimizer='pymoo',
+    )   
