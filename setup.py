@@ -1,7 +1,7 @@
-""" Atlas
-Some description here...
+""" Atlas: A Brain for Self-driving Laboratories
 """
 
+import versioneer
 from setuptools import find_packages, setup
 
 
@@ -14,7 +14,9 @@ def readme():
 # Setup
 # -----
 setup(
-    name="atlas",
+    name="matter-atlas",
+    version=versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(),
     description="some description",
     long_description=readme(),
     classifiers=[
@@ -25,7 +27,7 @@ setup(
     url="https://github.com/rileyhickman/atlas",
     author="Riley Hickman",
     author_email="riley.hickman@mail.utoronto.ca",
-    # license='XXX',
+    license='MIT',
     packages=find_packages(where="src", include=["atlas*"]),
     package_dir={"": "src"},
     zip_safe=False,
