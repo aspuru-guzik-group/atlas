@@ -6,15 +6,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import numpy as np
 import torch
 from botorch.acquisition import AcquisitionFunction
-from pymoo.algorithms.moo.nsga2 import NSGA2
-from pymoo.algorithms.soo.nonconvex.ga import GA
 from pymoo.config import Config
-from pymoo.core.mixed import (
-    MixedVariableDuplicateElimination,
-    MixedVariableGA,
-    MixedVariableMating,
-    MixedVariableSampling,
-)
+from pymoo.core.mixed import MixedVariableGA
 from pymoo.core.population import Population
 from pymoo.core.problem import Problem
 from pymoo.core.variable import Choice, Integer, Real
@@ -22,13 +15,9 @@ from pymoo.optimize import minimize
 
 Config.show_compile_hint = False
 
-from olympus import ParameterVector
+from olympus.objects import ParameterVector
 
-from atlas import Logger
-from atlas.acquisition_functions.acqf_utils import (
-    create_available_options,
-    get_batch_initial_conditions,
-)
+from atlas import Logger, tkwargs
 from atlas.acquisition_optimizers.base_optimizer import AcquisitionOptimizer
 from atlas.params.params import Parameters
 from atlas.sample_selector.sample_selector import batch_local_penalization_selector
@@ -46,19 +35,20 @@ class PymooProblemWrapper(Problem):
         acqf: AcquisitionFunction,
         batch_size: int,
         known_constraints: Union[Callable, List[Callable]],
+        fca_constraint: Callable, 
         fixed_param: Dict[int, float],
         num_fantasies: int = 0,
         **kwargs,
     ):
         if not known_constraints.is_empty:
-            n_constr = 1
+            self.num_constr = 1
         else:
-            n_constr = 0
+            self.num_constr = 0
         super().__init__(
             vars=pymoo_space,
             n_vars=len(params_obj.param_space),
             n_obj=1,
-            n_constr=n_constr,
+            n_constr=self.num_constr,
             xl=bounds[0],
             xu=bounds[1],
             **kwargs,
@@ -70,6 +60,7 @@ class PymooProblemWrapper(Problem):
         self.acqf = acqf
         self.batch_size = batch_size
         self.known_constraints = known_constraints
+        self.fca_constraint = fca_constraint
         self.fixed_param = fixed_param
         self.num_fantasies = num_fantasies
 
@@ -174,20 +165,17 @@ class PymooProblemWrapper(Problem):
             is_scaled=False,
             return_scaled=True,
         )
-        vals_torch = (
-            self.fca_constraint(
-                val=self.fca_constraint(
-                    torch.tensor(X_expanded).view(
-                        X_expanded.shape[0], 1, X_expanded.shape[1]
-                    )
-                )
-            )
-            .detach()
-            .numpy()[0][0]
-        )
+        X_torch = torch.tensor(X_expanded, **tkwargs).view(X_expanded.shape[0], 1, X_expanded.shape[1])
 
-        # TODO: finish this function
-        return None
+        vals_np = self.fca_constraint(X=X_torch).detach().numpy().squeeze()
+        g = []
+        for val_np in vals_np: 
+            if val_np >= 0:
+                g.append(-2) # feasible
+            else:
+                g.append(2)
+
+        return np.array(g)
 
     def _X_to_list_dicts(self, X):
         X_list_dicts = []
@@ -254,13 +242,24 @@ class PymooProblemWrapper(Problem):
         out["F"] = f.detach().numpy()
 
         # -----------------------------
-        # known constraints evaluation
+        # constraints evaluation
         # ----------------------------
-        if not self.known_constraints.is_empty:
-            g = self._known_constraints_wrapper(X)
+        if self.acqf.feas_strategy == 'fca':
             # TODO: also take care of FCA constraint here ...
-            #
+            g_unknown = self._wrapped_fc_constraint(X)
+        else:
+            g_unknown = np.ones(X.shape[0]) * -2. # all feasible
+
+        if not self.known_constraints.is_empty:
+            g_known = self._known_constraints_wrapper(X)
+        else:
+            g_known = np.ones(X.shape[0]) * -2.
+
+        g = np.maximum(g_known, g_unknown)
+
+        if self.num_constr > 0:
             out["G"] = g
+
 
 
 def gen_initial_population(
@@ -430,6 +429,7 @@ class PymooGAOptimizer(AcquisitionOptimizer):
                     acqf=self.acqf,
                     batch_size=self.batch_size,
                     known_constraints=self.known_constraints,
+                    fca_constraint=self.fca_constraint,
                     fixed_param=fixed_param,
                     num_fantasies=self.num_fantasies,
                 )
@@ -460,6 +460,7 @@ class PymooGAOptimizer(AcquisitionOptimizer):
                 acqf=self.acqf,
                 batch_size=self.batch_size,
                 known_constraints=self.known_constraints,
+                fca_constraint=self.fca_constraint,
                 fixed_param={},
                 num_fantasies=self.num_fantasies,
             )

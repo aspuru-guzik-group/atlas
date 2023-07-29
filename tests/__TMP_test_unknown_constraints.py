@@ -828,7 +828,7 @@ def run_mixed_cat_disc_cont(
 
 
 if __name__ == "__main__":
-    run_continuous("random", 1, "fwa_0", False, "ucb", "pymoo")
+    run_continuous("random", 1, "fca_0.2", False, "ucb", "pymoo")
     # run_discrete('random', 1, 'fwa_0', False, 'pymoo')
     # run_categorical('random', 1, 'fwa_0', False, 'pymoo')
     # run_mixed_disc_cont('random', 1, 'fwa_0', False, 'pymoo')
