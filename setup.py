@@ -1,8 +1,9 @@
 """ Atlas: A Brain for Self-driving Laboratories
 """
 
-import versioneer
 from setuptools import find_packages, setup
+
+import versioneer
 
 
 def readme():
@@ -27,7 +28,7 @@ setup(
     url="https://github.com/rileyhickman/atlas",
     author="Riley Hickman",
     author_email="riley.hickman@mail.utoronto.ca",
-    license='MIT',
+    license="MIT",
     packages=find_packages(where="src", include=["atlas*"]),
     package_dir={"": "src"},
     zip_safe=False,
