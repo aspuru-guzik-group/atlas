@@ -3,7 +3,7 @@
 ![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
 
 [![aspuru-guzik-group](https://circleci.com/gh/aspuru-guzik-group/atlas.svg?style=shield)](https://app.circleci.com/pipelines/github/aspuru-guzik-group/atlas)
-[![Docs](https://readthedocs.org/projects/matter-atlas/badge/?version=latest&style=flat-default]
+![Docs](https://readthedocs.org/projects/matter-atlas/badge/?version=latest&style=flat-default)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
