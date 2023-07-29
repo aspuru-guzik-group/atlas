@@ -37,7 +37,9 @@ from atlas.utils.planner_utils import reverse_normalize
 
 
 class MultiFidelityPlanner(BasePlanner):
-    """ """
+    """ Multi-fideltiy experiment planner using the trace-aware knowledge gradient 
+    acquisition function
+    """
 
     def __init__(
         self,
@@ -204,6 +206,7 @@ class MultiFidelityPlanner(BasePlanner):
             project=self._project,
         )
         return mfkg_acqf.to(self.tkwargs["device"])
+
 
     def _ask(self) -> List[ParameterVector]:
         """query the planner for a batch of new parameter points to measure"""

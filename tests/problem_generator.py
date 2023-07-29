@@ -257,8 +257,8 @@ class KnownConstraintsGenerator:
             x1 = params[2]
 
         else:
-            x0 = params[1]
-            x1 = params[2]
+            x0 = params[0]
+            x1 = params[1]
 
         np.random.seed(100703)
         arr = np.random.randint(NUM_CAT_OPTS, size=(10, 2))
