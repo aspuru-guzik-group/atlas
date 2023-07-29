@@ -195,33 +195,124 @@ class ProblemGenerator:
             return hybrid_surface_callable, hybrid_surface_callable.param_space
 
 
+<<<<<<< HEAD
+         elif self.problem_type == 'mixed_disc_cont':
+          surface_choice_disc = str(np.random.choice(self.allowed_cont_surfaces, size=None))
+          surface_choice_cont = str(np.random.choice(self.allowed_cont_surfaces, size=None))
+          surface_callable_disc = Surface(kind=surface_choice_disc)
+          surface_callable_cont  = Surface(kind=surface_choice_cont)
+
+          hybrid_surface_callable = HybridSurface(
+            surfaces=[surface_callable_disc, surface_callable_cont],
+            surface_types=['disc', 'cont'],
+            is_moo=self.is_moo,
+          )
+
+          return hybrid_surface_callable, hybrid_surface_callable.param_space
+
+
+         elif self.problem_type == 'mixed_cat_disc':
+          surface_choice_cat = str(np.random.choice(self.allowed_cat_surfaces, size=None))
+          surface_choice_disc = str(np.random.choice(self.allowed_cont_surfaces, size=None))
+          surface_callable_cat = Surface(kind=surface_choice_cat, num_opts=NUM_CAT_OPTS)
+          surface_callable_disc  = Surface(kind=surface_choice_disc)
+          surface_callable_cat = self.add_descriptors(surface_callable_cat)
+          hybrid_surface_callable = HybridSurface(
+            surfaces=[surface_callable_cat, surface_callable_disc],
+            surface_types=['cat', 'disc'],
+            is_moo=self.is_moo,
+          )
+
+          return hybrid_surface_callable, hybrid_surface_callable.param_space
+
+         elif self.problem_type == 'mixed_cat_disc_cont':
+          surface_choice_cat = str(np.random.choice(self.allowed_cat_surfaces, size=None))
+          surface_choice_disc = str(np.random.choice(self.allowed_cont_surfaces, size=None))
+          surface_choice_cont = str(np.random.choice(self.allowed_cont_surfaces, size=None))
+          surface_callable_cat = Surface(kind=surface_choice_cat, num_opts=NUM_CAT_OPTS)
+          surface_callable_disc  = Surface(kind=surface_choice_disc)
+          surface_callable_cont  = Surface(kind=surface_choice_cont)
+          surface_callable_cat = self.add_descriptors(surface_callable_cat)
+          
+          hybrid_surface_callable = HybridSurface(
+            surfaces=[surface_callable_cat, surface_callable_disc, surface_callable_cont],
+            surface_types=['cat', 'disc', 'cont'],
+            is_moo=self.is_moo,
+          )
+
+          return hybrid_surface_callable, hybrid_surface_callable.param_space
+         
+
+
+class KnownConstraintsGenerator():
+
+    def __init__(self, is_general=False):
+        self.is_general=is_general
+=======
 class KnownConstraintsGenerator:
     def __init__(self):
         pass
+>>>>>>> 48797157e1f964bbeb8327cf50170bcbe9a4fed4
 
     def get_constraint(self, problem_type: str):
         return getattr(self, f"known_constraint_{problem_type}")
 
+<<<<<<< HEAD
+    def known_constraint_continuous(self, params):
+        if self.is_general:
+            s = params[0]
+            x0 = float(params[1])
+            x1 = float(params[2])
+        
+        else:
+            x0 = float(params[0])
+            x1 = float(params[1])
+           
+        y = (x0-0.5)**2 + (x1-0.5)**2
+            
+        if np.abs(x0-x1)<0.1:
+=======
     @staticmethod
     def known_constraint_continuous(params):
         x0 = params[0]
         x1 = params[1]
         y = (x0 - 0.5) ** 2 + (x1 - 0.5) ** 2
         if np.abs(x0 - x1) < 0.1:
+>>>>>>> 48797157e1f964bbeb8327cf50170bcbe9a4fed4
             return False
 
         if 0.05 < y < 0.15:
             return False
+<<<<<<< HEAD
+            
+=======
 
+>>>>>>> 48797157e1f964bbeb8327cf50170bcbe9a4fed4
         else:
             return True
 
+<<<<<<< HEAD
+    def known_constraint_discrete(self, params):  
+        
+        if self.is_general:
+            s = params[0]
+            x0 = float(params[1])
+            x1 = float(params[2])
+        
+        else:
+            x0 = float(params[0])
+            x1 = float(params[1])
+        
+        y = (x0-0.5)**2 + (x1-0.5)**2
+        if np.abs(x0-x1)<0.1:
+=======
     @staticmethod
     def known_constraint_discrete(params):
         x0 = params[0]
         x1 = params[1]
         y = (x0 - 0.5) ** 2 + (x1 - 0.5) ** 2
         if np.abs(x0 - x1) < 0.1:
+>>>>>>> 48797157e1f964bbeb8327cf50170bcbe9a4fed4
             return False
 
         if 0.05 < y < 0.15:
@@ -230,6 +321,22 @@ class KnownConstraintsGenerator:
         else:
             return True
 
+<<<<<<< HEAD
+
+    def known_constraint_categorical(self, params):
+       # if params[0] == 'x13' and params[1] =='x2': --> as "params[0]" is x and "params[1]" is y, imagine a grid.
+       # if params[0] == 'x13' this blocks out the entirity of the x axis of x = 13
+       # if params[0] == 'x13' and params[1] in ['x2', 'x15'] --> this is how to do straight line
+       # total of 441 blocks --> need 30-50% infesable
+        if self.is_general:
+            s = params[0]
+            x0 = params[1]
+            x1 = params[2]
+
+        else: 
+            x0 = params[1]
+            x1 = params[2]
+=======
     @staticmethod
     def known_constraint_categorical(params):
         # if params[0] == 'x13' and params[1] =='x2': --> as "params[0]" is x and "params[1]" is y, imagine a grid.
@@ -238,6 +345,7 @@ class KnownConstraintsGenerator:
         # total of 441 blocks --> need 30-50% infesable
         x0 = params[0]
         x1 = params[1]
+>>>>>>> 48797157e1f964bbeb8327cf50170bcbe9a4fed4
 
         np.random.seed(100703)
         arr = np.random.randint(NUM_CAT_OPTS, size=(10, 2))
@@ -248,6 +356,23 @@ class KnownConstraintsGenerator:
 
         return True
 
+<<<<<<< HEAD
+    def known_constraint_disc_cont(self, params):
+        if self.is_general:
+            s = params[0]
+            x0 = float(params[1]) #continuous
+            x1 = float(params[2]) #continuous
+            x2 = float(params[3]) #discrete
+            x3 = float(params[4]) #discrete
+        
+        else:
+            x0 = float(params[0]) #continuous
+            x1 = float(params[1]) #continuous
+            x2 = float(params[2]) #discrete
+            x3 = float(params[3]) #discrete
+       
+        if np.abs(x0-x1)<0.1:
+=======
     @staticmethod
     def known_constraint_disc_cont(params):
         x0 = float(params[0])  # continuous
@@ -256,6 +381,7 @@ class KnownConstraintsGenerator:
         x3 = float(params[3])  # discrete
 
         if np.abs(x0 - x1) < 0.1:
+>>>>>>> 48797157e1f964bbeb8327cf50170bcbe9a4fed4
             return False
 
         if np.abs(x2 - x3) < 0.1:
@@ -263,13 +389,30 @@ class KnownConstraintsGenerator:
 
         return True
 
+<<<<<<< HEAD
+
+    def known_constraint_cat_disc(self, params):
+        if self.is_general:
+            s = params[0]
+            x0 = params[1] # categorical
+            x1 = params[2] # categorical
+            x2 = float(params[3]) # discrete
+            x3 = float(params[4]) # discrete
+=======
     @staticmethod
     def known_constraint_cat_disc(params):
         x0 = params[0]  # categorical
         x1 = params[1]  # categorical
         x2 = float(params[2])  # discrete
         x3 = float(params[3])  # discrete
+>>>>>>> 48797157e1f964bbeb8327cf50170bcbe9a4fed4
 
+        else: 
+            x0 = params[0] # categorical
+            x1 = params[1] # categorical
+            x2 = float(params[2]) # discrete
+            x3 = float(params[3]) # discrete
+       
         np.random.seed(100703)
         arr = np.random.randint(NUM_CAT_OPTS, size=(10, 2))
         np.random.seed()
@@ -279,25 +422,71 @@ class KnownConstraintsGenerator:
 
         if np.abs(x2 - x3) < 0.1:
             return False
+<<<<<<< HEAD
+            
+        return True
+=======
+>>>>>>> 48797157e1f964bbeb8327cf50170bcbe9a4fed4
 
         return True
 
+<<<<<<< HEAD
+    def known_constraint_cat_cont(self, params):
+        if self.is_general:
+            s = params[0]
+            x0 = params[1] # categorical
+            x1 = params[2] # categorical
+            x2 = float(params[3]) # continuous
+            x3 = float(params[4]) # continuous
+=======
     @staticmethod
     def known_constraint_cat_cont(params):
         x0 = params[0]  # categorical
         x1 = params[1]  # categorical
         x2 = float(params[2])  # continuous
         x3 = float(params[3])  # continuous
+>>>>>>> 48797157e1f964bbeb8327cf50170bcbe9a4fed4
 
+        else:
+            x0 = params[0] # categorical
+            x1 = params[1] # categorical
+            x2 = float(params[2]) # continuous
+            x3 = float(params[3]) # continuous
+        
         np.random.seed(100702)
         arr = np.random.randint(NUM_CAT_OPTS, size=(5, 2))
         np.random.seed()
         for x in arr:
             if [x0, x1] == [f"x{x[0]}", f"x{x[1]}"]:
                 return False
+<<<<<<< HEAD
+        
+        return True
+=======
+>>>>>>> 48797157e1f964bbeb8327cf50170bcbe9a4fed4
 
         return True
 
+<<<<<<< HEAD
+    def known_constraint_cat_disc_cont(self, params):
+        if self.is_general:
+            s = params[0] 
+            x0 = params[1] # categorical
+            x1 = params[2] # categorical
+            x2 = float(params[3]) # discrete
+            x3 = float(params[4]) # discrete
+            x4 = float(params[5]) # continuous
+            x5 = float(params[6]) # continuous
+        
+        else:
+            x0 = params[0] # categorical
+            x1 = params[1] # categorical
+            x2 = float(params[2]) # discrete
+            x3 = float(params[3]) # discrete
+            x4 = float(params[4]) # continuous
+            x5 = float(params[5]) # continuous
+        
+=======
     @staticmethod
     def known_constraint_cat_disc_cont(params):
         x0 = params[0]  # categorical
@@ -307,12 +496,22 @@ class KnownConstraintsGenerator:
         x4 = float(params[4])  # continuous
         x5 = float(params[5])  # continuous
 
+>>>>>>> 48797157e1f964bbeb8327cf50170bcbe9a4fed4
         np.random.seed(100704)
         arr = np.random.randint(NUM_CAT_OPTS, size=(5, 2))
         np.random.seed()
         for x in arr:
             if [x0, x1] == [f"x{x[0]}", f"x{x[1]}"]:
                 return False
+<<<<<<< HEAD
+            
+        if np.abs(x2-x3)<0.1:
+            return False
+            
+        if np.abs(x4-x5)<0.1:
+            return False
+            
+=======
 
         if np.abs(x2 - x3) < 0.1:
             return False
@@ -320,6 +519,7 @@ class KnownConstraintsGenerator:
         if np.abs(x4 - x5) < 0.1:
             return False
 
+>>>>>>> 48797157e1f964bbeb8327cf50170bcbe9a4fed4
         return True
 
 
