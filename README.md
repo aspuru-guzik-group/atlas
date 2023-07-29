@@ -1,5 +1,6 @@
 # Atlas
 
+![image]({https://img.shields.io/badge/Python-FFD43B?style=for-the-badge&logo=python&logoColor=blue})
 
 [![aspuru-guzik-group](https://circleci.com/gh/aspuru-guzik-group/atlas.svg?style=shield)](https://app.circleci.com/pipelines/github/aspuru-guzik-group/atlas)
 
@@ -14,6 +15,8 @@ spaces, multi-objective optimization, noisy optimization (noise on input paramet
 optimization, meta-learning optimization, data-driven search space expansion/contraction, and more!
 
 `atlas` is intended serve as the brain or experiment planner for self-driving laboratories.
+
+You can find more details about `atlas` in our [documentation](https://aspuru-guzik-group.github.io/). 
 
 
 `atlas` is proudly developed in 🇨🇦 at the University of Toronto and the Vector Institute for Artificial Intelligence.
