@@ -305,7 +305,7 @@ class PymooGAOptimizer(AcquisitionOptimizer):
         repair: bool = False,
         verbose: bool = False,
         save_history: bool = False,
-        num_gen: int = 3000,  # 5000,
+        num_gen: int = 5000,
         eliminate_duplicates: bool = True,
         fixed_params: Optional[List[Dict[int, float]]] = [],
         num_fantasies: int = 0,
