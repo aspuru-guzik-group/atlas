@@ -26,7 +26,7 @@ jobs:
           command: pytest --cov=src/
       - run: 
           name: unset-node-options
-          command: bash unset NODE_OPTIONS
+          command: bash unset_node_options.sh
       - codecov/upload
 
 # Invoke jobs via workflows
