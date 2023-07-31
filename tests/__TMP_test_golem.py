@@ -12,7 +12,7 @@ from olympus.objects import (
 )
 from olympus.surfaces import Surface
 
-from atlas.planners.gp.planner import BoTorchPlanner
+from atlas.planners.gp.planner import GPPlanner
 from atlas.utils.golem_utils import get_golem_dists
 
 CONT = {
@@ -119,7 +119,7 @@ def test_golem_opt_cont():
     param_space.add(param_1)
     param_space.add(param_2)
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         feas_strategy="naive-0",
         init_design_strategy="lhs",

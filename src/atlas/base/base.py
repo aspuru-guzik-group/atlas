@@ -41,8 +41,8 @@ from atlas.utils.planner_utils import (
 torch.set_default_dtype(torch.double)
 
 gpytorch.settings.debug(state=False)
-import botorch
 
+import botorch
 botorch.settings.validate_input_scaling(state=False)
 
 
@@ -132,6 +132,10 @@ class BasePlanner(CustomPlanner):
         # initial design point trackers
         self.num_init_design_attempted = 0
         self.num_init_design_completed = 0
+
+        # log welcome message
+        Logger.log_welcome(line='-')
+
 
         # check multiobjective stuff
         if self.is_moo:
@@ -257,6 +261,7 @@ class BasePlanner(CustomPlanner):
         """build the GP classification model and likelihood
         and train the model
         """
+        Logger.log_chapter(title='Training classification surrogate model')
 
         model = ClassificationGPMatern(train_x, train_y).to(tkwargs["device"])
         likelihood = gpytorch.likelihoods.BernoulliLikelihood().to(
@@ -764,6 +769,8 @@ class BasePlanner(CustomPlanner):
 
     def initial_design(self) -> List[ParameterVector]:
         """Acquire initial design samples using one of several supported strategues"""
+
+
         num_init_remain = self.num_init_design - len(self._values)
         num_init_batches = math.ceil(self.num_init_design / self.batch_size)
         init_batch_num = int((len(self._values) / self.batch_size) + 1)

@@ -13,7 +13,7 @@ Atlas
 GPPlanner
 #########
 
-.. autoclass:: atlas.planners.gp.planner.BoTorchPlanner
+.. autoclass:: atlas.planners.gp.planner.GPPlanner
 
 
 Models

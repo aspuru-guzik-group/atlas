@@ -28,8 +28,8 @@ warnings.filterwarnings("ignore", "^.*jitter.*", category=RuntimeWarning)
 torch.set_default_dtype(torch.double)
 
 
-class BoTorchPlanner(BasePlanner):
-    """Wrapper for GP-based Bayesiam optimization with BoTorch
+class GPPlanner(BasePlanner):
+    """Wrapper for GP-based Bayesian optimization 
     Args:
             goal (str): the optimization goal, "maximize" or "minimize"
             feas_strategy (str): feasibility acqusition function name
@@ -96,10 +96,16 @@ class BoTorchPlanner(BasePlanner):
 
                 self.acquisition_type = "general"
 
+        Logger.log_chapter(title='Initial design phase')
+
     def build_train_regression_gp(
         self, train_x: torch.Tensor, train_y: torch.Tensor
     ) -> gpytorch.models.ExactGP:
-        """Build the regression GP model and likelihood"""
+        """Build the regression GP model and likelihood
+        """
+
+        Logger.log_chapter(title='Training regression surrogate model')
+
         # infer the model based on the parameter types
         if self.problem_type in [
             "fully_continuous",

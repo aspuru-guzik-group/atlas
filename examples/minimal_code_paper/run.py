@@ -4,7 +4,7 @@ import pickle
 
 from olympus import Campaign, Surface
 
-from atlas.planners.gp.planner import BoTorchPlanner
+from atlas.planners.gp.planner import GPPlanner
 
 surface = Surface(
     kind="Branin"
@@ -13,7 +13,7 @@ surface = Surface(
 campaign = Campaign()  # define Olympus campaign object
 campaign.set_param_space(surface.param_space)
 
-planner = BoTorchPlanner(
+planner = GPPlanner(
     goal="minimize", num_init_design=5
 )  # instantiate GPPlanner
 planner.set_param_space(surface.param_space)

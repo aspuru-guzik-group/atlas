@@ -10,7 +10,7 @@ import rich
 from olympus import Campaign, Emulator
 
 from atlas import Logger
-from atlas.planners.gp.planner import BoTorchPlanner
+from atlas.planners.gp.planner import GPPlanner
 
 
 def execute(benchmark_config):
@@ -41,7 +41,7 @@ def execute(benchmark_config):
         campaign = Campaign()
         campaign.set_param_space(param_space)
 
-        planner = BoTorchPlanner(
+        planner = GPPlanner(
             goal=benchmark_config["goal"], **benchmark_config["optimizer_args"]
         )
         planner.set_param_space(param_space)

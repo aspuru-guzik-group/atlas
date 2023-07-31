@@ -69,18 +69,13 @@ class ProblemGenerator:
                 )
                 surface_callable = Surface(kind=surface_choice)
 
-            print(surface_callable.param_space)
-
             return surface_callable, surface_callable.param_space
 
         elif self.problem_type == "discrete":
             surface_choice = str(
                 np.random.choice(self.allowed_cont_surfaces, size=None)
             )
-            print(surface_choice)
             surface_callable = Surface(kind=surface_choice)
-
-            print(surface_callable.param_space)
 
             discrete_param_space = ParameterSpace()
             param_0 = ParameterDiscrete(

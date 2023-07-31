@@ -13,7 +13,7 @@ from olympus.objects import (
 )
 from olympus.surfaces import Surface
 
-from atlas.planners.gp.planner import BoTorchPlanner
+from atlas.planners.gp.planner import GPPlanner
 
 RANDOM = {
     "param_type": ["cont", "disc", "cat"],
@@ -46,7 +46,7 @@ def set_cont(init_design_strategy, batch_size, num_init_design):
     param_space.add(param_1)
     param_space.add(param_2)
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         init_design_strategy=init_design_strategy,
         num_init_design=num_init_design,
@@ -79,7 +79,7 @@ def set_disc(init_design_strategy, batch_size, num_init_design):
     param_space.add(param_1)
     param_space.add(param_2)
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         init_design_strategy=init_design_strategy,
         num_init_design=num_init_design,
@@ -101,7 +101,7 @@ def set_cat(init_design_strategy, batch_size, num_init_design):
     campaign = Campaign()
     campaign.set_param_space(surface.param_space)
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         init_design_strategy=init_design_strategy,
         num_init_design=num_init_design,

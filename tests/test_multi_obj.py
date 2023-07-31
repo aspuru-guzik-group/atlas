@@ -19,7 +19,7 @@ from problem_generator import (
     ProblemGenerator,
 )
 
-from atlas.planners.gp.planner import BoTorchPlanner
+from atlas.planners.gp.planner import GPPlanner
 
 # SCALARIZER_KINDS = ["WeightedSum", "Parego", "Hypervolume", "Chimera"]
 SCALARIZER_KINDS = ["Hypervolume"]
@@ -560,7 +560,7 @@ def run_continuous(
         scalarizer_kind, surface_callable.value_space
     )
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         init_design_strategy=init_design_strategy,
         num_init_design=num_init_design,
@@ -627,7 +627,7 @@ def run_discrete(
         scalarizer_kind, surface_callable.value_space
     )
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         init_design_strategy=init_design_strategy,
         batch_size=batch_size,
@@ -694,7 +694,7 @@ def run_categorical(
         scalarizer_kind, surface_callable.value_space
     )
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         init_design_strategy=init_design_strategy,
         num_init_design=num_init_design,
@@ -761,7 +761,7 @@ def run_mixed_cat_cont(
         scalarizer_kind, surface_callable.value_space
     )
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         init_design_strategy=init_design_strategy,
         num_init_design=num_init_design,
@@ -828,7 +828,7 @@ def run_mixed_disc_cont(
         scalarizer_kind, surface_callable.value_space
     )
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         init_design_strategy=init_design_strategy,
         num_init_design=num_init_design,
@@ -895,7 +895,7 @@ def run_mixed_cat_disc(
         scalarizer_kind, surface_callable.value_space
     )
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         init_design_strategy=init_design_strategy,
         num_init_design=num_init_design,
@@ -964,7 +964,7 @@ def run_mixed_cat_disc_cont(
         scalarizer_kind, surface_callable.value_space
     )
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         init_design_strategy=init_design_strategy,
         num_init_design=num_init_design,

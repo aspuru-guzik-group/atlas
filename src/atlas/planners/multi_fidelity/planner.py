@@ -30,10 +30,6 @@ from atlas.acquisition_optimizers import (
 from atlas.base.base import BasePlanner
 from atlas.utils.planner_utils import reverse_normalize
 
-# new stuff -----------
-
-
-# ----------------------
 
 
 class MultiFidelityPlanner(BasePlanner):
@@ -92,6 +88,7 @@ class MultiFidelityPlanner(BasePlanner):
                 "FATAL",
             )
 
+
         # verify the fidelities
         if not self.fidelities:
             Logger.log(
@@ -125,6 +122,8 @@ class MultiFidelityPlanner(BasePlanner):
         # set current ask fidelity (default to None)
         self.current_ask_fidelity = None
 
+        Logger.log_chapter(title='Initial design phase')
+
     def _project(self, X: torch.Tensor):
         return project_to_target_fidelity(
             X=X, target_fidelities=self.target_fidelities
@@ -156,6 +155,9 @@ class MultiFidelityPlanner(BasePlanner):
         train_y: torch.Tensor,
     ) -> Any:
         """Build the regression model and likelihood"""
+
+        Logger.log_chapter(title='Training regression surrogate model')
+        
         # TODO: only using continuous  parameters now and always using discrete
         # fidelities
 

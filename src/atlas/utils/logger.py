@@ -84,22 +84,22 @@ class MessageLogger:
                 if "NoneType: None" not in error_message:
                     self.error_console.print(error_message, style=f"{color}")
 
-            self.console.print(f"[{message_type}] {message}", style=f"{color}")
+            self.console.print(f"{self.name} [{message_type}] {message}", style=f"{color}")
             return error_message, message
 
-    def log_chapter(self, title, line="─", style="#34a0a4"):
+    def log_chapter(self, title, line="─", style="#05a6fb"):
         if self.verbosity >= 4:
             title = " " + title + " "
             self.console.print(f"{title:{line}^80}", style=style)
 
     def log_welcome(self, line="─"):
         # self.console.print(pixels, justify='center')
-        self.console.rule()
+        self.console.rule(style='#051923')
         msg1 = "\nWelcome to ATLAS!"
-        self.console.print(msg1, justify="center", style="#c53a5d bold")
+        self.console.print(msg1, justify="center", style="#05a6fb bold")
         msg2 = f"Made with :two_hearts: in :Canada:\n"
-        self.console.print(msg2, justify="center", style="#e6ad14 bold")
-        self.console.rule()
+        self.console.print(msg2, justify="center", style="#006494")
+        self.console.rule(style='#051923')
 
     def log_config(self, full_campaign, campaign_config):
         # -----------------
