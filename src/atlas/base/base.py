@@ -616,7 +616,7 @@ class BasePlanner(CustomPlanner):
                     sample_x.append(float(element))
             X_proc.append(sample_x)
 
-        X_proc = torch.tensor(np.array(X_proc, **tkwargs))
+        X_proc = torch.tensor(np.array(X_proc), **tkwargs)
 
         if (
             self.problem_type == "fully_categorical"

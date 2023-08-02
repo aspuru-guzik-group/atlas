@@ -362,7 +362,7 @@ class LCB(FeasibilityAwareAcquisition):
     def evaluate(self, X: torch.Tensor):
         posterior = self.reg_model.posterior(X=X)
         mean, sigma = self.compute_mean_sigma(posterior)
-        acqf_val = mean - self.beta.sqrt() * sigma
+        acqf_val = -mean - self.beta.sqrt() * sigma
         return acqf_val
 
 
@@ -376,7 +376,7 @@ class UCB(FeasibilityAwareAcquisition):
     def evaluate(self, X: torch.Tensor):
         posterior = self.reg_model.posterior(X=X)
         mean, sigma = self.compute_mean_sigma(posterior)
-        acqf_val = mean + self.beta.sqrt() * sigma
+        acqf_val = -mean + self.beta.sqrt() * sigma
         return acqf_val
 
 
