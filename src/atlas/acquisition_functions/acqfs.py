@@ -475,7 +475,7 @@ class General(FeasibilityAwareAcquisition):
         updf = torch.exp(normal.log_prob(u))
         acqf_val = sigma_x * (updf + u * ucdf)
 
-        return acqf_val  # (# samples,)
+        return -acqf_val  # (# samples,) # is this sign correct?? 
 
     def generate_X_sns(self):
         # generate Cartesian product space of the general parameter options
