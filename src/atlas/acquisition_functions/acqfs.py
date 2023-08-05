@@ -593,7 +593,7 @@ def get_acqf_instance(
     elif acquisition_type in ["lcb", "ucb"]:
         if not use_q_acqf:
             acqf_args["beta"] = torch.tensor(
-                [0.2], **tkwargs
+                [1.0], **tkwargs
             )  # default value of beta
             module = __import__(
                 f"atlas.acquisition_functions.acqfs",

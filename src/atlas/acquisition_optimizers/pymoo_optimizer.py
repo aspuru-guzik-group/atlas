@@ -40,7 +40,7 @@ class PymooProblemWrapper(Problem):
         num_fantasies: int = 0,
         **kwargs,
     ):
-        if not known_constraints.is_empty:
+        if not known_constraints.is_empty or acqf.feas_strategy=='fca':
             self.num_constr = 1
         else:
             self.num_constr = 0
