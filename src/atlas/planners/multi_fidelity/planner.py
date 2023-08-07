@@ -21,14 +21,15 @@ from gpytorch.mlls import ExactMarginalLogLikelihood
 from olympus import ParameterVector
 from olympus.campaigns import ParameterSpace
 
-from atlas import Logger
+from atlas import Logger, tkwargs
 from atlas.acquisition_optimizers import (
     GeneticOptimizer,
     GradientOptimizer,
     PymooGAOptimizer,
 )
+from atlas.acquisition_functions.acqf_utils import create_available_options
 from atlas.base.base import BasePlanner
-from atlas.utils.planner_utils import reverse_normalize
+from atlas.utils.planner_utils import reverse_normalize, infer_problem_type
 
 
 
@@ -76,7 +77,7 @@ class MultiFidelityPlanner(BasePlanner):
             key: val for key, val in locals().items() if key != "self"
         }
         super().__init__(**local_args)
-        self.tkwargs = {
+        tkwargs = {
             "dtype": torch.double,
             "device": "cpu",  # torch.device("cuda" if torch.cuda.is_available() else "cpu"),
         }
@@ -100,7 +101,7 @@ class MultiFidelityPlanner(BasePlanner):
                 "FATAL",
             )
         else:
-            self.fidelities = torch.Tensor(self.fidelities).to(**self.tkwargs)
+            self.fidelities = torch.Tensor(self.fidelities).to(**tkwargs)
 
         # target fidelity must always be 1.0
         self.target_fidelities = {self.fidelity_params: 1.0}
@@ -121,6 +122,8 @@ class MultiFidelityPlanner(BasePlanner):
 
         # set current ask fidelity (default to None)
         self.current_ask_fidelity = None
+
+    
 
         Logger.log_chapter(title='Initial design phase')
 
@@ -179,26 +182,69 @@ class MultiFidelityPlanner(BasePlanner):
         )
         return model
 
+    def _optimize_curr_val_mfkg_acqf(self, curr_val_acqf: qMultiFidelityKnowledgeGradient):
+        
+        if self.func_problem_type == 'fully_continuous':
+            # optimize the fixed feature acquisition function with gradients
+            _, current_value = optimize_acqf(
+                acq_function=curr_val_acqf,
+                bounds=self.params_obj.bounds[
+                    :, np.logical_not(self.params_obj.fidelity_params_mask)
+                ].to(**tkwargs),
+                q=1,  # batch_size always 1 here
+                num_restarts=5,
+                raw_samples=100,
+                options={"batch_limit": 10, "maxiter": 200},
+            )
+        elif self.func_problem_type in ['fully_discrete', 'fully_categorical']:
+            # optimize cartesian product
+            choices_feat, choices_cat = create_available_options(
+                self.param_space,
+                self._params,
+                fca_constraint_callable=None,
+                known_constraint_callables=self.known_constraints,
+                normalize=self.has_descriptors,
+                has_descriptors=self.has_descriptors,
+                mins_x=self.params_obj._mins_x,
+                maxs_x=self.params_obj._maxs_x,
+            )
+            # print(choices_feat)
+            # print(choices_cat)
+            # print(self.params_obj.fidelity_params_mask)
+            #func_choices_feat = choices_feat[:,np.logical_not(self.params_obj.fidelity_params_mask)]
+            
+            func_choices_feat = choices_feat[:,1:]
+            # print(func_choices_feat)
+            # print(self.has_descriptors)
+
+            func_choices_feat = func_choices_feat.view(func_choices_feat.shape[0],1,func_choices_feat.shape[-1])
+            # print(func_choices_feat.shape)
+            # full pass on acquisition function
+            acqf_vals = curr_val_acqf(func_choices_feat).detach()
+            current_value = torch.amax(acqf_vals)
+
+
+        else:
+            raise NotImplementedError
+
+        
+        # print(current_value)
+        # print(current_value.shape)
+
+        return current_value
+        
+
+
     def _get_mfkg_acqf(self) -> qMultiFidelityKnowledgeGradient:
         # build acquisition function
         curr_val_acqf = FixedFeatureAcquisitionFunction(
             acq_function=PosteriorMean(self.reg_model),
-            d=len(self.param_space),
+            d=self.params_obj.expanded_dims, # remove fidelity param?? #len(self.param_space),
             columns=[self.fidelity_params],
             values=[1],  # TODO: is this right for all cases??
         )
 
-        # optimize the fixed feature acquisition function
-        _, current_value = optimize_acqf(
-            acq_function=curr_val_acqf,
-            bounds=self.params_obj.bounds[
-                :, np.logical_not(self.params_obj.fidelity_params_mask)
-            ].to(**self.tkwargs),
-            q=1,  # batch_size always 1 here
-            num_restarts=5,
-            raw_samples=100,
-            options={"batch_limit": 10, "maxiter": 200},
-        )
+        current_value = self._optimize_curr_val_mfkg_acqf(curr_val_acqf)
 
         mfkg_acqf = qMultiFidelityKnowledgeGradient(
             model=self.reg_model,
@@ -207,11 +253,26 @@ class MultiFidelityPlanner(BasePlanner):
             cost_aware_utilty=self.cost_aware_utility,
             project=self._project,
         )
-        return mfkg_acqf.to(self.tkwargs["device"])
+        # TODO: bad hack fix this
+        setattr(mfkg_acqf, 'feas_strategy', self.feas_strategy)
+        return mfkg_acqf.to(tkwargs["device"])
 
 
     def _ask(self) -> List[ParameterVector]:
         """query the planner for a batch of new parameter points to measure"""
+
+        # infer the problem type minus the fidelity parameter
+        # TODO: move this somewhere else...
+        func_params = [
+            param for ix, param in enumerate(self.param_space) if ix!=self.fidelity_params
+        ]
+        self.func_param_space = ParameterSpace()
+        for param in func_params:
+            self.func_param_space.add(param)
+        self.func_problem_type = infer_problem_type(self.func_param_space)
+        print('func problem type : ', self.func_problem_type)
+        
+
 
         # if we have all nan values, just continue with initial design
         if np.logical_or(
@@ -226,6 +287,7 @@ class MultiFidelityPlanner(BasePlanner):
                 self.fidelity_params
             )
 
+    
             (
                 self.train_x_scaled_cla,
                 self.train_y_scaled_cla,
@@ -237,8 +299,8 @@ class MultiFidelityPlanner(BasePlanner):
 
             # build and fit regression surrogate model
             self.reg_model = self.build_train_regression_gp(
-                self.train_x_scaled_reg.to(**self.tkwargs),
-                self.train_y_scaled_reg.to(**self.tkwargs),
+                self.train_x_scaled_reg.to(**tkwargs),
+                self.train_y_scaled_reg.to(**tkwargs),
             )
 
             # TODO: handle unknown constraints
@@ -261,7 +323,7 @@ class MultiFidelityPlanner(BasePlanner):
                 ]
                 res, _ = optimize_acqf_mixed(
                     acq_function=mfkg_acqf,
-                    bounds=self.params_obj.bounds.to(**self.tkwargs),
+                    bounds=self.params_obj.bounds.to(**tkwargs),
                     fixed_features_list=fixed_features_list,
                     q=self.batch_size,
                     num_restarts=5,
@@ -298,6 +360,8 @@ class MultiFidelityPlanner(BasePlanner):
                     use_reg_only=use_reg_only,
                     fixed_params=fixed_params,
                     num_fantasies=128,
+                    pop_size=100,
+                    num_gen=800,
                 )
 
                 return_params = acquisition_optimizer.optimize()
@@ -308,7 +372,5 @@ class MultiFidelityPlanner(BasePlanner):
 
             # get the cost value
             # cost = self.cost_model(res).sum()
-
-            print(return_params)
 
         return return_params

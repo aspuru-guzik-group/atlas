@@ -194,7 +194,7 @@ class BasePlanner(CustomPlanner):
             else:
                 self.has_descriptors = True
 
-        elif self.problem_type in ["mixed_cat_cont", "mixed_cat_dis"]:
+        elif self.problem_type in ["mixed_cat_cont", "mixed_cat_disc"]:
             descriptors = []
             for p in self.param_space:
                 if p.type == "categorical":

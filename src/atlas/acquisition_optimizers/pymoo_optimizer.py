@@ -8,10 +8,11 @@ import torch
 from botorch.acquisition import AcquisitionFunction
 from pymoo.config import Config
 from pymoo.core.mixed import MixedVariableGA
-from pymoo.core.population import Population
+from pymoo.core.population import Population, pop_from_array_or_individual
 from pymoo.core.problem import Problem
 from pymoo.core.variable import Choice, Integer, Real
 from pymoo.optimize import minimize
+from pymoo.core.individual import Individual
 
 Config.show_compile_hint = False
 
@@ -37,6 +38,7 @@ class PymooProblemWrapper(Problem):
         known_constraints: Union[Callable, List[Callable]],
         fca_constraint: Callable, 
         fixed_param: Dict[int, float],
+        cat_option_maps: Dict,
         num_fantasies: int = 0,
         **kwargs,
     ):
@@ -63,6 +65,7 @@ class PymooProblemWrapper(Problem):
         self.fca_constraint = fca_constraint
         self.fixed_param = fixed_param
         self.num_fantasies = num_fantasies
+        self.cat_option_maps = cat_option_maps
 
         # TODO: this only supports one fixed param now, should be fine...
         if self.fixed_param != {}:
@@ -119,7 +122,7 @@ class PymooProblemWrapper(Problem):
                     if param.name == self.fixed_param_name:
                         val_ = str(self.fixed_param_val)
                     else:
-                        olymp_sample[param.name] = sample[elem]
+                        olymp_sample[param.name] = self.cat_option_maps[param.name][sample[elem]]
 
             olymp_samples.append(olymp_sample)
 
@@ -284,7 +287,7 @@ def gen_initial_population(
 
             pop_list_dicts.append(pop_dict)
 
-    return Population.new(X=pop_list_dicts)
+    return Population.new("X", np.array(pop_list_dicts))
 
 
 class PymooGAOptimizer(AcquisitionOptimizer):
@@ -301,11 +304,11 @@ class PymooGAOptimizer(AcquisitionOptimizer):
         timings_dict: Dict,
         use_reg_only: bool = False,
         # pymoo config
-        pop_size: int = 200,
+        pop_size: int = 100, #200,
         repair: bool = False,
         verbose: bool = False,
         save_history: bool = False,
-        num_gen: int = 5000,
+        num_gen: int = 500,#5000,
         eliminate_duplicates: bool = True,
         fixed_params: Optional[List[Dict[int, float]]] = [],
         num_fantasies: int = 0,
@@ -355,11 +358,12 @@ class PymooGAOptimizer(AcquisitionOptimizer):
 
         with torch.no_grad():
             # set pymoo parameter space
-            self.pymoo_space, self.xl, self.xu = self._set_pymoo_param_space()
+            self.pymoo_space, self.cat_option_maps, self.xl, self.xu = self._set_pymoo_param_space()
 
     def _set_pymoo_param_space(self):
         """convert Olympus parameter space to pymoo"""
         pymoo_space = {}
+        cat_option_maps = {}
         xl, xu = [], []
         for param in self.param_space:
             if param.type == "continuous":
@@ -374,13 +378,15 @@ class PymooGAOptimizer(AcquisitionOptimizer):
                 xl.append(param.low)
                 xu.append(param.high)
             elif param.type == "categorical":
-                pymoo_space[param.name] = Choice(options=param.options)
+                pymoo_options = [f'x{i}' for i in range(len(param.options))]
+                cat_option_maps[param.name] = dict(zip(pymoo_options, param.options))
+                pymoo_space[param.name] = Choice(options=pymoo_options)
                 xl.append(0)
                 xu.append(len(param.options) - 1)
             else:
                 raise ValueError
 
-        return pymoo_space, np.array(xl), np.array(xu)
+        return pymoo_space, cat_option_maps, np.array(xl), np.array(xu)
 
     def _batch_sample_selector(self, final_pop):
         """select batch of samples from the pymoo minimize results"""
@@ -431,6 +437,7 @@ class PymooGAOptimizer(AcquisitionOptimizer):
                     known_constraints=self.known_constraints,
                     fca_constraint=self.fca_constraint,
                     fixed_param=fixed_param,
+                    cat_option_maps=self.cat_option_maps,
                     num_fantasies=self.num_fantasies,
                 )
 
@@ -462,6 +469,7 @@ class PymooGAOptimizer(AcquisitionOptimizer):
                 known_constraints=self.known_constraints,
                 fca_constraint=self.fca_constraint,
                 fixed_param={},
+                cat_option_maps=self.cat_option_maps,
                 num_fantasies=self.num_fantasies,
             )
 
