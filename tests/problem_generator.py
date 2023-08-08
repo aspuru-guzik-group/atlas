@@ -189,13 +189,59 @@ class ProblemGenerator:
 
             return hybrid_surface_callable, hybrid_surface_callable.param_space
 
-        else:
-            raise NotImplementedError
+
+        elif self.problem_type == 'mixed_disc_cont':
+          surface_choice_disc = str(np.random.choice(self.allowed_cont_surfaces, size=None))
+          surface_choice_cont = str(np.random.choice(self.allowed_cont_surfaces, size=None))
+          surface_callable_disc = Surface(kind=surface_choice_disc)
+          surface_callable_cont  = Surface(kind=surface_choice_cont)
+
+          hybrid_surface_callable = HybridSurface(
+            surfaces=[surface_callable_disc, surface_callable_cont],
+            surface_types=['disc', 'cont'],
+            is_moo=self.is_moo,
+          )
+
+          return hybrid_surface_callable, hybrid_surface_callable.param_space
 
 
-class KnownConstraintsGenerator:
+        elif self.problem_type == 'mixed_cat_disc':
+          surface_choice_cat = str(np.random.choice(self.allowed_cat_surfaces, size=None))
+          surface_choice_disc = str(np.random.choice(self.allowed_cont_surfaces, size=None))
+          surface_callable_cat = Surface(kind=surface_choice_cat, num_opts=NUM_CAT_OPTS)
+          surface_callable_disc  = Surface(kind=surface_choice_disc)
+          surface_callable_cat = self.add_descriptors(surface_callable_cat)
+          hybrid_surface_callable = HybridSurface(
+            surfaces=[surface_callable_cat, surface_callable_disc],
+            surface_types=['cat', 'disc'],
+            is_moo=self.is_moo,
+          )
+
+          return hybrid_surface_callable, hybrid_surface_callable.param_space
+
+        elif self.problem_type == 'mixed_cat_disc_cont':
+          surface_choice_cat = str(np.random.choice(self.allowed_cat_surfaces, size=None))
+          surface_choice_disc = str(np.random.choice(self.allowed_cont_surfaces, size=None))
+          surface_choice_cont = str(np.random.choice(self.allowed_cont_surfaces, size=None))
+          surface_callable_cat = Surface(kind=surface_choice_cat, num_opts=NUM_CAT_OPTS)
+          surface_callable_disc  = Surface(kind=surface_choice_disc)
+          surface_callable_cont  = Surface(kind=surface_choice_cont)
+          surface_callable_cat = self.add_descriptors(surface_callable_cat)
+          
+          hybrid_surface_callable = HybridSurface(
+            surfaces=[surface_callable_cat, surface_callable_disc, surface_callable_cont],
+            surface_types=['cat', 'disc', 'cont'],
+            is_moo=self.is_moo,
+          )
+
+          return hybrid_surface_callable, hybrid_surface_callable.param_space
+         
+
+
+class KnownConstraintsGenerator():
+
     def __init__(self, is_general=False):
-        self.is_general = is_general
+        self.is_general=is_general
 
     def get_constraint(self, problem_type: str):
         return getattr(self, f"known_constraint_{problem_type}")

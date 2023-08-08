@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-
 import numpy as np
 import pytest
 from olympus.campaigns import Campaign, ParameterSpace
