@@ -1,8 +1,10 @@
 # Atlas
 
+![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
 
 [![aspuru-guzik-group](https://circleci.com/gh/aspuru-guzik-group/atlas.svg?style=shield)](https://app.circleci.com/pipelines/github/aspuru-guzik-group/atlas)
-
+[![codecov](https://codecov.io/gh/aspuru-guzik-group/atlas/branch/main/graph/badge.svg?token=1Z8FA25WVO)](https://codecov.io/gh/aspuru-guzik-group/atlas)
+![Docs](https://readthedocs.org/projects/matter-atlas/badge/?version=latest&style=flat-default)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -14,6 +16,8 @@ spaces, multi-objective optimization, noisy optimization (noise on input paramet
 optimization, meta-learning optimization, data-driven search space expansion/contraction, and more!
 
 `atlas` is intended serve as the brain or experiment planner for self-driving laboratories.
+
+You can find more details about `atlas` in our [documentation](https://matter-atlas.readthedocs.io/en/latest/). 
 
 
 `atlas` is proudly developed in 🇨🇦 at the University of Toronto and the Vector Institute for Artificial Intelligence.

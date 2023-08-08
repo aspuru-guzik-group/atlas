@@ -19,7 +19,7 @@ from problem_generator import (
     ProblemGenerator,
 )
 
-from atlas.planners.gp.planner import BoTorchPlanner
+from atlas.planners.gp.planner import GPPlanner
 
 FEAS_STRATEGY_PARAM = [
     "naive-0_0",
@@ -495,7 +495,7 @@ def run_continuous(
     split = feas_strategy_param.split("_")
     feas_strategy, feas_param = split[0], float(split[1])
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         feas_strategy=feas_strategy,
         feas_param=feas_param,
@@ -546,7 +546,7 @@ def run_discrete(
     split = feas_strategy_param.split("_")
     feas_strategy, feas_param = split[0], float(split[1])
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         feas_strategy=feas_strategy,
         feas_param=feas_param,
@@ -602,7 +602,7 @@ def run_categorical(
     campaign = Campaign()
     campaign.set_param_space(param_space)
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         feas_strategy=feas_strategy,
         feas_param=feas_param,
@@ -652,7 +652,7 @@ def run_mixed_disc_cont(
     campaign = Campaign()
     campaign.set_param_space(param_space)
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         feas_strategy=feas_strategy,
         feas_param=feas_param,
@@ -700,7 +700,7 @@ def run_mixed_cat_disc(
     campaign = Campaign()
     campaign.set_param_space(param_space)
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         feas_strategy=feas_strategy,
         feas_param=feas_param,
@@ -748,7 +748,7 @@ def run_mixed_cat_cont(
     campaign = Campaign()
     campaign.set_param_space(param_space)
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         feas_strategy=feas_strategy,
         feas_param=feas_param,
@@ -798,7 +798,7 @@ def run_mixed_cat_disc_cont(
     campaign = Campaign()
     campaign.set_param_space(param_space)
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         feas_strategy=feas_strategy,
         feas_param=feas_param,
@@ -828,7 +828,7 @@ def run_mixed_cat_disc_cont(
 
 
 if __name__ == "__main__":
-    run_continuous("random", 1, "fwa_0", False, "ucb", "pymoo")
+    run_continuous("random", 1, "fca_0.2", False, "ucb", "pymoo")
     # run_discrete('random', 1, 'fwa_0', False, 'pymoo')
     # run_categorical('random', 1, 'fwa_0', False, 'pymoo')
     # run_mixed_disc_cont('random', 1, 'fwa_0', False, 'pymoo')

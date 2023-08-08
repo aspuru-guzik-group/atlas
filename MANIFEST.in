@@ -1,0 +1,6 @@
+graft src
+include README.md
+include LICENSE
+include versioneer.py
+include src/atlas/_version.py
+include pyproject.toml

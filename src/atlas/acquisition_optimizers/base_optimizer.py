@@ -50,6 +50,9 @@ class AcquisitionOptimizer:
         ...
 
     def optimize(self):
+
+        Logger.log_chapter(title='Acquisition function optimization')
+
         start_time = time.time()
         # returns list of parameter vectors with recommendations
         results = self._optimize()

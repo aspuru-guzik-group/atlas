@@ -10,7 +10,7 @@ from olympus.campaigns import Campaign, ParameterSpace
 from olympus.objects import ParameterCategorical
 
 from atlas.gps.gps import TanimotoGP
-from atlas.planners.gp.planner import BoTorchPlanner
+from atlas.planners.gp.planner import GPPlanner
 
 tkwargs = {"dtype": torch.double, "device": "cpu"}
 
@@ -65,7 +65,7 @@ def run_single_molecular_param(num_init_design, batch_size):
     campaign = Campaign()
     campaign.set_param_space(param_space)
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         init_design_strategy="random",
         num_init_design=num_init_design,

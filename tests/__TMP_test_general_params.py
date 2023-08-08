@@ -11,7 +11,7 @@ from olympus.objects import (
 from olympus.surfaces import Surface
 from problem_generator import ProblemGenerator
 
-from atlas.planners.gp.planner import BoTorchPlanner
+from atlas.planners.gp.planner import GPPlanner
 
 from problem_generator import ProblemGenerator, KnownConstraintsGenerator
 
@@ -270,7 +270,7 @@ def run_cat_general_cont_func(
 	campaign = Campaign()
 	campaign.set_param_space(param_space)
 
-	planner = BoTorchPlanner(
+	planner = GPPlanner(
 		goal='minimize',
 		init_design_strategy=init_design_strategy,
 		num_init_design=num_init_design,
@@ -360,7 +360,7 @@ def run_cat_general_disc_func(
 	campaign = Campaign()
 	campaign.set_param_space(param_space)
 
-	planner = BoTorchPlanner(
+	planner = GPPlanner(
 		goal='minimize',
 		init_design_strategy=init_design_strategy,
 		num_init_design=num_init_design,
@@ -452,7 +452,7 @@ def run_cat_general_cat_func(
 	campaign = Campaign()
 	campaign.set_param_space(param_space)
 
-	planner = BoTorchPlanner(
+	planner = GPPlanner(
 		goal='minimize',
 		init_design_strategy=init_design_strategy,
 		num_init_design=num_init_design,
@@ -542,7 +542,7 @@ def run_cat_general_mixed_cat_cont_func(
 	campaign = Campaign()
 	campaign.set_param_space(param_space)
 
-	planner = BoTorchPlanner(
+	planner = GPPlanner(
 		goal='minimize',
 		init_design_strategy=init_design_strategy,
 		num_init_design=num_init_design,
@@ -642,7 +642,7 @@ def run_cat_general_mixed_cat_disc_func(
 	campaign = Campaign()
 	campaign.set_param_space(param_space)
 
-	planner = BoTorchPlanner(
+	planner = GPPlanner(
 		goal='minimize',
 		init_design_strategy=init_design_strategy,
 		num_init_design=num_init_design,
@@ -726,7 +726,7 @@ def run_cat_general_mixed_disc_cont_func(
 	campaign = Campaign()
 	campaign.set_param_space(param_space)
 
-	planner = BoTorchPlanner(
+	planner = GPPlanner(
 		goal='minimize',
 		init_design_strategy=init_design_strategy,
 		num_init_design=num_init_design,
@@ -824,7 +824,7 @@ def run_cat_general_mixed_cat_disc_cont_func(
 	campaign = Campaign()
 	campaign.set_param_space(param_space)
 
-	planner = BoTorchPlanner(
+	planner = GPPlanner(
 		goal='minimize',
 		init_design_strategy=init_design_strategy,
 		num_init_design=num_init_design,

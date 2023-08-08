@@ -11,7 +11,7 @@ from olympus.objects import (
 from olympus.surfaces import Surface
 from problem_generator import ProblemGenerator
 
-from atlas.planners.gp.planner import BoTorchPlanner
+from atlas.planners.gp.planner import GPPlanner
 
 CONT = {
     "init_design_strategy": [
@@ -396,7 +396,7 @@ def run_continuous(
     problem_gen = ProblemGenerator(problem_type="continuous")
     surface_callable, param_space = problem_gen.generate_instance()
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         feas_strategy="naive-0",
         init_design_strategy=init_design_strategy,
@@ -438,7 +438,7 @@ def run_discrete(
     problem_gen = ProblemGenerator(problem_type="discrete")
     surface_callable, param_space = problem_gen.generate_instance()
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         feas_strategy="naive-0",
         init_design_strategy=init_design_strategy,
@@ -482,7 +482,7 @@ def run_categorical(
     campaign = Campaign()
     campaign.set_param_space(param_space)
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         feas_strategy="naive-0",
         init_design_strategy=init_design_strategy,
@@ -526,7 +526,7 @@ def run_mixed_cat_cont(
     campaign = Campaign()
     campaign.set_param_space(param_space)
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="maximize",
         feas_strategy="naive-0",
         init_design_strategy=init_design_strategy,
@@ -565,7 +565,7 @@ def run_mixed_disc_cont(
     campaign = Campaign()
     campaign.set_param_space(param_space)
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         feas_strategy="naive-0",
         init_design_strategy=init_design_strategy,
@@ -608,7 +608,7 @@ def run_mixed_cat_disc(
     campaign = Campaign()
     campaign.set_param_space(param_space)
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         feas_strategy="naive-0",
         init_design_strategy=init_design_strategy,
@@ -648,7 +648,7 @@ def run_mixed_cat_disc_cont(
     campaign = Campaign()
     campaign.set_param_space(param_space)
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         feas_strategy="naive-0",
         init_design_strategy=init_design_strategy,
@@ -684,14 +684,14 @@ if __name__ == "__main__":
     # 	num_init_design=6,
     # )
 
-    run_continuous(
-        init_design_strategy="random",
-        batch_size=1,
-        use_descriptors=False,
-        acquisition_type="ucb",
-        acquisition_optimizer="pymoo",
-        num_init_design=4,
-    )
+    # run_continuous(
+    #     init_design_strategy="random",
+    #     batch_size=1,
+    #     use_descriptors=False,
+    #     acquisition_type="ucb",
+    #     acquisition_optimizer="pymoo",
+    #     num_init_design=4,
+    # )
 
     # run_categorical(
     # 	init_design_strategy='random',
@@ -737,3 +737,10 @@ if __name__ == "__main__":
     # 	acquisition_optimizer='pymoo',
     # 	num_init_design=5,
     # )
+
+    run_batched(
+        problem_type='cont', 
+        init_design_strategy='random', 
+        batch_size=2, 
+        acquisition_optimizer='pymoo',
+    )   

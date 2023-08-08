@@ -69,18 +69,13 @@ class ProblemGenerator:
                 )
                 surface_callable = Surface(kind=surface_choice)
 
-            print(surface_callable.param_space)
-
             return surface_callable, surface_callable.param_space
 
         elif self.problem_type == "discrete":
             surface_choice = str(
                 np.random.choice(self.allowed_cont_surfaces, size=None)
             )
-            print(surface_choice)
             surface_callable = Surface(kind=surface_choice)
-
-            print(surface_callable.param_space)
 
             discrete_param_space = ParameterSpace()
             param_0 = ParameterDiscrete(
@@ -195,7 +190,7 @@ class ProblemGenerator:
             return hybrid_surface_callable, hybrid_surface_callable.param_space
 
 
-         elif self.problem_type == 'mixed_disc_cont':
+        elif self.problem_type == 'mixed_disc_cont':
           surface_choice_disc = str(np.random.choice(self.allowed_cont_surfaces, size=None))
           surface_choice_cont = str(np.random.choice(self.allowed_cont_surfaces, size=None))
           surface_callable_disc = Surface(kind=surface_choice_disc)
@@ -210,7 +205,7 @@ class ProblemGenerator:
           return hybrid_surface_callable, hybrid_surface_callable.param_space
 
 
-         elif self.problem_type == 'mixed_cat_disc':
+        elif self.problem_type == 'mixed_cat_disc':
           surface_choice_cat = str(np.random.choice(self.allowed_cat_surfaces, size=None))
           surface_choice_disc = str(np.random.choice(self.allowed_cont_surfaces, size=None))
           surface_callable_cat = Surface(kind=surface_choice_cat, num_opts=NUM_CAT_OPTS)
@@ -224,7 +219,7 @@ class ProblemGenerator:
 
           return hybrid_surface_callable, hybrid_surface_callable.param_space
 
-         elif self.problem_type == 'mixed_cat_disc_cont':
+        elif self.problem_type == 'mixed_cat_disc_cont':
           surface_choice_cat = str(np.random.choice(self.allowed_cat_surfaces, size=None))
           surface_choice_disc = str(np.random.choice(self.allowed_cont_surfaces, size=None))
           surface_choice_cont = str(np.random.choice(self.allowed_cont_surfaces, size=None))
@@ -256,35 +251,34 @@ class KnownConstraintsGenerator():
             s = params[0]
             x0 = float(params[1])
             x1 = float(params[2])
-        
+
         else:
             x0 = float(params[0])
             x1 = float(params[1])
-           
-        y = (x0-0.5)**2 + (x1-0.5)**2
-            
-        if np.abs(x0-x1)<0.1:
+
+        y = (x0 - 0.5) ** 2 + (x1 - 0.5) ** 2
+
+        if np.abs(x0 - x1) < 0.1:
             return False
 
         if 0.05 < y < 0.15:
             return False
-            
+
         else:
             return True
 
-    def known_constraint_discrete(self, params):  
-        
+    def known_constraint_discrete(self, params):
         if self.is_general:
             s = params[0]
             x0 = float(params[1])
             x1 = float(params[2])
-        
+
         else:
             x0 = float(params[0])
             x1 = float(params[1])
-        
-        y = (x0-0.5)**2 + (x1-0.5)**2
-        if np.abs(x0-x1)<0.1:
+
+        y = (x0 - 0.5) ** 2 + (x1 - 0.5) ** 2
+        if np.abs(x0 - x1) < 0.1:
             return False
 
         if 0.05 < y < 0.15:
@@ -293,20 +287,19 @@ class KnownConstraintsGenerator():
         else:
             return True
 
-
     def known_constraint_categorical(self, params):
-       # if params[0] == 'x13' and params[1] =='x2': --> as "params[0]" is x and "params[1]" is y, imagine a grid.
-       # if params[0] == 'x13' this blocks out the entirity of the x axis of x = 13
-       # if params[0] == 'x13' and params[1] in ['x2', 'x15'] --> this is how to do straight line
-       # total of 441 blocks --> need 30-50% infesable
+        # if params[0] == 'x13' and params[1] =='x2': --> as "params[0]" is x and "params[1]" is y, imagine a grid.
+        # if params[0] == 'x13' this blocks out the entirity of the x axis of x = 13
+        # if params[0] == 'x13' and params[1] in ['x2', 'x15'] --> this is how to do straight line
+        # total of 441 blocks --> need 30-50% infesable
         if self.is_general:
             s = params[0]
             x0 = params[1]
             x1 = params[2]
 
-        else: 
-            x0 = params[1]
-            x1 = params[2]
+        else:
+            x0 = params[0]
+            x1 = params[1]
 
         np.random.seed(100703)
         arr = np.random.randint(NUM_CAT_OPTS, size=(10, 2))
@@ -320,18 +313,18 @@ class KnownConstraintsGenerator():
     def known_constraint_disc_cont(self, params):
         if self.is_general:
             s = params[0]
-            x0 = float(params[1]) #continuous
-            x1 = float(params[2]) #continuous
-            x2 = float(params[3]) #discrete
-            x3 = float(params[4]) #discrete
-        
+            x0 = float(params[1])  # continuous
+            x1 = float(params[2])  # continuous
+            x2 = float(params[3])  # discrete
+            x3 = float(params[4])  # discrete
+
         else:
-            x0 = float(params[0]) #continuous
-            x1 = float(params[1]) #continuous
-            x2 = float(params[2]) #discrete
-            x3 = float(params[3]) #discrete
-       
-        if np.abs(x0-x1)<0.1:
+            x0 = float(params[0])  # continuous
+            x1 = float(params[1])  # continuous
+            x2 = float(params[2])  # discrete
+            x3 = float(params[3])  # discrete
+
+        if np.abs(x0 - x1) < 0.1:
             return False
 
         if np.abs(x2 - x3) < 0.1:
@@ -339,21 +332,20 @@ class KnownConstraintsGenerator():
 
         return True
 
-
     def known_constraint_cat_disc(self, params):
         if self.is_general:
             s = params[0]
-            x0 = params[1] # categorical
-            x1 = params[2] # categorical
-            x2 = float(params[3]) # discrete
-            x3 = float(params[4]) # discrete
+            x0 = params[1]  # categorical
+            x1 = params[2]  # categorical
+            x2 = float(params[3])  # discrete
+            x3 = float(params[4])  # discrete
 
-        else: 
-            x0 = params[0] # categorical
-            x1 = params[1] # categorical
-            x2 = float(params[2]) # discrete
-            x3 = float(params[3]) # discrete
-       
+        else:
+            x0 = params[0]  # categorical
+            x1 = params[1]  # categorical
+            x2 = float(params[2])  # discrete
+            x3 = float(params[3])  # discrete
+
         np.random.seed(100703)
         arr = np.random.randint(NUM_CAT_OPTS, size=(10, 2))
         np.random.seed()
@@ -363,67 +355,63 @@ class KnownConstraintsGenerator():
 
         if np.abs(x2 - x3) < 0.1:
             return False
-            
-        return True
 
         return True
 
     def known_constraint_cat_cont(self, params):
         if self.is_general:
             s = params[0]
-            x0 = params[1] # categorical
-            x1 = params[2] # categorical
-            x2 = float(params[3]) # continuous
-            x3 = float(params[4]) # continuous
+            x0 = params[1]  # categorical
+            x1 = params[2]  # categorical
+            x2 = float(params[3])  # continuous
+            x3 = float(params[4])  # continuous
 
         else:
-            x0 = params[0] # categorical
-            x1 = params[1] # categorical
-            x2 = float(params[2]) # continuous
-            x3 = float(params[3]) # continuous
-        
+            x0 = params[0]  # categorical
+            x1 = params[1]  # categorical
+            x2 = float(params[2])  # continuous
+            x3 = float(params[3])  # continuous
+
         np.random.seed(100702)
         arr = np.random.randint(NUM_CAT_OPTS, size=(5, 2))
         np.random.seed()
         for x in arr:
             if [x0, x1] == [f"x{x[0]}", f"x{x[1]}"]:
                 return False
-        
-        return True
 
         return True
 
     def known_constraint_cat_disc_cont(self, params):
         if self.is_general:
-            s = params[0] 
-            x0 = params[1] # categorical
-            x1 = params[2] # categorical
-            x2 = float(params[3]) # discrete
-            x3 = float(params[4]) # discrete
-            x4 = float(params[5]) # continuous
-            x5 = float(params[6]) # continuous
-        
+            s = params[0]
+            x0 = params[1]  # categorical
+            x1 = params[2]  # categorical
+            x2 = float(params[3])  # discrete
+            x3 = float(params[4])  # discrete
+            x4 = float(params[5])  # continuous
+            x5 = float(params[6])  # continuous
+
         else:
-            x0 = params[0] # categorical
-            x1 = params[1] # categorical
-            x2 = float(params[2]) # discrete
-            x3 = float(params[3]) # discrete
-            x4 = float(params[4]) # continuous
-            x5 = float(params[5]) # continuous
-        
+            x0 = params[0]  # categorical
+            x1 = params[1]  # categorical
+            x2 = float(params[2])  # discrete
+            x3 = float(params[3])  # discrete
+            x4 = float(params[4])  # continuous
+            x5 = float(params[5])  # continuous
+
         np.random.seed(100704)
         arr = np.random.randint(NUM_CAT_OPTS, size=(5, 2))
         np.random.seed()
         for x in arr:
             if [x0, x1] == [f"x{x[0]}", f"x{x[1]}"]:
                 return False
-            
-        if np.abs(x2-x3)<0.1:
+
+        if np.abs(x2 - x3) < 0.1:
             return False
-            
-        if np.abs(x4-x5)<0.1:
+
+        if np.abs(x4 - x5) < 0.1:
             return False
-            
+
         return True
 
 

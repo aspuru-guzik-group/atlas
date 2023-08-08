@@ -362,7 +362,7 @@ class LCB(FeasibilityAwareAcquisition):
     def evaluate(self, X: torch.Tensor):
         posterior = self.reg_model.posterior(X=X)
         mean, sigma = self.compute_mean_sigma(posterior)
-        acqf_val = mean - self.beta.sqrt() * sigma
+        acqf_val = -mean - self.beta.sqrt() * sigma
         return acqf_val
 
 
@@ -376,7 +376,7 @@ class UCB(FeasibilityAwareAcquisition):
     def evaluate(self, X: torch.Tensor):
         posterior = self.reg_model.posterior(X=X)
         mean, sigma = self.compute_mean_sigma(posterior)
-        acqf_val = mean + self.beta.sqrt() * sigma
+        acqf_val = -mean + self.beta.sqrt() * sigma
         return acqf_val
 
 
@@ -475,7 +475,7 @@ class General(FeasibilityAwareAcquisition):
         updf = torch.exp(normal.log_prob(u))
         acqf_val = sigma_x * (updf + u * ucdf)
 
-        return acqf_val  # (# samples,)
+        return -acqf_val  # (# samples,) # is this sign correct?? 
 
     def generate_X_sns(self):
         # generate Cartesian product space of the general parameter options
@@ -593,7 +593,7 @@ def get_acqf_instance(
     elif acquisition_type in ["lcb", "ucb"]:
         if not use_q_acqf:
             acqf_args["beta"] = torch.tensor(
-                [0.2], **tkwargs
+                [1.0], **tkwargs
             )  # default value of beta
             module = __import__(
                 f"atlas.acquisition_functions.acqfs",

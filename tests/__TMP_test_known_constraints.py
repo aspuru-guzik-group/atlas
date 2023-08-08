@@ -19,7 +19,7 @@ from problem_generator import (
     ProblemGenerator,
 )
 
-from atlas.planners.gp.planner import BoTorchPlanner
+from atlas.planners.gp.planner import GPPlanner
 
 CONT = {
     "init_design_strategy": [
@@ -407,7 +407,7 @@ def run_continuous(
         "continuous"
     )
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         init_design_strategy=init_design_strategy,
         num_init_design=num_init_design,
@@ -458,7 +458,7 @@ def run_discrete(
     param_test = np.array([0.1, 0.9])
     print(known_constraints(param_test))
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         init_design_strategy=init_design_strategy,
         num_init_design=num_init_design,
@@ -510,7 +510,7 @@ def run_categorical(
     campaign = Campaign()
     campaign.set_param_space(surface_callable.param_space)
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         init_design_strategy=init_design_strategy,
         num_init_design=num_init_design,
@@ -552,7 +552,7 @@ def run_mixed_disc_cont(
     surface_callable, param_space = problem_gen.generate_instance()
     known_constraints = KnownConstraintsGenerator().get_constraint("disc_cont")
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         init_design_strategy=init_design_strategy,
         num_init_design=num_init_design,
@@ -598,7 +598,7 @@ def run_mixed_cat_disc(
     surface_callable, param_space = problem_gen.generate_instance()
     known_constraints = KnownConstraintsGenerator().get_constraint("cat_disc")
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         init_design_strategy=init_design_strategy,
         num_init_design=num_init_design,
@@ -644,7 +644,7 @@ def run_mixed_cat_cont(
     surface_callable, param_space = problem_gen.generate_instance()
     known_constraints = KnownConstraintsGenerator().get_constraint("cat_cont")
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         init_design_strategy=init_design_strategy,
         num_init_design=num_init_design,
@@ -692,7 +692,7 @@ def run_mixed_cat_disc_cont(
         "cat_disc_cont"
     )
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         init_design_strategy=init_design_strategy,
         num_init_design=num_init_design,
@@ -736,7 +736,7 @@ def run_compositional_constraint_cont(
     param_space.add(param_1)
     param_space.add(param_2)
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         init_design_strategy=init_design_strategy,
         num_init_design=num_init_design,
@@ -798,7 +798,7 @@ def run_permutation_constraint_mixed_cat_disc(
     param_space.add(param_2)
     param_space.add(param_3)
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         init_design_strategy=init_design_strategy,
         num_init_design=num_init_design,
@@ -851,7 +851,7 @@ def run_pending_experiment_constraint_cat(
     campaign = Campaign()
     campaign.set_param_space(surface.param_space)
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         init_design_strategy=init_design_strategy,
         num_init_design=num_init_design,
@@ -951,7 +951,7 @@ def run_batch_constrained_disc(
     param_space.add(param_1)
     param_space.add(param_2)
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         init_design_strategy=init_design_strategy,
         num_init_design=num_init_design,
@@ -1017,7 +1017,7 @@ def run_pymoo(
     else:
         acquisition_type = "ei"
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         feas_strategy="fwa",
         init_design_strategy=init_design_strategy,

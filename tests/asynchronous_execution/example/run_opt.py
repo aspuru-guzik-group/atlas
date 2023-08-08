@@ -10,7 +10,7 @@ import time
 from olympus import Campaign, Surface
 
 from atlas import Logger
-from atlas.planners.gp.planner import BoTorchPlanner
+from atlas.planners.gp.planner import GPPlanner
 
 SURFACE_KIND = "Branin"
 BUDGET = 20
@@ -53,7 +53,7 @@ def execute_opt():
     campaign = Campaign()
     campaign.set_param_space(surface.param_space)
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         init_design_strategy="random",
         num_init_design=3,

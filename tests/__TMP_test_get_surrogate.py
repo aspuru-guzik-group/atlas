@@ -15,7 +15,7 @@ from olympus.objects import (
 from olympus.scalarizers import Scalarizer
 from olympus.surfaces import Surface
 
-from atlas.planners.gp.planner import BoTorchPlanner
+from atlas.planners.gp.planner import GPPlanner
 from atlas.utils.synthetic_data import trig_factory
 
 
@@ -31,7 +31,7 @@ def test_reg_surrogate_cont():
     param_space.add(param_1)
     param_space.add(param_2)
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         feas_strategy="naive-0",
         init_design_strategy="random",
@@ -81,7 +81,7 @@ def test_cla_surrogate_cont():
     param_space.add(param_1)
     param_space.add(param_2)
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         feas_strategy="fwa",
         init_design_strategy="random",
@@ -124,7 +124,7 @@ def test_acquisition_function():
     param_space.add(param_1)
     param_space.add(param_2)
 
-    planner = BoTorchPlanner(
+    planner = GPPlanner(
         goal="minimize",
         feas_strategy="naive-0",
         init_design_strategy="random",

@@ -131,6 +131,8 @@ class RGPEPlanner(BasePlanner):
         self._train_tasks = self.scaler.fit_transform_tasks(self._train_tasks)
         self._valid_tasks = self.scaler.transform_tasks(self._valid_tasks)
 
+        Logger.log_chapter(title='Initial design phase')
+
     def _get_fitted_model(self, train_X, train_Y, state_dict=None):
         """Get a fixed noise single task GP. The GP model will be fit unless
         a state_dict containing model hyperparameters is passed
@@ -349,6 +351,7 @@ class RGPEPlanner(BasePlanner):
                 num_samples=10,
             )
 
+            Logger.log_chapter(title='Training regression surrogate model')
             self.reg_model = RGPE(model_list, rank_weights)
 
             # check to see if we cache the weights and save them to disk

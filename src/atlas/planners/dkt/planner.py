@@ -116,6 +116,8 @@ class DKTPlanner(BasePlanner):
         self._train_tasks = self.scaler.fit_transform_tasks(self._train_tasks)
         self._valid_tasks = self.scaler.transform_tasks(self._valid_tasks)
 
+        Logger.log_chapter(title='Initial design phase')
+
     def _load_model(self) -> None:
         # calculate the input dimensionality
         x_dim = 0
@@ -208,6 +210,7 @@ class DKTPlanner(BasePlanner):
             )
 
             # builds the regression model
+            Logger.log_chapter(title='Training regression surrogate model')
             self.reg_model = DKTGP(
                 self.model, self.train_x_scaled_reg, self.train_y_scaled_reg
             )
