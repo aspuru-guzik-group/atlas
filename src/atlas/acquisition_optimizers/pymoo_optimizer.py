@@ -304,11 +304,11 @@ class PymooGAOptimizer(AcquisitionOptimizer):
         timings_dict: Dict,
         use_reg_only: bool = False,
         # pymoo config
-        pop_size: int = 100, #200,
+        pop_size: int = 200,
         repair: bool = False,
         verbose: bool = False,
         save_history: bool = False,
-        num_gen: int = 500,#5000,
+        num_gen: int = 3000,
         eliminate_duplicates: bool = True,
         fixed_params: Optional[List[Dict[int, float]]] = [],
         num_fantasies: int = 0,

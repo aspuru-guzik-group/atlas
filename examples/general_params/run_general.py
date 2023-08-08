@@ -23,8 +23,8 @@ emulator_ii = Emulator(dataset='suzuki_ii', model='BayesNeuralNet')
 emulator_iii = Emulator(dataset='suzuki_iii', model='BayesNeuralNet')
 emulator_iv = Emulator(dataset='suzuki_iv', model='BayesNeuralNet')
 
-NUM_RUNS = 10
-BUDGET = 30
+NUM_RUNS = 50
+BUDGET = 50
 NUM_INIT_DESIGN = 5
 
 
@@ -48,13 +48,13 @@ def measure(params, s):
 		'catalyst_loading': params.catalyst_loading,
 	})
 	if s == 'i':
-		measurement, _, __ = emulator_i.run(func_params)
+		measurement, _, __ = emulator_i.run(func_params, num_samples=10)
 	elif s == 'ii':
-		measurement, _, __ = emulator_ii.run(func_params)
+		measurement, _, __ = emulator_ii.run(func_params, num_samples=10)
 	elif s == 'iii':
-		measurement, _, __ = emulator_iii.run(func_params)
+		measurement, _, __ = emulator_iii.run(func_params, num_samples=10)
 	elif s == 'iv':
-		measurement, _, __ = emulator_iv.run(func_params)
+		measurement, _, __ = emulator_iv.run(func_params, num_samples=10)
 	return measurement
 
 

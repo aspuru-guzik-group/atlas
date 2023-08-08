@@ -24,8 +24,8 @@ emulator_ii = Emulator(dataset='suzuki_ii', model='BayesNeuralNet')
 emulator_iii = Emulator(dataset='suzuki_iii', model='BayesNeuralNet')
 emulator_iv = Emulator(dataset='suzuki_iv', model='BayesNeuralNet')
 
-NUM_RUNS = 20
-BUDGET = 30
+NUM_RUNS = 50
+BUDGET = 50
 NUM_INIT_DESIGN = 5
 
 
@@ -43,13 +43,13 @@ Continuous (name='catalyst_loading', low=0.498, high=2.515, is_periodic=False)
 
 def measure(func_params, s):
 	if s == 'i':
-		measurement, _, __ = emulator_i.run(func_params)
+		measurement, _, __ = emulator_i.run(func_params, num_samples=10)
 	elif s == 'ii':
-		measurement, _, __ = emulator_ii.run(func_params)
+		measurement, _, __ = emulator_ii.run(func_params, num_samples=10)
 	elif s == 'iii':
-		measurement, _, __ = emulator_iii.run(func_params)
+		measurement, _, __ = emulator_iii.run(func_params, num_samples=10)
 	elif s == 'iv':
-		measurement, _, __ = emulator_iv.run(func_params)
+		measurement, _, __ = emulator_iv.run(func_params, num_samples=10)
 	return measurement
 
 
@@ -114,6 +114,7 @@ for run_ix in range(NUM_RUNS):
 			all_s_measurements = []
 			for s in ['i', 'ii', 'iii', 'iv']:
 				measurement = measure(sample, s)[0]
+
 				print(f'measurement ({s}): ', measurement)
 				all_s_measurements.append(measurement)
 				iter_ += 1 # each measurement is an iteration (1 for the price of 4)
