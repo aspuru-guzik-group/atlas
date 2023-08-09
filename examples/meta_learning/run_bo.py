@@ -17,7 +17,7 @@ from olympus.campaigns import ParameterSpace, Campaign
 from olympus.datasets import Dataset
 
 from atlas import tkwargs
-from atlas.planners.dkt.planner import DKTPlanner
+from atlas.planners.gp.planner import GPPlanner
 
 
 #------------------
@@ -47,14 +47,12 @@ from atlas.planners.dkt.planner import DKTPlanner
 #------------------
 
 
-
 # config
 TARGET_TASK = sys.argv[1]
-SOURCE_TASKS = pickle.load(open(f'ae_source_tasks/source_tasks_{TARGET_TASK}.pkl', 'rb'))
 
 NUM_RUNS = 50
 BUDGET = 200
-NUM_INIT_DESIGN = 2
+NUM_INIT_DESIGN = 10
 
 dataset = Dataset(kind=f'buchwald_{TARGET_TASK}')
 
@@ -68,22 +66,13 @@ for run_ix in range(NUM_RUNS):
 	campaign = Campaign()
 	campaign.set_param_space(dataset.param_space)
 
-	planner = DKTPlanner(
+	planner = GPPlanner(
 		goal='maximize',
 		init_design_strategy='random',
 		num_init_design=NUM_INIT_DESIGN,
 		batch_size=1, 
 		acquisition_type='ei', 
 		acquisition_optimizer_kind='pymoo',
-		#meta-learning
-		train_tasks=SOURCE_TASKS, 
-		valid_tasks=SOURCE_TASKS[:2],  
-		model_path=f'./tmp_models_{TARGET_TASK}/',
-		from_disk=False,
-		hyperparams={'model':{
-				'epochs': 2000,
-			}
-		} 
 	)
 	planner.set_param_space(dataset.param_space)
 
@@ -97,8 +86,6 @@ for run_ix in range(NUM_RUNS):
 			campaign.add_observation(sample, measurement)
 
 			iter_ += 1
-
-	os.system(f'rm -r ./tmp_models_{TARGET_TASK}/')
 
 	# store the results in dataframe
 	x0_col = campaign.observations.get_params()[:, 0]
@@ -117,4 +104,4 @@ for run_ix in range(NUM_RUNS):
 	})
 	all_data.append(data)
 
-	pickle.dump(all_data, open(f'dkt_target_{TARGET_TASK}_results.pkl', 'wb'))
+	pickle.dump(all_data, open(f'bo_target_{TARGET_TASK}_results.pkl', 'wb'))

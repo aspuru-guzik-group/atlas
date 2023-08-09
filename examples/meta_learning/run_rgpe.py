@@ -17,7 +17,7 @@ from olympus.campaigns import ParameterSpace, Campaign
 from olympus.datasets import Dataset
 
 from atlas import tkwargs
-from atlas.planners.dkt.planner import DKTPlanner
+from atlas.planners.rgpe.planner import RGPEPlanner
 
 
 #------------------
@@ -68,7 +68,7 @@ for run_ix in range(NUM_RUNS):
 	campaign = Campaign()
 	campaign.set_param_space(dataset.param_space)
 
-	planner = DKTPlanner(
+	planner = RGPEPlanner(
 		goal='maximize',
 		init_design_strategy='random',
 		num_init_design=NUM_INIT_DESIGN,
@@ -78,12 +78,8 @@ for run_ix in range(NUM_RUNS):
 		#meta-learning
 		train_tasks=SOURCE_TASKS, 
 		valid_tasks=SOURCE_TASKS[:2],  
-		model_path=f'./tmp_models_{TARGET_TASK}/',
-		from_disk=False,
-		hyperparams={'model':{
-				'epochs': 2000,
-			}
-		} 
+		#model_path=f'./tmp_models_{TARGET_TASK}/',
+		#from_disk=False,
 	)
 	planner.set_param_space(dataset.param_space)
 
@@ -97,8 +93,6 @@ for run_ix in range(NUM_RUNS):
 			campaign.add_observation(sample, measurement)
 
 			iter_ += 1
-
-	os.system(f'rm -r ./tmp_models_{TARGET_TASK}/')
 
 	# store the results in dataframe
 	x0_col = campaign.observations.get_params()[:, 0]
@@ -117,4 +111,4 @@ for run_ix in range(NUM_RUNS):
 	})
 	all_data.append(data)
 
-	pickle.dump(all_data, open(f'dkt_target_{TARGET_TASK}_results.pkl', 'wb'))
+	pickle.dump(all_data, open(f'rgpe_target_{TARGET_TASK}_results.pkl', 'wb'))

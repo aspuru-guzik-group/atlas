@@ -51,9 +51,10 @@ for run_ix in range(NUM_RUNS):
 		samples = planner.recommend(campaign.observations)
 
 		for sample in samples:
-			measurement = dataset.run(sample, noiseless=True)[0]
+			measurement = dataset.run(sample, return_paramvector=True, noiseless=True)[0]
 			print('SAMPLE : ', sample)
 			print('MEASUREMENT : ', measurement)
+			
 			campaign.add_and_scalarize(sample, measurement, planner.scalarizer)
 
 			iter_ += 1

@@ -405,6 +405,7 @@ class PymooGAOptimizer(AcquisitionOptimizer):
         for sample_arr, sample_pvec in zip(
             olymp_samples_arr, olymp_samples_pvec
         ):
+            sample_arr = sample_arr.to_array()
             # check to see if the set of perviously measured params
             # contains this sample
             if not any((self._params[:] == sample_arr).all(1)):
