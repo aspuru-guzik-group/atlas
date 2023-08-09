@@ -1,0 +1,20 @@
+{
+	"Ge": {
+			"electron_affinity": 1.232676,
+			"ionization_energy": 7.8994,
+			"mass":              72.630,
+			"electronegativity": 1.8
+		},
+	"Sn": {
+			"electron_affinity": 1.112070,
+			"ionization_energy": 7.3439,
+			"mass":              118.71,
+			"electronegativity": 1.8
+		},
+	"Pb": {
+			"electron_affinity": 0.356743,
+			"ionization_energy": 7.41666,
+			"mass":              207.2,
+			"electronegativity": 1.9 
+		}
+}

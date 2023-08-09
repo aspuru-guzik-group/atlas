@@ -142,8 +142,16 @@ for run_ix in range(NUM_RUNS):
 			true_measurements.append(mean_measurement)
 
 			iter_ += 1
+
+		# make a general recommendation if we have a trained regression
+		# surrogate model
+		if len(campaign.observations.get_values()) > NUM_INIT_DESIGN:
+
+			_ = planner.recommend_general(num_proposals=1)
+
+
+			
 	
-	#all_true_measurements.append(true_measurements)
 
 	# store the results in dataframe
 	s_col = campaign.observations.get_params()[:, 0]

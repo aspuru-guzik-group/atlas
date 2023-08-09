@@ -1,0 +1,26 @@
+{
+	"F": {
+			"electron_affinity": 3.401189,
+			"ionization_energy": 17.42282,
+			"mass":              18.998,
+			"electronegativity": 4.0
+		},
+	"Cl": {
+			"electron_affinity": 3.612724,
+			"ionization_energy": 12.96764,
+			"mass":              35.45,
+			"electronegativity": 3.0
+		},
+	"I": {
+			"electron_affinity": 3.059046,
+			"ionization_energy": 10.45126,
+			"mass":              126.90,
+			"electronegativity": 2.5
+		},
+	"Br": {
+			"electron_affinity": 3.363588,
+			"ionization_energy": 11.81381,
+			"mass":              79.904,
+			"electronegativity": 2.8
+		}
+}

@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import json
 import pickle
 import numpy as np
 import pandas as pd
@@ -19,7 +20,7 @@ from atlas.planners.gp.planner import GPPlanner
 
 # config
 dset = Dataset(kind='perovskites')
-NUM_RUNS = 5
+NUM_RUNS = 50
 # BUDGET = 30
 COST_BUDGET = 200.
 NUM_INIT_DESIGN = 5
@@ -29,6 +30,17 @@ NUM_INIT_DESIGN = 5
 LOOKUP = pickle.load(open('lookup/lookup_table.pkl', 'rb'))
 # print(lookup.keys())
 # print(lookup['Ethylammonium']['Ge']['F'].keys())
+
+
+def build_options_descriptors(json_file):
+	with open(json_file, 'r') as f:
+		content = json.load(f)
+
+	options = list(content.keys())
+	descriptors = [list(content[opt].values()) for opt in options]
+
+	return options, descriptors
+
 
 def measure(params, s=None):
 	# high-fidelity is hse06
@@ -61,12 +73,37 @@ def compute_cost(params):
 
 # build parameter space
 param_space = ParameterSpace()
+
 # organic
-param_space.add(dset.param_space[0])
+# param_space.add(dset.param_space[0])
+organic_opts, organic_descs = build_options_descriptors('lookup/organics.json')
+param_space.add(
+	ParameterCategorical(
+		name='organic', 
+		options=organic_opts,
+		descriptors=organic_descs,
+	)
+)
 # cation
-param_space.add(dset.param_space[1])
+#param_space.add(dset.param_space[1])
+cation_opts, cation_descs = build_options_descriptors('lookup/cations.json')
+param_space.add(
+	ParameterCategorical(
+		name='cation', 
+		options=cation_opts,
+		descriptors=cation_descs,
+	)
+)
 # anion
-param_space.add(dset.param_space[2])
+#param_space.add(dset.param_space[2])
+anion_opts, anion_descs = build_options_descriptors('lookup/anions.json')
+param_space.add(
+	ParameterCategorical(
+		name='anion', 
+		options=anion_opts,
+		descriptors=anion_descs,
+	)
+)
 
 
 all_data = []
@@ -82,9 +119,9 @@ for run_ix in range(NUM_RUNS):
 		goal='minimize',
 		init_design_strategy='random',
 		num_init_design=NUM_INIT_DESIGN,
-		use_descriptors=False,
+		use_descriptors=True,
 		batch_size=1,
-		acquisition_optimizer_kind='pymoo',
+		acquisition_optimizer_kind='gradient',
 	)
 
 	planner.set_param_space(param_space)
@@ -130,4 +167,4 @@ for run_ix in range(NUM_RUNS):
 		'anion': x2_col,
 	})
 	all_data.append(data)
-	pickle.dump(all_data, open('high_fidelity_results.pkl', 'wb'))
+	pickle.dump(all_data, open('high_fidelity_results_w_desc.pkl', 'wb'))
