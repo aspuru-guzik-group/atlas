@@ -81,7 +81,7 @@ for run_ix in range(NUM_RUNS):
 		model_path=f'./tmp_models_{TARGET_TASK}/',
 		from_disk=False,
 		hyperparams={'model':{
-				'epochs': 2000,
+				'epochs': 20000,
 			}
 		} 
 	)
