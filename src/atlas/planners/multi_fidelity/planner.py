@@ -200,7 +200,7 @@ class MultiFidelityPlanner(BasePlanner):
             # optimize cartesian product
             choices_feat, choices_cat = create_available_options(
                 self.param_space,
-                self._params,
+                [],#self._params, # TODO: figure out is this is correct
                 fca_constraint_callable=None,
                 known_constraint_callables=self.known_constraints,
                 normalize=self.has_descriptors,
@@ -287,7 +287,6 @@ class MultiFidelityPlanner(BasePlanner):
                 self.fidelity_params
             )
 
-    
             (
                 self.train_x_scaled_cla,
                 self.train_y_scaled_cla,
@@ -360,8 +359,8 @@ class MultiFidelityPlanner(BasePlanner):
                     use_reg_only=use_reg_only,
                     fixed_params=fixed_params,
                     num_fantasies=128,
-                    pop_size=100,
-                    num_gen=800,
+                    pop_size=200,
+                    num_gen=10,
                 )
 
                 return_params = acquisition_optimizer.optimize()

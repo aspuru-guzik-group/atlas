@@ -476,6 +476,8 @@ class General(FeasibilityAwareAcquisition):
         acqf_val = sigma_x * (updf + u * ucdf)
 
         return -acqf_val  # (# samples,) # is this sign correct?? 
+    
+
 
     def generate_X_sns(self):
         # generate Cartesian product space of the general parameter options

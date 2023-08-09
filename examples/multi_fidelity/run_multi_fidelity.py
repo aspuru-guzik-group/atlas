@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import json
 import pickle
 import numpy as np
 import pandas as pd
@@ -29,6 +30,16 @@ NUM_INIT_DESIGN = 10
 LOOKUP = pickle.load(open('lookup/lookup_table.pkl', 'rb'))
 # print(lookup.keys())
 # print(lookup['Ethylammonium']['Ge']['F'].keys())
+
+
+def build_options_descriptors(json_file):
+	with open(json_file, 'r') as f:
+		content = json.load(f)
+
+	options = list(content.keys())
+	descriptors = [list(content[opt].values()) for opt in options]
+
+	return options, descriptors
 
 def measure(params, s):
 	# high-fidelity is hse06, low-fidelity is gga
@@ -77,16 +88,45 @@ param_space.add(
 	)
 )
 # organic
-param_space.add(dset.param_space[0])
+# param_space.add(dset.param_space[0])
+organic_opts, organic_descs = build_options_descriptors('lookup/organics.json')
+param_space.add(
+	ParameterCategorical(
+		name='organic', 
+		options=organic_opts,
+		descriptors=organic_descs,
+	)
+)
 # cation
-param_space.add(dset.param_space[1])
+#param_space.add(dset.param_space[1])
+cation_opts, cation_descs = build_options_descriptors('lookup/cations.json')
+param_space.add(
+	ParameterCategorical(
+		name='cation', 
+		options=cation_opts,
+		descriptors=cation_descs,
+	)
+)
 # anion
-param_space.add(dset.param_space[2])
+#param_space.add(dset.param_space[2])
+anion_opts, anion_descs = build_options_descriptors('lookup/anions.json')
+param_space.add(
+	ParameterCategorical(
+		name='anion', 
+		options=anion_opts,
+		descriptors=anion_descs,
+	)
+)
+
 
 
 all_data = []
 min_hse06_bandgap = get_min_hse06_bandgap(param_space)
 print('MIN HSE06 BANDGAP : ', min_hse06_bandgap)
+
+# >>> MIN HSE06 BANDGAP :  1.5249
+# hydrazinium	Sn	I
+
 
 for run_ix in range(NUM_RUNS):
 
@@ -94,7 +134,7 @@ for run_ix in range(NUM_RUNS):
 	campaign.set_param_space(param_space)
 
 	planner = MultiFidelityPlanner(
-		goal='maximize',
+		goal='minimize',
 		init_design_strategy='random',
 		num_init_design=NUM_INIT_DESIGN,
 		use_descriptors=False,
