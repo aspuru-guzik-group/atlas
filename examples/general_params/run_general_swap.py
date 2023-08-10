@@ -55,7 +55,7 @@ def measure(params, s):
 		measurement, _, __ = emulator_iii.run(func_params, num_samples=10)
 	elif s == 'iv':
 		measurement, _, __ = emulator_iv.run(func_params, num_samples=10)
-	return measurement
+	return -1.* measurement
 
 
 # build parameter space
@@ -168,7 +168,7 @@ for run_ix in range(NUM_RUNS):
 	})
 	all_true_measurements.append(data)
 
-	pickle.dump(all_true_measurements, open('general_results.pkl', 'wb'))
+	pickle.dump(all_true_measurements, open('general_swap_results.pkl', 'wb'))
 
 
 
