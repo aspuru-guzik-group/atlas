@@ -251,12 +251,12 @@ class PymooProblemWrapper(Problem):
             # TODO: also take care of FCA constraint here ...
             g_unknown = self._wrapped_fc_constraint(X)
         else:
-            g_unknown = np.ones(X.shape[0]) * -2. # all feasible
+            g_unknown = np.ones(len(X)) * -2. # all feasible
 
         if not self.known_constraints.is_empty:
             g_known = self._known_constraints_wrapper(X)
         else:
-            g_known = np.ones(X.shape[0]) * -2.
+            g_known = np.ones(len(X)) * -2.
 
         g = np.maximum(g_known, g_unknown)
 

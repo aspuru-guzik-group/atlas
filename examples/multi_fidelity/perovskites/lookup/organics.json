@@ -1,0 +1,130 @@
+{
+    "acetamidinium": {
+        "homo": -0.49721,
+        "lumo": -0.224,
+        "dipole": 1.3334,
+        "atomization": -1.725933612628,
+        "r_gyr": 1.3441486537452711,
+        "total_mass": 59.092000000000006
+    },
+    "ammonium": {
+        "homo": -0.82332,
+        "lumo": -0.23211,
+        "dipole": 0.0,
+        "atomization": -0.417229812216,
+        "r_gyr": 0.4854253354305651,
+        "total_mass": 18.038999999999998
+    },
+    "azetidinium": {
+        "homo": -0.53625,
+        "lumo": -0.19333,
+        "dipole": 2.5188,
+        "atomization": -1.820933667732,
+        "r_gyr": 1.2022594745638675,
+        "total_mass": 58.104000000000006
+    },
+    "butylammonium": {
+        "homo": -0.46372,
+        "lumo": -0.19805,
+        "dipole": 8.6784,
+        "atomization": -2.597559386648,
+        "r_gyr": 1.9552431406634987,
+        "total_mass": 74.14699999999999
+    },
+    "dimethylammonium": {
+        "homo": -0.59845,
+        "lumo": -0.19659,
+        "dipole": 1.4879,
+        "atomization": -1.504113362432,
+        "r_gyr": 1.2273785609097019,
+        "total_mass": 46.093
+    },
+    "ethylammonium": {
+        "homo": -0.5464,
+        "lumo": -0.20326,
+        "dipole": 3.8078,
+        "atomization": -1.511365344432,
+        "r_gyr": 1.2430033906154765,
+        "total_mass": 46.09300000000001
+    },
+    "formamidinium": {
+        "homo": -0.51456,
+        "lumo": -0.24322,
+        "dipole": 0.2149,
+        "atomization": -1.16606733452,
+        "r_gyr": 1.1316438420259367,
+        "total_mass": 45.065
+    },
+    "guanidinium": {
+        "homo": -0.48729,
+        "lumo": -0.18547,
+        "dipole": 0.0,
+        "atomization": -1.579657237524,
+        "r_gyr": 1.2868169355634202,
+        "total_mass": 60.080000000000005
+    },
+    "hydrazinium": {
+        "homo": -0.51886,
+        "lumo": -0.22032,
+        "dipole": 2.8664,
+        "atomization": -0.75850472622,
+        "r_gyr": 0.8815852218447312,
+        "total_mass": 33.054
+    },
+    "hydroxylammonium": {
+        "homo": -0.58535,
+        "lumo": -0.23015,
+        "dipole": 3.535,
+        "atomization": -0.610470697216,
+        "r_gyr": 0.9139459671901186,
+        "total_mass": 34.038000000000004
+    },
+    "imidazolium": {
+        "homo": -0.4601,
+        "lumo": -0.22398,
+        "dipole": 1.3965,
+        "atomization": -1.84142017812,
+        "r_gyr": 1.2615654918700423,
+        "total_mass": 69.08699999999999
+    },
+    "isopropylammonium": {
+        "homo": -0.53343,
+        "lumo": -0.19317,
+        "dipole": 4.0261,
+        "atomization": -2.06089548654,
+        "r_gyr": 1.4154442895248487,
+        "total_mass": 60.12000000000002
+    },
+    "methylammonium": {
+        "homo": -0.62338,
+        "lumo": -0.21297,
+        "dipole": 2.1877,
+        "atomization": -0.961169867024,
+        "r_gyr": 0.9240459984180535,
+        "total_mass": 32.066
+    },
+    "propylammonium": {
+        "homo": -0.49918,
+        "lumo": -0.19818,
+        "dipole": 6.2339,
+        "atomization": -2.05499118954,
+        "r_gyr": 1.602514273659045,
+        "total_mass": 60.12000000000002
+    },
+    "tetramethylammonium": {
+        "homo": -0.57506,
+        "lumo": -0.16193,
+        "dipole": 0.0,
+        "atomization": -2.584676869648,
+        "r_gyr": 1.4986893022669292,
+        "total_mass": 74.14699999999999
+    },
+    "trimethylammonium": {
+        "homo": -0.58397,
+        "lumo": -0.18158,
+        "dipole": 0.8595,
+        "atomization": -2.04561705654,
+        "r_gyr": 1.3939292926333677,
+        "total_mass": 60.12000000000001
+    }
+}

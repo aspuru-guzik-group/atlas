@@ -2,6 +2,7 @@
 
 import time
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from copy import deepcopy
 
 import gpytorch
 import numpy as np
@@ -27,6 +28,7 @@ from atlas.acquisition_optimizers import (
     GradientOptimizer,
     PymooGAOptimizer,
 )
+from atlas.acquisition_functions.acqfs import get_acqf_instance
 from atlas.acquisition_functions.acqf_utils import create_available_options
 from atlas.base.base import BasePlanner
 from atlas.utils.planner_utils import reverse_normalize, infer_problem_type
@@ -122,6 +124,7 @@ class MultiFidelityPlanner(BasePlanner):
 
         # set current ask fidelity (default to None)
         self.current_ask_fidelity = None
+
 
     
 
@@ -232,6 +235,64 @@ class MultiFidelityPlanner(BasePlanner):
         # print(current_value.shape)
 
         return current_value
+    
+
+    def recommend_target_fidelity(self, batch_size:int=1) -> List[ParameterVector]:
+        """ make batch of recommendations on the target fidelity level with 
+        the surrogate posterior mean as the acquisition function (greedy)
+
+        """
+        # greedy_acqf = FixedFeatureAcquisitionFunction(
+        #     acq_function=PosteriorMean(self.reg_model),
+        #     d=self.params_obj.expanded_dims,
+        #     columns=[self.fidelity_params],
+        #     values=[1],
+        # )
+        # setattr(greedy_acqf, 'feas_strategy', self.feas_strategy)
+        # greedy_acqf.to(tkwargs["device"])
+
+        acqf_args = dict(
+            acquisition_optimizer_kind=self.acquisition_optimizer_kind,
+            params_obj=self.params_obj,
+            problem_type=self.problem_type,
+            feas_strategy=self.feas_strategy,
+            feas_param=self.feas_param,
+            infeas_ratio=0., # TODO: implement
+            use_reg_only=True,
+            f_best_scaled=None, # TODO: implement
+            batch_size=batch_size,
+            use_min_filter=False, # TODO: implement 
+        )
+
+        greedy_acqf = get_acqf_instance(
+            acquisition_type='greedy',
+            reg_model=self.reg_model,
+            cla_model=None, # TODO: implement
+            cla_likelihood=None, # TODO: implement
+            acqf_args=acqf_args,
+        )
+
+        acquisition_optimizer = PymooGAOptimizer(
+            self.params_obj,
+            self.acquisition_type,
+            greedy_acqf,
+            self.known_constraints,
+            batch_size,
+            self.feas_strategy,
+            None,  # self.fca_constraint
+            self._params,
+            {},  # self.timings_dict,
+            use_reg_only=False,
+            fixed_params=[{self.fidelity_params: 1.0}], # always target fidelity
+            num_fantasies=0,
+            pop_size=800,
+            num_gen=1000,
+        )
+
+        return_params = acquisition_optimizer.optimize()
+
+
+        return return_params
         
 
 
@@ -256,6 +317,16 @@ class MultiFidelityPlanner(BasePlanner):
         # TODO: bad hack fix this
         setattr(mfkg_acqf, 'feas_strategy', self.feas_strategy)
         return mfkg_acqf.to(tkwargs["device"])
+    
+
+    def handle_init_design_ask_fidelity(self, return_params: List[ParameterVector]):
+        new_return_params = []
+        for param_vec in return_params:
+            new_param_vec = deepcopy(param_vec)
+            new_param_vec[self.fidelity_params_name] = self.current_ask_fidelity
+            new_return_params.append(new_param_vec)
+        return new_return_params
+
 
 
     def _ask(self) -> List[ParameterVector]:
@@ -270,7 +341,8 @@ class MultiFidelityPlanner(BasePlanner):
         for param in func_params:
             self.func_param_space.add(param)
         self.func_problem_type = infer_problem_type(self.func_param_space)
-        print('func problem type : ', self.func_problem_type)
+        # print('func problem type : ', self.func_problem_type)
+        self.fidelity_params_name = self.param_space.param_names[self.fidelity_params]
         
 
 
@@ -280,7 +352,10 @@ class MultiFidelityPlanner(BasePlanner):
             np.all(np.isnan(self._values)),
         ):
             return_params = self.initial_design()
-
+            if self.current_ask_fidelity is not None:
+                return_params = self.handle_init_design_ask_fidelity(return_params=return_params)
+            
+        
         else:
             # convert bounds min max stuff for multi-fidelity problem
             self.params_obj.set_multi_fidelity_param_attrs(
@@ -313,6 +388,7 @@ class MultiFidelityPlanner(BasePlanner):
 
             # get the fixed parameters according to current ask fidelity level
             fixed_params = self.get_fixed_params()
+
 
             if self.acquisition_optimizer_kind == "gradient":
                 # optimize the knowledge gradient
@@ -359,8 +435,8 @@ class MultiFidelityPlanner(BasePlanner):
                     use_reg_only=use_reg_only,
                     fixed_params=fixed_params,
                     num_fantasies=128,
-                    pop_size=200,
-                    num_gen=10,
+                    pop_size=800,
+                    num_gen=1000,
                 )
 
                 return_params = acquisition_optimizer.optimize()

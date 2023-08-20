@@ -329,6 +329,27 @@ class MonteCarloAcquisition(FeasibilityAwareAcquisition, MCSamplerMixin):
 # ACQUISITION FUNCTIONS
 # --------------------------------
 
+class Greedy(FeasibilityAwareAcquisition):
+    """ Greedy acquisition function
+    """
+    def __init__(
+        self,
+        reg_model,
+        cla_model,
+        cla_likelihood,
+        fix_min_max=False,
+        **acqf_args,
+    ):
+        super().__init__(
+            reg_model, cla_model, cla_likelihood, fix_min_max, **acqf_args
+        )
+        self.reg_model = reg_model
+
+    def evaluate(self, X: torch.Tensor):
+        posterior = self.reg_model.posterior(X=X)
+        mean, _ = self.compute_mean_sigma(posterior)
+        return mean
+    
 
 class VarianceBased(FeasibilityAwareAcquisition):
     """Feasibility-aware variance-based utility function"""
@@ -585,6 +606,13 @@ def get_acqf_instance(
             cla_likelihood=cla_likelihood,
             **acqf_args,
         )
+    elif acquisition_type == 'greedy':
+        return Greedy(
+            reg_model=reg_model,
+            cla_model=cla_model,
+            cla_likelihood=cla_likelihood,
+            **acqf_args,
+        )
     elif acquisition_type == "variance":
         return VarianceBased(
             reg_model=reg_model,
@@ -592,6 +620,7 @@ def get_acqf_instance(
             cla_likelihood=cla_likelihood,
             **acqf_args,
         )
+    
     elif acquisition_type in ["lcb", "ucb"]:
         if not use_q_acqf:
             acqf_args["beta"] = torch.tensor(

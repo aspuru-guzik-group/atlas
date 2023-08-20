@@ -27,10 +27,9 @@ def run_continuous(acquisition_optimizer):
 
     param_space = ParameterSpace()
     # two continuous parameters and one fidelity param
-
+    param_space.add(ParameterDiscrete(name="s", options=[0.5, 1.0]))
     param_space.add(ParameterContinuous(name="x0", low=0.0, high=1.0))
     param_space.add(ParameterContinuous(name="x1", low=0.0, high=1.0))
-    param_space.add(ParameterDiscrete(name="s", options=[0.5, 1.0]))
 
     planner = MultiFidelityPlanner(
         goal="minimize",
@@ -38,7 +37,7 @@ def run_continuous(acquisition_optimizer):
         num_init_design=num_init_design,
         batch_size=batch_size,
         acquisition_optimizer_kind=acquisition_optimizer,
-        fidelity_params=2,
+        fidelity_params=0,
         fidelities=[
             0.5,
             1.0,
@@ -48,14 +47,17 @@ def run_continuous(acquisition_optimizer):
 
     planner.set_param_space(param_space)
 
+    print(planner.param_space)
+
+
     campaign = Campaign()
     campaign.set_param_space(param_space)
 
     BUDGET = num_init_design + batch_size * 6
 
     iter_ = 0
-    while len(campaign.observations.get_values()) < BUDGET:
-        if len(campaign.observations.get_values()) > num_init_design:
+    while campaign.num_obs < BUDGET:
+        if campaign.num_obs > num_init_design:
             if (
                 iter_ % 2 == 0
             ):  # iterating between low and high fidelity samples
@@ -69,6 +71,12 @@ def run_continuous(acquisition_optimizer):
             campaign.add_observation(sample, measurement)
 
         iter_ += 1
+
+        if campaign.num_obs > 6:
+            # make a greedy recommendation with the reg surrogate posterior 
+            rec_samples = planner.recommend_target_fidelity(batch_size=1)
+
+        
 
 
 if __name__ == "__main__":
