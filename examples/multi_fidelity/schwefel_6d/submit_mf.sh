@@ -30,6 +30,6 @@ conda activate hermes
 
 date >> mf-mf.log
 echo "" >> mf-mf.log
-python run_bo.py 
+python run_mf.py 
 echo "" >> mf-mf.log
 date >> mf-mf.log
