@@ -27,17 +27,8 @@ You can find more details about `atlas` in our [documentation](https://matter-at
 
 ## Installation
 
-Atlas is available for installation using `pip` or `conda-forge`.
 
-```bash
-pip install matter-atlas
-```
-
-```bash
-conda install -c conda-forge matter-atlas
-```
-
-Alternatively you can install `atlas` from source in edit mode by executing the following commands
+You can install `atlas` from source in edit mode by executing the following commands
 
 ```bash
 git clone git@github.com:rileyhickman/atlas.git
