@@ -41,7 +41,7 @@ setup(
         "pymoo",
         "sobol-seq",
         "pyDOE",
-        "botorch",
+        "botorch==0.8.5",
         "matter-chimera",
         "matter-golem",
     ],
