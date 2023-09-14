@@ -31,7 +31,7 @@ You can find more details about `atlas` in our [documentation](https://matter-at
 You can install `atlas` from source in edit mode by executing the following commands
 
 ```bash
-git clone git@github.com:rileyhickman/atlas.git
+git clone git@github.com:aspuru-guzik-group/atlas.git
 cd atlas
 pip install -e .
 ```
