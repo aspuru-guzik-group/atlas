@@ -85,7 +85,15 @@ are encouraged. Please reach out to [Riley](riley.hickman@mail.utoronto.ca) by e
 
 ```
 @misc{hickman_atlas_2023,
-
+	author = {Hickman, Riley and Sim, Malcolm and Pablo-Garc{\'\i}a, Sergio and Woolhouse, Ivan and Hao, Han and Bao, Zeqing and Bannigan, Pauric and Allen, Christine and Aldeghi, Matteo and Aspuru-Guzik, Al{\'a}n},
+	doi = {10.26434/chemrxiv-2023-8nrxx},
+	language = {en},
+	month = sep,
+	publisher = {ChemRxiv},
+	shorttitle = {Atlas},
+	title = {Atlas: {A} {Brain} for {Self}-driving {Laboratories}},
+	urldate = {2023-09-05},
+	year = {2023},
 }
 ```
 
