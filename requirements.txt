@@ -1,4 +1,4 @@
-botorch==0.8.5
+botorch>=0.8.5
 matter-chimera
 matter-golem
 scikit-learn
@@ -8,17 +8,20 @@ sobol-seq
 tqdm
 ipykernel
 jupyterlab
-matplotlib
+matplotlib<=3.7.3
+pandas<=2.0.3
 seaborn
-pandas
 SQLAlchemy
 silence-tensorflow
+protobuf==3.20.*
+tensorflow==2.15
+tensorflow-probability==0.23.0
 deap
 rich
 pytest
 pytest-cov
 gspread
 matter-golem
-olympus @ git+https://github.com/aspuru-guzik-group/olympus@main
 pymoo
 GPy
+cmcrameri

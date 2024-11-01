@@ -41,9 +41,11 @@ setup(
         "pymoo",
         "sobol-seq",
         "pyDOE",
-        "botorch==0.8.5",
+        "botorch>=0.8.5",
+        "matplotlib<=3.7.3",
+        "pandas<=2.0.3",
         "matter-chimera",
         "matter-golem",
     ],
-    python_requires=">=3.6",
+    python_requires=">=3.9",
 )
