@@ -34,6 +34,14 @@ You can install `atlas` from source in edit mode by executing the following comm
 git clone git@github.com:aspuru-guzik-group/atlas.git
 cd atlas
 pip install -e .
+pip install -r requirements.txt
+```
+
+If you require `olympus` resources, you can install it from source by doing
+```bash
+git clone -b olympus-atlas --single-branch git@github.com:aspuru-guzik-group/olympus.git
+cd olympus 
+pip install -e .
 ```
 
 ## Usage
