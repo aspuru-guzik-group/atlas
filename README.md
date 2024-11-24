@@ -39,7 +39,7 @@ pip install -r requirements.txt
 
 If you require `olympus` resources, you can install it from source by doing
 ```bash
-git clone git@github.com:aspuru-guzik-group/olympus.git
+git clone -b olympus-atlas --single-branch git@github.com:aspuru-guzik-group/olympus.git
 cd olympus 
 pip install -e .
 ```
