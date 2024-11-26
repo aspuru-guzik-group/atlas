@@ -37,7 +37,7 @@ plan_args = {
 }
 plan_args = plan_args[FLAGS.tag]
 
-NUM_RUNS = 100
+NUM_RUNS = 5
 
 
 #------
@@ -57,11 +57,12 @@ for _ in range(NUM_RUNS):
         feas_strategy=plan_args["feas_strategy"],
         feas_param=plan_args["feas_param"],
         acquisition_type='ucb',
+        acquisition_optimizer_kind='pymoo',
     ) # instantiate Atlas planner
     planner.set_param_space(surface.param_space)
 
 
-    while len(campaign.observations.get_values()) < 100:
+    while len(campaign.observations.get_values()) < 25:
         samples = planner.recommend(
             campaign.observations
         )  # ask planner for parameters (list of ParameterVectors)
