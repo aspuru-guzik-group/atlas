@@ -311,7 +311,7 @@ class MultiFidelityPlanner(BasePlanner):
             model=self.reg_model,
             num_fantasies=128,  # change this to 128 for production
             current_value=current_value,
-            cost_aware_utilty=self.cost_aware_utility,
+            cost_aware_utility=self.cost_aware_utility,
             project=self._project,
         )
         # TODO: bad hack fix this
