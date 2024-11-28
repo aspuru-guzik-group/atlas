@@ -18,8 +18,8 @@ from atlas.planners.gp.planner import GPPlanner
 
 # config
 dataset = Dataset(kind='dye_lasers')
-NUM_RUNS = 10
-BUDGET = 50
+NUM_RUNS = 50
+BUDGET = 200
 NUM_INIT_DESIGN = 10
 
 all_data = []
