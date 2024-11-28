@@ -5,3 +5,4 @@ m2r2
 nbsphinx
 sphinx_design
 furo
+lxml-html-clean

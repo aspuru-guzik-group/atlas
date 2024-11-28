@@ -4,7 +4,7 @@ Welcome to Atlas' documentation!
 
 .. image:: _static/atlas_logo.png
 
-**Atlas**  is ...::
+**Atlas**  is an chemistry and materials science adaptive experimentation package. ::
 
     from olympus import Surface, Campaign
     from atlas.planners.gp.planner import GPPlanner
