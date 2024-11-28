@@ -37,7 +37,8 @@ plan_args = {
 }
 plan_args = plan_args[FLAGS.tag]
 
-NUM_RUNS = 5
+NUM_RUNS = 50
+BUDGET = 100
 
 
 #------
@@ -48,6 +49,8 @@ NUM_RUNS = 5
 surface = BraninConstr()
 all_runs = []
 for _ in range(NUM_RUNS):
+
+    print(f'RUN {_}')
 
     campaign = Campaign() # define Olympus campaign object
     campaign.set_param_space(surface.param_space)
@@ -62,7 +65,7 @@ for _ in range(NUM_RUNS):
     planner.set_param_space(surface.param_space)
 
 
-    while len(campaign.observations.get_values()) < 25:
+    while len(campaign.observations.get_values()) < BUDGET:
         samples = planner.recommend(
             campaign.observations
         )  # ask planner for parameters (list of ParameterVectors)
@@ -76,11 +79,11 @@ for _ in range(NUM_RUNS):
     x1_col = campaign.observations.get_params()[:, 1]
     
     df = pd.DataFrame({
-        'param_0': x0_col,
-        'param_1': x1_col,
+        'x0': x0_col,
+        'x1': x1_col,
         'obj': campaign.observations.get_values()
     })
 
     all_runs.append(df)
 
-pickle.dump(all_runs, open(f"results_{FLAGS.tag}.pkl", "wb"))
+    pickle.dump(all_runs, open(f"results_{FLAGS.tag}.pkl", "wb"))
