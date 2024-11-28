@@ -85,7 +85,7 @@ class MultiFidelityPlanner(BasePlanner):
         }
 
         # check if we have any fidelity param dims specified
-        if not self.fidelity_params:
+        if self.fidelity_params is None:
             Logger.log(
                 "You must specify at least one fidelity dimension to use this planner",
                 "FATAL",
