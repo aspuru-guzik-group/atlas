@@ -1,26 +1,24 @@
 Installation
 ============
 
-We recommend to install **Olympus** with ``pip``::
+To install Atlas, we recommend installing from from source ::
 
-    pip install olymp
+    git clone https://github.com/aspuru-guzik-group/atlas.git
+    cd atlas
+    pip install -e .
+    pip install -r requirements.txt
 
-Alternatively, you can install **Olympus** with ``conda``::
+Atlas works hand-in-hand with Olympus, which can be installed from source. Specifically, the ``olympus-atlas`` branch for compatibility with Atlas. ::
 
-    conda install -c conda-forge  olymp
-
-Finally, you can clone the GitHub repo and install it from source::
-
-    git clone git@github.com:aspuru-guzik-group/olympus.git
+    git clone olympus-atlas --single-branch https://github.com/aspuru-guzik-group/olympus.git
     cd olympus
-    python setup.py install
-
+    python install -e .
 
 Dependencies
 ------------
 The installation only requires:
 
-* ``python >= 3.6``
+* ``python >= 3.9``
 * ``numpy``
 * ``pandas``
 
