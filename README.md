@@ -19,6 +19,8 @@ optimization, meta-learning optimization, data-driven search space expansion/con
 
 You can find more details about `atlas` in our [documentation](https://matter-atlas.readthedocs.io/en/latest/). 
 
+You can see the peer-reviewed publication in our [publication](https://pubs.rsc.org/en/content/articlelanding/2025/dd/d4dd00115j) at RSC Digital Discovery.
+
 
 `atlas` is proudly developed in 🇨🇦 at the University of Toronto and the Vector Institute for Artificial Intelligence.
 
@@ -27,8 +29,7 @@ You can find more details about `atlas` in our [documentation](https://matter-at
 
 ## Installation
 
-
-You can install `atlas` from source in edit mode by executing the following commands
+Currently, `atlas` does not work with Python>=3.11, and we recommend using 3.9 or 3.10. This will be fixed in later updates. You can install `atlas` from source in edit mode by executing the following commands
 
 ```bash
 git clone git@github.com:aspuru-guzik-group/atlas.git
@@ -85,23 +86,22 @@ Distributed under the [MIT](https://choosealicense.com/licenses/mit/)
 ## Contact
 
 Academic collaborations and extensions/improvements to the code by the community
-are encouraged. Please reach out to [Riley](riley.hickman@mail.utoronto.ca) by email if you have questions.
+are encouraged. Please reach out to [Riley](riley.hickman@mail.utoronto.ca) or [Gary](gary.tom@mail.mcgill.ca) by email if you have questions.
 
 ## Citation
 
 `atlas` is an academic research software. If you use `atlas` in a scientific publication, please cite the following article.
 
 ```
-@misc{hickman_atlas_2023,
-	author = {Hickman, Riley and Sim, Malcolm and Pablo-Garc{\'\i}a, Sergio and Woolhouse, Ivan and Hao, Han and Bao, Zeqing and Bannigan, Pauric and Allen, Christine and Aldeghi, Matteo and Aspuru-Guzik, Al{\'a}n},
-	doi = {10.26434/chemrxiv-2023-8nrxx},
-	language = {en},
-	month = sep,
-	publisher = {ChemRxiv},
-	shorttitle = {Atlas},
-	title = {Atlas: {A} {Brain} for {Self}-driving {Laboratories}},
-	urldate = {2023-09-05},
-	year = {2023},
+@misc{hickman_atlas_2025,
+	title={Atlas: a brain for self-driving laboratories},
+        author={Hickman, Riley J and Sim, Malcolm and Pablo-Garc{\'\i}a, Sergio and Tom, Gary and Woolhouse, Ivan and Hao, Han and Bao, Zeqing and Bannigan, Pauric and Allen, Christine and Aldeghi, Matteo and Aspuru-Guzik, Al{\'a}n}},
+        journal={Digital Discovery},
+        volume={4},
+        number={4},
+        pages={1006--1029},
+        year={2025},
+        publisher={Royal Society of Chemistry}
 }
 ```
 
